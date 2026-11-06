@@ -229,3 +229,14 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 }
 @media print{.onglets,.moi,.pres,.filtres{display:none!important}body{background:#fff}.entete{background:#fff}.bloc,.jour{border:1px solid #ddd}}
 a.bt-presse{display:inline-block;text-decoration:none}
+
+/* Bouton 👁 Maire et majorité dans la barre du jour */
+.oeil{cursor:pointer;margin-left:auto;font:600 11.5px var(--texte);border:0;border-radius:999px;padding:3px 10px;background:rgba(255,255,255,.18);color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
+.jour-tete .oeil+em{margin-left:6px}
+.oeil.on{background:#5b4b8a;color:#fff;box-shadow:none}
+.majo-pan{background:#f4f2fa;border-bottom:1px dashed #cfc8e6;padding:6px 14px}
+.tete-bloc{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.tete-bloc .h2{margin:0}
+.tete-bloc .oeil{color:#5b4b8a}
+.tete-bloc+.majo-pan{border:1px dashed #cfc8e6;border-radius:11px;margin:8px 0}
+@media (max-width:420px){.jour-tete .oeil-txt{display:none}.jour-tete{padding:7px 10px}.jour-tete b{font-size:21px}.jour-tete em{font-size:10px;padding:2px 7px}.oeil{padding:3px 8px}}
