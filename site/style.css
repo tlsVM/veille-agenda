@@ -119,6 +119,16 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .pb.on{background:var(--vert);color:#fff}
 .pb.peut.on{background:var(--rose);border-color:var(--rose);color:var(--vert-fonce)}
 .pb:disabled{opacity:.5}
+.pb-autre{cursor:pointer;font-size:12px;font-weight:600;border:0;background:none;color:var(--gris);text-decoration:underline;text-underline-offset:2px;padding:3px 4px}
+.pb-autre:hover{color:var(--vert)}
+.modale-boite.gestion{background:#fff;color:var(--encre);max-height:90vh;overflow:auto}
+.modale-boite.gestion h2{color:var(--vert)}
+.modale-boite.gestion p{color:var(--gris)}
+.gest-ligne{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid var(--trait)}
+.gest-ligne:first-child{border-top:0}
+.gest-nom{flex:1;font-weight:600;font-size:14px}
+.gest-ligne .pb{padding:3px 10px;font-size:12px}
+.gest-fermer{display:block;width:100%;margin-top:12px;cursor:pointer;border:0;border-radius:999px;background:var(--vert);color:#fff;font-weight:600;font-size:15px;padding:9px}
 .qui{flex-basis:100%;font-size:12px;font-weight:600;color:var(--vert)}
 .qui i{font-style:normal;color:var(--rose-fort)}
 .mini{margin:6px 0;border-radius:11px;padding:4px 10px}

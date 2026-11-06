@@ -104,6 +104,9 @@
       b.addEventListener('click', function (ev) { ev.stopPropagation(); cocher(id, v[0], w); });
       w.appendChild(b);
     });
+    var g = el('button', 'pb-autre', '✎ Cocher pour un·e élu·e'); g.type = 'button';
+    g.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirGestion(id, w); });
+    w.appendChild(g);
     w.appendChild(el('span', 'qui'));
     peindrePresence(w);
     return w;
@@ -124,15 +127,46 @@
   function majPresences() { document.querySelectorAll('.pres').forEach(peindrePresence); }
   function cocher(id, s, w) {
     if (!moi) { ouvrirChoix(); return; }
-    var actuel = (D.presences[id] || {})[moi], nouveau = actuel === s ? '' : s;
+    cocherPour(id, moi, s);
+  }
+  // Coche (ou décoche si on reclique) la présence de « nom » sur l'événement « id »
+  function cocherPour(id, nom, s, apres) {
+    var actuel = (D.presences[id] || {})[nom], nouveau = actuel === s ? '' : s;
     // affichage immédiat, puis enregistrement
-    D.presences[id] = D.presences[id] || {}; if (nouveau) D.presences[id][moi] = nouveau; else delete D.presences[id][moi];
-    majPresences();
-    var corps = new URLSearchParams({ a: 'pres', id: id, nom: moi, statut: nouveau });
+    D.presences[id] = D.presences[id] || {}; if (nouveau) D.presences[id][nom] = nouveau; else delete D.presences[id][nom];
+    majPresences(); if (apres) apres();
+    var corps = new URLSearchParams({ a: 'pres', id: id, nom: nom, statut: nouveau });
     fetch('api.php', { method: 'POST', body: corps }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.presences) { D.presences = d.presences; majPresences(); }
+      if (d.presences) { D.presences = d.presences; majPresences(); if (apres) apres(); }
       else alert('La présence n\'a pas pu être enregistrée. Réessayez.');
     }).catch(function () { alert('Pas de connexion : la présence n\'a pas été enregistrée.'); });
+  }
+
+  // Fenêtre « Cocher pour un·e élu·e » : tous les noms, un clic par personne
+  function ouvrirGestion(id, w) {
+    var ev = D.evenements.filter(function (e) { return e.id === id; })[0];
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', 'Présences'));
+    if (ev) bx.appendChild(el('p', '', (ev.heure ? hFmt(ev.heure) + ' · ' : '') + courte(ev.date) + ' · ' + ev.titre));
+    var liste = el('div', 'gest-liste'); bx.appendChild(liste);
+    function peindre() {
+      liste.textContent = ''; var p = D.presences[id] || {};
+      (D.elus || []).forEach(function (n) {
+        var ligne = el('div', 'gest-ligne'); ligne.appendChild(el('span', 'gest-nom', n.replace(' (collaborateur)', '')));
+        [['present', 'Présent·e'], ['peut', 'Peut-être']].forEach(function (v) {
+          var on = p[n] === v[0];
+          var b = el('button', 'pb' + (v[0] === 'peut' ? ' peut' : '') + (on ? ' on' : ''), (on ? '✓ ' : '') + v[1]); b.type = 'button';
+          b.addEventListener('click', function () { cocherPour(id, n, v[0], peindre); });
+          ligne.appendChild(b);
+        });
+        liste.appendChild(ligne);
+      });
+    }
+    peindre();
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button';
+    f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
+    m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
+    m.appendChild(bx); document.body.appendChild(m);
   }
 
   // ---------- Cartes ----------
