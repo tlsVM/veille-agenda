@@ -241,10 +241,13 @@
     v.appendChild(b);
     // Le programme du jour et de demain
     [[AUJ, 'Aujourd\'hui dans l\'agenda'], [cle(ajout(new Date(), 1)), 'Demain']].forEach(function (x) {
-      var evs = D.evenements.filter(function (e) { return enCours(e, x[0]) && TYPES[typeDe(e)].g !== 'majo'; });
+      var tous = D.evenements.filter(function (e) { return enCours(e, x[0]); });
+      var evs = tous.filter(function (e) { return TYPES[typeDe(e)].g !== 'majo'; });
+      var majo = tous.filter(function (e) { return TYPES[typeDe(e)].g === 'majo'; });
       var s = el('section', 'bloc'); s.appendChild(el('h2', 'h2 bleu', x[1]));
-      if (!evs.length) s.appendChild(el('p', 'vide', 'Rien de prévu dans l\'agenda.'));
+      if (!evs.length && !majo.length) s.appendChild(el('p', 'vide', 'Rien de prévu dans l\'agenda.'));
       rangerJour(evs, s, false);
+      blocMajo(majo, s);
       v.appendChild(s);
     });
   }
@@ -301,13 +304,32 @@
   var PRIORITAIRES = { 'Réunion de groupe': 1, 'Protocole': 1, 'Cérémonie': 1, 'Inauguration': 1, 'Commission': 1, 'Conseil municipal': 1, 'Réunion officielle': 1, 'Concertation': 1, 'Réunion publique': 1 };
   function aPresence(e) { var p = D.presences[e.id]; return !!(p && Object.keys(p).length); }
   function enAvant(e) { return !!PRIORITAIRES[e.type] || aPresence(e); }
+  // Thèmes enroulés, dans cet ordre (les événements mairie tout en bas)
+  var THEMES = [
+    ['Culture', ['Culture'], 'mini-cult'],
+    ['Conférences et débats', ['Conférence', 'Café-débat'], 'mini-conf'],
+    ['Associations', ['Association de quartier', 'Vie associative'], 'mini-asso'],
+    ['Militant', ['Militant'], 'mini-mili'],
+    ['Institutionnel', ['Institutionnel', 'Autre'], 'mini-inst'],
+    ['Événements mairie', ['Mairie'], 'mini-mairie']
+  ];
   function rangerJour(evs, c, toutOuvert) {
     var haut = evs.filter(enAvant), reste = evs.filter(function (e) { return !enAvant(e); });
-    var autres = reste.filter(function (e) { return TYPES[typeDe(e)].g !== 'mairie'; });
-    var mai = reste.filter(function (e) { return TYPES[typeDe(e)].g === 'mairie'; });
     haut.forEach(function (e) { c.appendChild(carteEv(e)); });
-    if (autres.length) { var d1 = el('details', 'mini mini-autres'); d1.open = toutOuvert; d1.appendChild(el('summary', '', '● Autres rendez-vous · ' + autres.length)); autres.forEach(function (e) { d1.appendChild(carteEv(e)); }); c.appendChild(d1); }
-    if (mai.length) { var d2 = el('details', 'mini mini-mairie'); d2.open = toutOuvert; d2.appendChild(el('summary', '', '○ Événements mairie · ' + mai.length)); mai.forEach(function (e) { d2.appendChild(carteEv(e)); }); c.appendChild(d2); }
+    THEMES.forEach(function (th) {
+      var its = reste.filter(function (e) { return th[1].indexOf(typeDe(e)) >= 0; }); if (!its.length) return;
+      var d = el('details', 'mini ' + th[2]); d.open = toutOuvert;
+      var sm = el('summary'); var pt = el('i', 'pt'); pt.style.background = TYPES[th[1][0]].c; sm.appendChild(pt);
+      sm.appendChild(document.createTextNode(th[0] + ' · ' + its.length)); d.appendChild(sm);
+      its.forEach(function (e) { d.appendChild(carteEv(e)); }); c.appendChild(d);
+    });
+  }
+  // Agenda du maire et de la majorité : petit bloc enroulé
+  function blocMajo(majo, c) {
+    if (!majo.length) return;
+    var dj = el('details', 'mini mini-majo'); dj.appendChild(el('summary', '', '👁 Maire et majorité · ' + majo.length + ' rdv'));
+    majo.forEach(function (e) { var li = el('div', 'majo-li' + (/maire/i.test(e.qui || e.source || '') ? ' maire' : '')); li.appendChild(el('b', '', (hFmt(e.heure) || '') + (e.qui ? ' · ' + e.qui : ''))); li.appendChild(document.createTextNode(' ' + e.titre + (e.lieu ? ' → ' + e.lieu : ''))); dj.appendChild(li); });
+    c.appendChild(dj);
   }
   // Si une présence fait monter ou descendre un événement, on réaffiche (en gardant la position)
   var signature = '';
@@ -326,11 +348,7 @@
     var c = el('div', 'jour-corps');
     var majo = evs.filter(function (e) { return TYPES[typeDe(e)].g === 'majo'; });
     rangerJour(evs.filter(function (e) { return TYPES[typeDe(e)].g !== 'majo'; }), c, filtre !== 'tout');
-    if (majo.length && filtre === 'tout') {
-      var dj = el('details', 'mini mini-majo'); dj.appendChild(el('summary', '', '👁 Maire et majorité · ' + majo.length + ' rdv'));
-      majo.forEach(function (e) { var li = el('div', 'majo-li' + (/maire/i.test(e.qui || '') ? ' maire' : '')); li.appendChild(el('b', '', (hFmt(e.heure) || '') + ' · ' + (e.qui || ''))); li.appendChild(document.createTextNode(' → ' + e.titre + (e.lieu ? ' → ' + e.lieu : ''))); dj.appendChild(li); });
-      c.appendChild(dj);
-    }
+    if (filtre === 'tout') blocMajo(majo, c);
     if (!c.childNodes.length) c.appendChild(el('p', 'vide', '—'));
     j.appendChild(c);
     return j;

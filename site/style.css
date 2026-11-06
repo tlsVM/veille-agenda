@@ -136,7 +136,12 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .mini>summary::-webkit-details-marker{display:none}
 .mini>summary::after{content:" ▾"}.mini[open]>summary::after{content:" ▴"}
 .mini-cult{background:#faf4e8;border:1px dashed #d9c4a0}.mini-cult>summary{color:#7a5a20}
-.mini-autres{background:#faf7f9;border:1px dashed #dccbd4}.mini-autres>summary{color:#6b5a63}
+.mini>summary .pt{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.mini-conf{background:#f1f8f3;border:1px dashed #a9d3b6}.mini-conf>summary{color:#0b6b38}
+.mini-asso{background:#fff7ec;border:1px dashed #edc48f}.mini-asso>summary{color:#9a5a0c}
+.mini-mili{background:#fff3f3;border:1px dashed #f0a3a3}.mini-mili>summary{color:#b00000}
+.mini-inst{background:#f5f7f9;border:1px dashed #c9d2db}.mini-inst>summary{color:#56708a}
+.mini-mairie>summary .pt{box-shadow:inset 0 0 0 1px #999}
 .mini-mairie{background:#fff;border:1px dashed #cfcfcf}.mini-mairie>summary{color:#7a7a7a}
 .mini .ev{opacity:.92}
 .mini-majo{background:#f4f2fa;border:1px dashed #cfc8e6}.mini-majo>summary{color:#5b4b8a}
