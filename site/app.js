@@ -211,6 +211,30 @@
     if (a.source || a.lien) { var s = el('span', 'src'); if (a.lien) s.appendChild(lien(a.lien, a.source || 'Source')); else s.textContent = a.source; c.appendChild(s); }
     return c;
   }
+  function chercherPresse(q, res, bt) {
+    bt.disabled = true; res.textContent = ''; res.appendChild(el('p', 'nb', 'Recherche en cours… (jusqu\'à 30 secondes)'));
+    fetch('api.php?a=presse&q=' + encodeURIComponent(q), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      bt.disabled = false; res.textContent = '';
+      if (d.erreur) {
+        var m = { cle: 'La recherche n\'est pas encore activée : il manque la clé Gemini sur le serveur (étape à faire par Hugo).', plafond: 'Nombre maximal de recherches atteint pour aujourd\'hui. Réessayez demain.', quota: 'Le quota gratuit de Gemini est atteint pour aujourd\'hui. Réessayez demain.' }[d.erreur] || 'La recherche n\'a pas abouti. Réessayez dans un instant.';
+        res.appendChild(el('p', 'nb', m)); return;
+      }
+      var t = el('div', 'nb', 'Recherche du ' + new Date(d.le).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + ' · articles trouvés par Gemini, à vérifier en ouvrant les liens'); res.appendChild(t);
+      if (!d.articles.length) res.appendChild(el('p', 'vide', d.brut || 'Aucun article trouvé sur ce quartier ces 7 derniers jours.'));
+      d.articles.forEach(function (x) {
+        var c = el('div', 'item');
+        var l1 = el('div'); l1.appendChild(el('span', 'dt', courte(x.date))); l1.appendChild(el('span', 'q', x.media)); if (x.date === AUJ) l1.appendChild(el('span', 'av', 'AUJOURD\'HUI')); c.appendChild(l1);
+        var b = el('b'); if (x.lien) b.appendChild(lien(x.lien, x.titre)); else b.textContent = x.titre; c.appendChild(b);
+        if (x.resume) c.appendChild(el('p', '', x.resume));
+        res.appendChild(c);
+      });
+      if (d.sources && d.sources.length) {
+        var s = el('details', 'mini mini-sect'); s.appendChild(el('summary', '', 'Pages consultées par la recherche · ' + d.sources.length));
+        d.sources.forEach(function (x) { var p = el('div', 'src'); p.appendChild(lien(x.lien, x.titre)); s.appendChild(p); });
+        res.appendChild(s);
+      }
+    }).catch(function () { bt.disabled = false; res.textContent = ''; res.appendChild(el('p', 'nb', 'Connexion impossible pour le moment.')); });
+  }
   function carteItem(it, cat) {
     var c = el('div', 'item');
     var l1 = el('div'); l1.appendChild(el('span', 'dt', courte(it.date) + (it.heure ? ' · ' + hFmt(it.heure) : '')));
@@ -456,6 +480,15 @@
       .sort(function (x, y) { return y.date.localeCompare(x.date); });
     var act = el('section', 'bloc bloc-q'); act.appendChild(el('h2', 'grand-titre petit', 'Actualité des quartiers'));
     act.appendChild(el('p', 'sous-titre', 'presse et associations, le mois écoulé'));
+    // Recherche en ligne de la presse du jour et de la semaine sur le quartier choisi (Gemini)
+    var rz = el('div', 'rech-presse');
+    if (selQ.q) {
+      var bt = el('button', 'bt-presse', '🔎 Rechercher l\'actualité · ' + selQ.q); bt.type = 'button';
+      var res = el('div', 'res-presse');
+      bt.addEventListener('click', function () { chercherPresse(selQ.q, res, bt); });
+      rz.appendChild(bt); rz.appendChild(res);
+    } else rz.appendChild(el('p', 'nb', 'Choisissez un quartier en haut pour lancer une recherche d\'actualité en ligne (presse du jour et de la semaine).'));
+    act.appendChild(rz);
     (selQ.s ? [selQ.s] : Object.keys(SECTEURS)).forEach(function (s) {
       var its = items.filter(function (it) { return (it.secteur || secteurDuQuartier(it.quartier)) === s; }); if (!its.length) return;
       var d = el('details', 'mini mini-sect'); d.open = !!selQ.s; d.appendChild(el('summary', '', s + ' · ' + its.length));

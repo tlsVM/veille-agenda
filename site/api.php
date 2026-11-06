@@ -149,6 +149,70 @@ function enregistrerPresence($id, $nom, $statut) {
   return $p;
 }
 
+// ---------- Recherche presse par quartier (Gemini + recherche Google) ----------
+// Une seule recherche par quartier et par jour, gardée en mémoire et partagée par tous.
+// Plafond de recherches par jour pour ne jamais dépasser le quota gratuit.
+const PRESSE_MAX_PAR_JOUR = 40;
+
+function recherchePresse($quartier) {
+  global $DATA;
+  $c = config();
+  if (!$c || empty($c['gemini_key'])) { return ['erreur' => 'cle']; }
+  $jour = date('Y-m-d');
+  $slug = substr(preg_replace('/[^a-z0-9]+/', '-', strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $quartier))), 0, 50);
+  $f = "$DATA/cache/presse-$slug-$jour.json";
+  if (is_file($f) && !isset($_GET['frais'])) { $d = json_decode(file_get_contents($f), true); if ($d) { $d['memoire'] = true; return $d; } }
+  // compteur du jour
+  $cpt = "$DATA/cache/presse-compteur-$jour.txt";
+  $n = is_file($cpt) ? (int)file_get_contents($cpt) : 0;
+  if ($n >= PRESSE_MAX_PAR_JOUR) { return ['erreur' => 'plafond']; }
+  file_put_contents($cpt, (string)($n + 1), LOCK_EX);
+
+  $modele = !empty($c['gemini_modele']) ? $c['gemini_modele'] : 'gemini-2.5-flash';
+  $date = strftime_fr();
+  $consigne = "Nous sommes le $date. Cherche les articles de presse publiés aujourd'hui et ces 7 derniers jours qui concernent le quartier « $quartier » à Toulouse (France) : La Dépêche du Midi, Actu Toulouse, France 3 Occitanie, ici Occitanie (France Bleu), Le Journal toulousain, Mediacités, 20 Minutes Toulouse, Toulouse Infos, sites de la Mairie et des associations du quartier.\n"
+    . "Ne garde que ce qui parle vraiment de ce quartier de Toulouse (pas d'homonymes ailleurs). N'invente rien : si tu ne trouves rien, réponds seulement AUCUN.\n"
+    . "Réponds uniquement par des lignes, du plus récent au plus ancien, au format exact :\n"
+    . "AAAA-MM-JJ | Média | Titre de l'article | Résumé factuel en une ou deux phrases | URL de l'article\n"
+    . "Maximum 10 lignes, en français, sans autre texte.";
+  $corps = json_encode([
+    'contents' => [['parts' => [['text' => $consigne]]]],
+    'tools' => [['google_search' => new stdClass()]],
+    'generationConfig' => ['temperature' => 0.2],
+  ], JSON_UNESCAPED_UNICODE);
+  $ch = curl_init("https://generativelanguage.googleapis.com/v1beta/models/$modele:generateContent");
+  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 60,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . $c['gemini_key']], CURLOPT_POSTFIELDS => $corps]);
+  $r = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+  if ($code === 429) { return ['erreur' => 'quota']; }
+  if ($code !== 200 || !$r) { return ['erreur' => 'gemini', 'code' => $code]; }
+  $j = json_decode($r, true);
+  $texte = '';
+  foreach (($j['candidates'][0]['content']['parts'] ?? []) as $p) { $texte .= $p['text'] ?? ''; }
+  $articles = [];
+  foreach (preg_split('/\r?\n/', $texte) as $l) {
+    $l = trim($l, " \t*-•");
+    $x = array_map('trim', explode('|', $l));
+    if (count($x) >= 4 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $x[0])) {
+      $url = isset($x[4]) && preg_match('#^https?://#', $x[4]) ? $x[4] : '';
+      $articles[] = ['date' => $x[0], 'media' => $x[1], 'titre' => $x[2], 'resume' => $x[3], 'lien' => $url];
+    }
+  }
+  // sources réellement consultées par la recherche Google (liens vérifiables)
+  $sources = [];
+  foreach (($j['candidates'][0]['groundingMetadata']['groundingChunks'] ?? []) as $g) {
+    if (!empty($g['web']['uri'])) { $sources[] = ['titre' => $g['web']['title'] ?? 'source', 'lien' => $g['web']['uri']]; }
+  }
+  $d = ['quartier' => $quartier, 'le' => date('c'), 'articles' => $articles, 'sources' => array_slice($sources, 0, 12),
+        'brut' => $articles ? '' : (stripos($texte, 'AUCUN') !== false ? '' : trim($texte))];
+  file_put_contents($f, json_encode($d, JSON_UNESCAPED_UNICODE), LOCK_EX);
+  return $d;
+}
+function strftime_fr() {
+  $m = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  return date('j') . ' ' . $m[(int)date('n') - 1] . ' ' . date('Y');
+}
+
 // ---------- Aiguillage ----------
 
 $a = $_REQUEST['a'] ?? 'data';
@@ -164,6 +228,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
 }
 
 if ($a === 'pres') { sortir(['presences' => presences()]); }
+
+if ($a === 'presse') {
+  $q = trim((string)($_GET['q'] ?? ''));
+  if (!preg_match("/^[\\p{L}0-9 '’·.,\\-]{2,80}$/u", $q)) { sortir(['erreur' => 'quartier'], 400); }
+  sortir(recherchePresse($q));
+}
 
 if ($a === 'data') {
   $d = donnees();

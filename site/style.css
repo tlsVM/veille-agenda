@@ -195,6 +195,14 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .lq .ev{border:0;border-radius:8px;margin:6px 0 0}
 .mini-sect{background:#fff;border:1px dashed var(--trait)}.mini-sect>summary{color:var(--vert);font-size:13.5px}
 
+/* Recherche presse */
+.rech-presse{text-align:center;margin:4px 0 12px}
+.bt-presse{cursor:pointer;border:0;border-radius:999px;background:var(--vert);color:#fff;font-weight:600;font-size:15px;padding:10px 20px}
+.bt-presse:hover{background:var(--vert-fonce)}
+.bt-presse:disabled{opacity:.6;cursor:wait}
+.res-presse{text-align:left;margin-top:10px}
+.res-presse .item{background:#fff;border:1px solid var(--trait);border-radius:10px;padding:8px 12px;margin:6px 0}
+
 /* Choix du nom : fenêtre verte, comme le bloc « Je m'engage » */
 .modale{position:fixed;inset:0;z-index:50;background:rgba(14,50,34,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .modale-boite{background:var(--vert);color:#fff;border-radius:20px;max-width:420px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
