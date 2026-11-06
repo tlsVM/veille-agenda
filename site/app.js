@@ -489,12 +489,9 @@
     // Recherche en ligne de la presse du jour et de la semaine sur le quartier choisi (Gemini)
     var rz = el('div', 'rech-presse');
     if (selQ.q) {
-      var bt = el('button', 'bt-presse', '🔎 Rechercher l\'actualité · ' + selQ.q); bt.type = 'button';
-      var res = el('div', 'res-presse');
-      bt.addEventListener('click', function () { chercherPresse(selQ.q, res, bt); });
-      var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent('"' + selQ.q + '" Toulouse when:7d'), '📰 Google Actualités · 7 jours'); gn.className = 'bt-presse bt-news';
-      rz.appendChild(gn); rz.appendChild(bt); rz.appendChild(res);
-    } else rz.appendChild(el('p', 'nb', 'Choisissez un quartier en haut pour lancer une recherche d\'actualité en ligne (presse du jour et de la semaine).'));
+      var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent('"' + selQ.q + '" Toulouse when:7d'), '📰 Actualité de « ' + selQ.q + ' » · 7 derniers jours'); gn.className = 'bt-presse';
+      rz.appendChild(gn);
+    } else rz.appendChild(el('p', 'nb', 'Choisissez un quartier en haut pour rechercher son actualité en ligne (Google Actualités, 7 derniers jours).'));
     act.appendChild(rz);
     (selQ.s ? [selQ.s] : Object.keys(SECTEURS)).forEach(function (s) {
       var its = items.filter(function (it) { return (it.secteur || secteurDuQuartier(it.quartier)) === s; }); if (!its.length) return;

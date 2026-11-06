@@ -238,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
 
 if ($a === 'pres') { sortir(['presences' => presences()]); }
 
-if ($a === 'presse') {
+if ($a === 'presse' && !empty((config() ?? [])['presse_ia'])) { // désactivé : la recherche Google via Gemini n'est pas gratuite
   $q = trim((string)($_GET['q'] ?? ''));
   if (!preg_match("/^[\\p{L}0-9 '’·.,\\-]{2,80}$/u", $q)) { sortir(['erreur' => 'quartier'], 400); }
   sortir(recherchePresse($q));
