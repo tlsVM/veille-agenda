@@ -199,6 +199,9 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .rech-presse{text-align:center;margin:4px 0 12px}
 .bt-presse{cursor:pointer;border:0;border-radius:999px;background:var(--vert);color:#fff;font-weight:600;font-size:15px;padding:10px 20px}
 .bt-presse:hover{background:var(--vert-fonce)}
+.bt-news{display:inline-block;text-decoration:none;margin:0 6px 6px;background:#fff;color:var(--vert);box-shadow:inset 0 0 0 2px var(--vert)}
+.bt-news:hover{background:var(--rose-pale)}
+.rech-presse .bt-presse{margin:0 6px 6px}
 .bt-presse:disabled{opacity:.6;cursor:wait}
 .res-presse{text-align:left;margin-top:10px}
 .res-presse .item{background:#fff;border:1px solid var(--trait);border-radius:10px;padding:8px 12px;margin:6px 0}

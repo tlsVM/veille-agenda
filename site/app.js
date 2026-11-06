@@ -492,7 +492,8 @@
       var bt = el('button', 'bt-presse', '🔎 Rechercher l\'actualité · ' + selQ.q); bt.type = 'button';
       var res = el('div', 'res-presse');
       bt.addEventListener('click', function () { chercherPresse(selQ.q, res, bt); });
-      rz.appendChild(bt); rz.appendChild(res);
+      var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent('"' + selQ.q + '" Toulouse when:7d'), '📰 Google Actualités · 7 jours'); gn.className = 'bt-presse bt-news';
+      rz.appendChild(gn); rz.appendChild(bt); rz.appendChild(res);
     } else rz.appendChild(el('p', 'nb', 'Choisissez un quartier en haut pour lancer une recherche d\'actualité en ligne (presse du jour et de la semaine).'));
     act.appendChild(rz);
     (selQ.s ? [selQ.s] : Object.keys(SECTEURS)).forEach(function (s) {
