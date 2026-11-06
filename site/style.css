@@ -136,7 +136,9 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .mini>summary::-webkit-details-marker{display:none}
 .mini>summary::after{content:" ▾"}.mini[open]>summary::after{content:" ▴"}
 .mini-cult{background:#faf4e8;border:1px dashed #d9c4a0}.mini-cult>summary{color:#7a5a20}
-.mini-mairie{background:#f2f6fb;border:1px dashed #c9d8e8}.mini-mairie>summary{color:#2f5f8f}
+.mini-autres{background:#faf7f9;border:1px dashed #dccbd4}.mini-autres>summary{color:#6b5a63}
+.mini-mairie{background:#fff;border:1px dashed #cfcfcf}.mini-mairie>summary{color:#7a7a7a}
+.mini .ev{opacity:.92}
 .mini-majo{background:#f4f2fa;border:1px dashed #cfc8e6}.mini-majo>summary{color:#5b4b8a}
 .mini .ev{margin:5px 0}
 .majo-li{font-size:13px;padding:3px 0;border-top:1px dashed #e0dbef}
