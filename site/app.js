@@ -520,9 +520,11 @@
     act2.appendChild(el('h2', 'grand-titre', 'Actualité · ' + nom));
     act2.appendChild(el('p', 'sous-titre', selQ.q ? 'quartier ' + (selQ.s ? 'du secteur ' + selQ.s : '') : 'secteur · ' + SECTEURS[selQ.s].length + ' quartiers'));
     // recherche en ligne : le quartier, ou tous les quartiers du secteur
-    var termes = '(' + (selQ.q ? expressionsQuartier(selQ.q) : [].concat.apply([], SECTEURS[selQ.s].map(function (q) { return expressionsQuartier(q).slice(0, 2); }))).map(function (x) { return '"' + x + '"'; }).join(' OR ') + ')';
+    // Requête : quartier "Chalets" Toulouse  → les trois mots sont obligatoires (couvre « quartier des Chalets », « quartier Les Chalets »…)
+    function sansArticle(q) { return q.replace(/^(Les|Le|La) /, '').replace(/^L'/, ''); }
+    var termes = selQ.q ? 'quartier "' + sansArticle(selQ.q) + '" Toulouse' : 'quartier (' + SECTEURS[selQ.s].map(function (q) { return '"' + sansArticle(q) + '"'; }).join(' OR ') + ') Toulouse';
     var rz = el('div', 'rech-presse');
-    var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent(termes + ' "Toulouse" when:7d'), '📰 Presse en ligne · 7 derniers jours'); gn.className = 'bt-presse';
+    var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent(termes + ' when:7d'), '📰 Presse en ligne · 7 derniers jours'); gn.className = 'bt-presse';
     rz.appendChild(gn); act2.appendChild(rz);
     var presse = items.filter(function (x) { return x.categorie !== 'Association'; });
     var asso = items.filter(function (x) { return x.categorie === 'Association'; });
