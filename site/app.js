@@ -427,11 +427,9 @@
   // Si une présence fait monter ou descendre un événement, on réaffiche (en gardant la position)
   var signature = '';
   function sigPresences() { return Object.keys(D.presences).filter(function (k) { return Object.keys(D.presences[k] || {}).length; }).sort().join(','); }
-  function verifierRangement() {
-    var s = sigPresences(); if (s === signature) return; signature = s;
-    if (document.querySelector('.modale:not([hidden])') || !document.querySelector('.ev')) return;
-    var y = window.scrollY; rendre(); window.scrollTo(0, y);
-  }
+  // On ne réaffiche plus la page au moment du clic (ça refermait les semaines et faisait sauter l'écran) :
+  // l'événement coché remontera en haut de sa journée au prochain affichage (changement d'onglet, rechargement).
+  function verifierRangement() { signature = sigPresences(); }
   function blocJour(k, evs) {
     var d = dDe(k), j = el('section', 'jour' + (k === AUJ ? ' auj' : ''));
     var t = el('div', 'jour-tete'); t.appendChild(el('b', '', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
