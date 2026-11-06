@@ -268,3 +268,11 @@ a.bt-presse{display:inline-block;text-decoration:none}
 .jour-choisi{margin:10px 0 18px;padding:8px;border-radius:18px;background:#e8f0fe;border:2px solid #1a73e8}
 .bt-retour{cursor:pointer;border:0;background:#1a73e8;color:#fff;font-weight:600;font-size:12.5px;border-radius:999px;padding:4px 12px}
 .jour-choisi .jour{margin:8px 0 0}
+/* Bouton calendrier : gros et centré */
+.outils-ag{flex-direction:column;align-items:center}
+.cal-wrap{display:flex;justify-content:center;width:100%}
+.bt-cal{font-size:18px;padding:11px 28px;border-width:2.5px;background:var(--vert);color:#fff;box-shadow:0 3px 10px rgba(21,140,87,.3)}
+.bt-cal:hover{background:var(--vert-fonce)}
+.cal-pop{left:50%;transform:translateX(-50%);width:300px}
+.legende-d{flex:none;text-align:center}
+.legende-d .legende{justify-content:center}
