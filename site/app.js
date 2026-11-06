@@ -446,61 +446,83 @@
       return d;
     }
 
-    // 1. Aujourd'hui dans les quartiers, rangé par secteur puis quartier
-    var auj = el('section', 'bloc bloc-q');
-    auj.appendChild(el('h2', 'grand-titre', 'Aujourd\'hui dans les quartiers'));
-    auj.appendChild(el('p', 'sous-titre', JOURS[new Date().getDay()] + ' ' + new Date().getDate() + ' ' + MOIS[new Date().getMonth()]));
-    var duJour = rdvQ.filter(function (x) { return ce(x, AUJ); });
-    if (!duJour.length) auj.appendChild(el('p', 'vide', 'Rien de repéré aujourd\'hui dans les quartiers.'));
-    var grille = el('div', 'grille-q');
-    Object.keys(SECTEURS).concat(['']).forEach(function (s) {
-      var its = duJour.filter(function (x) { return (x.secteur || '') === s; }); if (!its.length) return;
-      var col = el('div', 'sect'); col.appendChild(el('h3', 'sect-t', s || 'Autres lieux'));
-      var parQ = {}; its.forEach(function (x) { (parQ[x.quartier] = parQ[x.quartier] || []).push(x); });
-      Object.keys(parQ).forEach(function (q) {
-        col.appendChild(el('div', 'quart-t', q));
-        parQ[q].forEach(function (x) { col.appendChild(ligneQ(x, false)); });
-      });
-      grille.appendChild(col);
-    });
-    auj.appendChild(grille); v.appendChild(auj);
-
-    // 2. À venir dans nos quartiers : les 10 prochains jours, rangés par jour
-    var av = el('section', 'bloc bloc-q');
-    av.appendChild(el('h2', 'grand-titre', 'À venir dans nos quartiers'));
-    av.appendChild(el('p', 'sous-titre', 'les 10 prochains jours'));
-    var rien = true;
-    for (var i = 1; i <= 10; i++) {
-      var k = cle(ajout(new Date(), i)), dd = dDe(k);
-      var its = rdvQ.filter(function (x) { return x.date === k; }); if (!its.length) continue;
-      rien = false;
-      av.appendChild(el('div', 'jour-q', JOURS[dd.getDay()] + ' ' + dd.getDate() + ' ' + MOIS[dd.getMonth()]));
-      its.forEach(function (x) { av.appendChild(ligneQ(x, true)); });
+    var nom = selQ.q || selQ.s;
+    function blocAvenir(titre, sousTitre, debut, nbJours) {
+      var av = el('section', 'bloc bloc-q');
+      av.appendChild(el('h2', 'grand-titre', titre));
+      av.appendChild(el('p', 'sous-titre', sousTitre));
+      var rien = true;
+      for (var i = debut; i <= nbJours; i++) {
+        var k = cle(ajout(new Date(), i)), dd = dDe(k);
+        var its = rdvQ.filter(function (x) { return i === debut ? ce(x, k) : x.date === k; }); if (!its.length) continue;
+        rien = false;
+        av.appendChild(el('div', 'jour-q', (k === AUJ ? 'Aujourd\'hui · ' : '') + JOURS[dd.getDay()] + ' ' + dd.getDate() + ' ' + MOIS[dd.getMonth()]));
+        its.forEach(function (x) { av.appendChild(ligneQ(x, true)); });
+      }
+      if (rien) av.appendChild(el('p', 'vide', 'Rien de repéré pour l\'instant.'));
+      return av;
     }
-    if (rien) av.appendChild(el('p', 'vide', 'Rien de repéré pour les 10 prochains jours.'));
-    v.appendChild(av);
-
-    // 3. Actualité des quartiers (presse et associations), par secteur, enroulée
     var depuis = cle(ajout(new Date(), -31));
     var items = D.quartiers.filter(function (it) { return it.date >= depuis && it.date <= AUJ && filtreLieu(it.quartier, it.secteur); })
       .sort(function (x, y) { return y.date.localeCompare(x.date); });
-    var act = el('section', 'bloc bloc-q'); act.appendChild(el('h2', 'grand-titre petit', 'Actualité des quartiers'));
-    act.appendChild(el('p', 'sous-titre', 'presse et associations, le mois écoulé'));
-    // Recherche en ligne de la presse du jour et de la semaine sur le quartier choisi (Gemini)
+
+    if (!nom) {
+      // ===== Vue d'ensemble : tous les secteurs, tous les quartiers =====
+      // 1. Aujourd'hui dans les quartiers, rangé par secteur puis quartier
+      var auj = el('section', 'bloc bloc-q');
+      auj.appendChild(el('h2', 'grand-titre', 'Aujourd\'hui dans les quartiers'));
+      auj.appendChild(el('p', 'sous-titre', JOURS[new Date().getDay()] + ' ' + new Date().getDate() + ' ' + MOIS[new Date().getMonth()]));
+      var duJour = rdvQ.filter(function (x) { return ce(x, AUJ); });
+      if (!duJour.length) auj.appendChild(el('p', 'vide', 'Rien de repéré aujourd\'hui dans les quartiers.'));
+      var grille = el('div', 'grille-q');
+      Object.keys(SECTEURS).concat(['']).forEach(function (s) {
+        var its = duJour.filter(function (x) { return (x.secteur || '') === s; }); if (!its.length) return;
+        var col = el('div', 'sect'); col.appendChild(el('h3', 'sect-t', s || 'Autres lieux'));
+        var parQ = {}; its.forEach(function (x) { (parQ[x.quartier] = parQ[x.quartier] || []).push(x); });
+        Object.keys(parQ).forEach(function (q) {
+          col.appendChild(el('div', 'quart-t', q));
+          parQ[q].forEach(function (x) { col.appendChild(ligneQ(x, false)); });
+        });
+        grille.appendChild(col);
+      });
+      auj.appendChild(grille); v.appendChild(auj);
+      // 2. À venir dans nos quartiers : les 10 prochains jours
+      v.appendChild(blocAvenir('À venir dans nos quartiers', 'les 10 prochains jours', 1, 10));
+      // 3. Actualité des quartiers, enroulée par secteur
+      var act = el('section', 'bloc bloc-q'); act.appendChild(el('h2', 'grand-titre petit', 'Actualité des quartiers'));
+      act.appendChild(el('p', 'sous-titre', 'presse et associations, le mois écoulé · choisissez un secteur ou un quartier pour le détail'));
+      Object.keys(SECTEURS).forEach(function (s) {
+        var its = items.filter(function (it) { return (it.secteur || secteurDuQuartier(it.quartier)) === s; }); if (!its.length) return;
+        var d = el('details', 'mini mini-sect'); d.appendChild(el('summary', '', s + ' · ' + its.length));
+        its.forEach(function (it) { d.appendChild(carteItem(it, it.categorie === 'Association' ? 'Association' : 'Presse')); });
+        act.appendChild(d);
+      });
+      if (!items.length) act.appendChild(el('p', 'vide', 'Rien de repéré ce mois-ci.'));
+      v.appendChild(act);
+      return;
+    }
+
+    // ===== Vue personnalisée : un secteur ou un quartier choisi =====
+    // 1. Actualité · nom
+    var act2 = el('section', 'bloc bloc-q');
+    act2.appendChild(el('h2', 'grand-titre', 'Actualité · ' + nom));
+    act2.appendChild(el('p', 'sous-titre', selQ.q ? 'quartier ' + (selQ.s ? 'du secteur ' + selQ.s : '') : 'secteur · ' + SECTEURS[selQ.s].length + ' quartiers'));
+    // recherche en ligne : le quartier, ou tous les quartiers du secteur
+    var termes = selQ.q ? '"' + selQ.q + '"' : '(' + SECTEURS[selQ.s].map(function (q) { return '"' + q + '"'; }).join(' OR ') + ')';
     var rz = el('div', 'rech-presse');
-    if (selQ.q) {
-      var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent('"' + selQ.q + '" Toulouse when:7d'), '📰 Actualité de « ' + selQ.q + ' » · 7 derniers jours'); gn.className = 'bt-presse';
-      rz.appendChild(gn);
-    } else rz.appendChild(el('p', 'nb', 'Choisissez un quartier en haut pour rechercher son actualité en ligne (Google Actualités, 7 derniers jours).'));
-    act.appendChild(rz);
-    (selQ.s ? [selQ.s] : Object.keys(SECTEURS)).forEach(function (s) {
-      var its = items.filter(function (it) { return (it.secteur || secteurDuQuartier(it.quartier)) === s; }); if (!its.length) return;
-      var d = el('details', 'mini mini-sect'); d.open = !!selQ.s; d.appendChild(el('summary', '', s + ' · ' + its.length));
-      its.forEach(function (it) { d.appendChild(carteItem(it, it.categorie === 'Association' ? 'Association' : 'Presse')); });
-      act.appendChild(d);
+    var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent(termes + ' Toulouse when:7d'), '📰 Presse en ligne · 7 derniers jours'); gn.className = 'bt-presse';
+    rz.appendChild(gn); act2.appendChild(rz);
+    var presse = items.filter(function (x) { return x.categorie !== 'Association'; });
+    var asso = items.filter(function (x) { return x.categorie === 'Association'; });
+    [['sb-presse', 'Dans la presse · le mois écoulé', presse, 'Presse'], ['sb-asso', 'Associations, Facebook et sites de quartier', asso, 'Association']].forEach(function (z) {
+      var sb = el('div', 'sb ' + z[0]); sb.appendChild(el('div', 'sb-titre', z[1]));
+      if (!z[2].length) sb.appendChild(el('p', 'nb', 'Rien de repéré pour l\'instant.'));
+      z[2].forEach(function (x) { sb.appendChild(carteItem(x, z[3])); });
+      act2.appendChild(sb);
     });
-    if (!items.length) act.appendChild(el('p', 'vide', 'Rien de repéré ce mois-ci.'));
-    v.appendChild(act);
+    v.appendChild(act2);
+    // 2. À venir · nom : aujourd'hui et les 30 prochains jours
+    v.appendChild(blocAvenir('À venir · ' + nom, 'aujourd\'hui et les 30 prochains jours', 0, 30));
   }
   // ---------- Vue : Archives ----------
   function vueArchives(v) {

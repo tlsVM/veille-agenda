@@ -228,3 +228,4 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
   .page{padding:16px 20px 40px}
 }
 @media print{.onglets,.moi,.pres,.filtres{display:none!important}body{background:#fff}.entete{background:#fff}.bloc,.jour{border:1px solid #ddd}}
+a.bt-presse{display:inline-block;text-decoration:none}
