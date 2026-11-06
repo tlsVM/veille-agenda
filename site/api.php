@@ -168,7 +168,8 @@ function recherchePresse($quartier) {
   if ($n >= PRESSE_MAX_PAR_JOUR) { return ['erreur' => 'plafond']; }
   file_put_contents($cpt, (string)($n + 1), LOCK_EX);
 
-  $modele = !empty($c['gemini_modele']) ? $c['gemini_modele'] : 'gemini-2.5-flash';
+  // modèle : celui du réglage s'il existe, sinon l'alias « dernier Flash », sinon 2.5 Flash
+  $modeles = array_values(array_unique(array_filter([$c['gemini_modele'] ?? '', 'gemini-flash-latest', 'gemini-2.5-flash'])));
   $date = strftime_fr();
   $consigne = "Nous sommes le $date. Cherche les articles de presse publiés aujourd'hui et ces 7 derniers jours qui concernent le quartier « $quartier » à Toulouse (France) : La Dépêche du Midi, Actu Toulouse, France 3 Occitanie, ici Occitanie (France Bleu), Le Journal toulousain, Mediacités, 20 Minutes Toulouse, Toulouse Infos, sites de la Mairie et des associations du quartier.\n"
     . "Ne garde que ce qui parle vraiment de ce quartier de Toulouse (pas d'homonymes ailleurs). N'invente rien : si tu ne trouves rien, réponds seulement AUCUN.\n"
@@ -180,12 +181,20 @@ function recherchePresse($quartier) {
     'tools' => [['google_search' => new stdClass()]],
     'generationConfig' => ['temperature' => 0.2],
   ], JSON_UNESCAPED_UNICODE);
-  $ch = curl_init("https://generativelanguage.googleapis.com/v1beta/models/$modele:generateContent");
-  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 60,
-    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . $c['gemini_key']], CURLOPT_POSTFIELDS => $corps]);
-  $r = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
-  if ($code === 429) { return ['erreur' => 'quota']; }
-  if ($code !== 200 || !$r) { return ['erreur' => 'gemini', 'code' => $code]; }
+  $r = null; $code = 0; $detail = '';
+  foreach ($modeles as $modele) {
+    $ch = curl_init("https://generativelanguage.googleapis.com/v1beta/models/$modele:generateContent");
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 60,
+      CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . $c['gemini_key']], CURLOPT_POSTFIELDS => $corps]);
+    $r = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); $cerr = curl_error($ch); curl_close($ch);
+    if ($code === 200 && $r) { break; }
+    $e = json_decode((string)$r, true);
+    $detail = "$modele : " . ($e['error']['message'] ?? ($cerr ?: 'réponse vide'));
+    @file_put_contents("$DATA/journal-presse.log", date('c') . "\t$quartier\t$code\t$detail\n", FILE_APPEND | LOCK_EX);
+    if ($code !== 404) { break; } // on n'essaie le modèle suivant que si celui-ci n'existe pas
+  }
+  if ($code === 429) { return ['erreur' => 'quota', 'detail' => $detail]; }
+  if ($code !== 200 || !$r) { return ['erreur' => 'gemini', 'code' => $code, 'detail' => $detail]; }
   $j = json_decode($r, true);
   $texte = '';
   foreach (($j['candidates'][0]['content']['parts'] ?? []) as $p) { $texte .= $p['text'] ?? ''; }
