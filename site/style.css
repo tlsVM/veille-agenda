@@ -242,3 +242,29 @@ a.bt-presse{display:inline-block;text-decoration:none}
 
 .tete-bloc+.majo-pan{border:1px dashed #cfc8e6;border-radius:11px;margin:8px 0}
 @media (max-width:420px){.jour-tete .oeil-txt{display:none}.jour-tete{padding:7px 10px}.jour-tete b{font-size:21px}.jour-tete em{font-size:10px;padding:2px 7px}.oeil{padding:1px 9px 1px 5px}}
+
+/* Outils de l'agenda : calendrier et légende repliée */
+.outils-ag{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:6px 0 2px}
+.cal-wrap{position:relative}
+.bt-cal{cursor:pointer;border:2px solid var(--vert);background:#fff;color:var(--vert);font-weight:700;font-size:13.5px;border-radius:999px;padding:5px 14px}
+.bt-cal:hover{background:var(--rose-pale)}
+.cal-pop{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:280px;background:#fff;border-radius:16px;padding:10px 12px;box-shadow:0 8px 30px rgba(18,51,38,.22);border:1px solid var(--trait)}
+.cal-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.cal-tete b{font:400 21px var(--titre);letter-spacing:.04em;text-transform:uppercase;color:var(--vert)}
+.cal-nav{cursor:pointer;border:0;background:var(--rose-pale);color:var(--vert);border-radius:999px;width:30px;height:30px;font-size:12px}
+.cal-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-j{font-size:11px;font-weight:600;color:var(--gris);padding:2px 0}
+.cal-d{position:relative;cursor:pointer;border:0;background:none;border-radius:50%;width:34px;height:34px;margin:auto;font-size:13.5px;font-weight:500;color:var(--encre)}
+.cal-d:hover{background:var(--rose-pale)}
+.cal-d.hors{color:#bbb}
+.cal-d.a::after{content:"";position:absolute;left:50%;bottom:4px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--vert)}
+.cal-d.auj{box-shadow:inset 0 0 0 2px var(--rose-fort);font-weight:700}
+.cal-d.choisi{background:#1a73e8;color:#fff;font-weight:700}
+.cal-d.choisi::after{background:#fff}
+.legende-d{flex:1 1 200px}
+.legende-d>summary{cursor:pointer;list-style:none;display:inline-block;font-size:13px;font-weight:600;color:var(--gris);border:1.5px dashed var(--trait);border-radius:999px;padding:5px 14px}
+.legende-d>summary::-webkit-details-marker{display:none}
+.legende-d[open]>summary{color:var(--vert)}
+.jour-choisi{margin:10px 0 18px;padding:8px;border-radius:18px;background:#e8f0fe;border:2px solid #1a73e8}
+.bt-retour{cursor:pointer;border:0;background:#1a73e8;color:#fff;font-weight:600;font-size:12.5px;border-radius:999px;padding:4px 12px}
+.jour-choisi .jour{margin:8px 0 0}

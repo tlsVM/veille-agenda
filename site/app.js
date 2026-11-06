@@ -52,6 +52,8 @@
   var D = { evenements: [], actus: [], quartiers: [], presences: {}, elus: [] };
   var vue = store('vm-vue') || 'jour';
   var filtre = 'tout';
+  var jourChoisi = '';
+  var moisCal = '';
   var moi = store('vm-moi') || '';
   var selQ = { s: store('vm-sec') || '', q: store('vm-q') || '' };
   var moisArch = '';
@@ -296,6 +298,34 @@
   function enCours(e, k) { return e.date === k || (e.date_fin && e.date < k && e.date_fin >= k); }
 
   // ---------- Vue : Agenda ----------
+  // Petit calendrier mensuel : un point sous les jours qui ont des rendez-vous
+  function dessinerCal(pop, mois) {
+    var base = mois ? dDe(mois + '-01') : new Date(); base = new Date(base.getFullYear(), base.getMonth(), 1);
+    moisCal = cle(base).slice(0, 7);
+    pop.textContent = '';
+    var tete = el('div', 'cal-tete');
+    var prec = el('button', 'cal-nav', '◀'); prec.type = 'button'; prec.setAttribute('aria-label', 'Mois précédent');
+    var suiv = el('button', 'cal-nav', '▶'); suiv.type = 'button'; suiv.setAttribute('aria-label', 'Mois suivant');
+    prec.addEventListener('click', function (e) { e.stopPropagation(); dessinerCal(pop, cle(new Date(base.getFullYear(), base.getMonth() - 1, 1)).slice(0, 7)); });
+    suiv.addEventListener('click', function (e) { e.stopPropagation(); dessinerCal(pop, cle(new Date(base.getFullYear(), base.getMonth() + 1, 1)).slice(0, 7)); });
+    tete.appendChild(prec); tete.appendChild(el('b', '', MOIS[base.getMonth()] + ' ' + base.getFullYear())); tete.appendChild(suiv);
+    pop.appendChild(tete);
+    var g = el('div', 'cal-grille');
+    ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'].forEach(function (x) { g.appendChild(el('span', 'cal-j', x)); });
+    var d = lundi(base);
+    for (var i = 0; i < 42; i++) {
+      var k = cle(d), dans = d.getMonth() === base.getMonth();
+      if (!dans && i >= 35) break;
+      var nb = D.evenements.filter(function (e) { return enCours(e, k) && TYPES[typeDe(e)].g !== 'majo'; }).length;
+      var b = el('button', 'cal-d' + (dans ? '' : ' hors') + (k === AUJ ? ' auj' : '') + (k === jourChoisi ? ' choisi' : '') + (nb ? ' a' : ''), String(d.getDate())); b.type = 'button';
+      if (nb) b.title = nb + ' rendez-vous';
+      (function (k) { b.addEventListener('click', function (e) { e.stopPropagation(); jourChoisi = k; rendre(); window.scrollTo(0, 0); }); })(k);
+      g.appendChild(b); d = ajout(d, 1);
+    }
+    pop.appendChild(g);
+  }
+  document.addEventListener('click', function (e) { var p = document.querySelector('.cal-pop'); if (p && !p.hidden && !p.contains(e.target)) p.hidden = true; });
+
   function vueAgenda(v) {
     var f = el('div', 'filtres');
     FILTRES.forEach(function (x) {
@@ -303,11 +333,28 @@
       b.addEventListener('click', function () { filtre = x[0]; rendre(); }); f.appendChild(b);
     });
     v.appendChild(f);
-    var lg = el('div', 'legende');
+    // Barre d'outils : calendrier + légende repliée
+    var outils = el('div', 'outils-ag');
+    var bcal = el('button', 'bt-cal', '📅 Choisir un jour'); bcal.type = 'button';
+    var pop = el('div', 'cal-pop'); pop.hidden = true;
+    bcal.addEventListener('click', function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) dessinerCal(pop, moisCal); });
+    var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(pop); outils.appendChild(wrap);
+    var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', '🎨 Légende des couleurs'));
+    var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
-      var s = el('span'); var i = el('i'); i.style.background = x[0]; if (x[0] === '#fff') i.style.boxShadow = 'inset 0 0 0 1px #999'; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s);
+      var s = el('span'); var i = el('i'); i.style.background = x[0]; if (x[0] === '#fff') i.style.boxShadow = 'inset 0 0 0 1px #999'; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lgc.appendChild(s);
     });
-    v.appendChild(lg);
+    lg.appendChild(lgc); outils.appendChild(lg);
+    v.appendChild(outils);
+
+    // Un jour choisi dans le calendrier : on l'affiche en premier
+    if (jourChoisi) {
+      var evsJ = D.evenements.filter(function (e) { return enCours(e, jourChoisi) && (filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo'); });
+      var zc = el('div', 'jour-choisi');
+      var ret = el('button', 'bt-retour', '✕ Fermer ce jour'); ret.type = 'button';
+      ret.addEventListener('click', function () { jourChoisi = ''; rendre(); });
+      zc.appendChild(ret); zc.appendChild(blocJour(jourChoisi, evsJ)); v.appendChild(zc);
+    }
 
     var debut = lundi(new Date()), fin = ajout(new Date(), 31), finSem1 = ajout(debut, 6);
     var parJour = {};
