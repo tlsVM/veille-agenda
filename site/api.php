@@ -38,7 +38,7 @@ function config() {
   global $DATA;
   $f = "$DATA/config.php";
   if (!is_file($f)) { return null; }
-  $c = include $f;
+  try { $c = include $f; } catch (Throwable $e) { return null; } // fichier de réglages mal écrit
   return is_array($c) ? $c : null;
 }
 
