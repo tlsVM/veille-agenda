@@ -36,7 +36,7 @@
     'Réunion officielle': FLAMANT, 'Concertation': FLAMANT, 'Réunion publique': FLAMANT,
     'Association de quartier': { c: '#e08a1e', f: '#fff7ec', g: 'quartier' },
     'Vie associative': { c: '#e08a1e', f: '#fff7ec', g: 'quartier' },
-    'Militant': { c: '#d32f2f', f: '#fdf6f6', g: 'militant' },
+    'Militant': { c: '#e00000', f: '#fff1f1', g: 'militant' },
     'Institutionnel': { c: '#56708a', f: '#fff', g: 'autre' },
     'Autre': { c: '#56708a', f: '#fff', g: 'autre' },
     'Culture': { c: '#a9874f', f: '#fffaf1', g: 'culture' },
@@ -259,7 +259,7 @@
     });
     v.appendChild(f);
     var lg = el('div', 'legende');
-    [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#d32f2f', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
+    [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
       var s = el('span'); var i = el('i'); i.style.background = x[0]; if (x[0] === '#fff') i.style.boxShadow = 'inset 0 0 0 1px #999'; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s);
     });
     v.appendChild(lg);
