@@ -1,0 +1,13 @@
+{
+  "name": "Veille et agenda · Vivre Mieux",
+  "short_name": "Vivre Mieux",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#178c56",
+  "lang": "fr",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

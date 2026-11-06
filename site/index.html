@@ -1,5 +1,50 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Veille et agenda · Vivre Mieux</title>
-<style>body{margin:0;font-family:Poppins,Arial,sans-serif;background:#fff;color:#16241c;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:16px}h1{color:#178c56;font-size:24px}p{color:#c81d6b}</style></head>
-<body><div><h1>Veille et agenda · Vivre Mieux</h1><p>Plateforme en construction</p><p style="color:#178c56">Test de mise à jour automatique réussi ✓</p></div></body></html>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#178c56">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vivre Mieux">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<header class="entete">
+  <img class="logo" src="logo.png" alt="Vivre Mieux Toulouse" width="600" height="191">
+  <h1>Veille et agenda</h1>
+  <div class="moi">
+    <label for="moi">Je coche pour</label>
+    <select id="moi"></select>
+  </div>
+</header>
+
+<nav class="onglets" aria-label="Rubriques">
+  <button type="button" data-v="jour" class="on">Aujourd'hui</button>
+  <button type="button" data-v="agenda">Agenda</button>
+  <button type="button" data-v="quartiers">Quartiers</button>
+  <button type="button" data-v="archives">Archives</button>
+  <button type="button" data-v="recherche" aria-label="Rechercher">🔍</button>
+</nav>
+
+<main id="vue" class="page" aria-live="polite">
+  <p class="chargement">Chargement…</p>
+</main>
+
+<div id="choix-nom" class="modale" hidden>
+  <div class="modale-boite" role="dialog" aria-labelledby="choix-titre">
+    <h2 id="choix-titre">Qui êtes-vous ?</h2>
+    <p>Choisissez votre nom une fois : votre téléphone s'en souviendra. Vous pourrez le changer en haut de la page.</p>
+    <div id="choix-liste" class="choix-liste"></div>
+  </div>
+</div>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>
