@@ -268,7 +268,7 @@
     var parJour = {};
     D.evenements.forEach(function (e) {
       var g = TYPES[typeDe(e)].g;
-      if (filtre !== 'tout' && g !== filtre && g !== 'groupe') return;
+      if (filtre !== 'tout' && g !== filtre) return;
       var k = e.date; if (k < cle(debut) || k > cle(fin)) { if (!(e.date_fin && e.date < cle(debut) && e.date_fin >= cle(debut))) return; k = cle(debut); }
       (parJour[k] = parJour[k] || []).push(e);
     });
