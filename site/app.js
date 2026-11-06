@@ -381,34 +381,90 @@
     sq.addEventListener('change', function () { selQ.q = sq.value; if (selQ.q && !selQ.s) selQ.s = secteurDuQuartier(selQ.q); store('vm-q', selQ.q); store('vm-sec', selQ.s); rendre(); });
     sel.appendChild(ls); sel.appendChild(lq); v.appendChild(sel);
 
-    var depuis = cle(ajout(new Date(), -31)), jusqua = cle(ajout(new Date(), 31));
-    var items = D.quartiers.filter(function (it) {
-      if (it.date < depuis || it.date > jusqua) return false;
-      if (selQ.q) return correspond(it.quartier, selQ.q);
-      if (selQ.s) return it.secteur === selQ.s || secteurDuQuartier(it.quartier) === selQ.s;
+    // Tout ce qui se passe dans les quartiers : événements de l'agenda avec un quartier
+    // (sauf majorité et réceptions au Capitole) + rendez-vous annoncés par les associations
+    function filtreLieu(q, sec) {
+      if (selQ.q) return correspond(q, selQ.q) || norm(q).indexOf(norm(selQ.q)) > -1;
+      if (selQ.s) return (sec || secteurDuQuartier(q)) === selQ.s;
       return true;
-    }).sort(function (a, b) { return b.date.localeCompare(a.date); });
-    var rdv = D.evenements.filter(function (e) {
-      var g = TYPES[typeDe(e)].g; if (g === 'majo' || !e.quartier || e.date < AUJ || e.date > jusqua) return false;
-      if (selQ.q) return correspond(e.quartier, selQ.q) || norm(e.quartier).indexOf(norm(selQ.q)) > -1;
-      if (selQ.s) return secteurDuQuartier(e.quartier) === selQ.s;
-      return g === 'quartier';
+    }
+    var rdvQ = [];
+    D.evenements.forEach(function (e) {
+      var g = TYPES[typeDe(e)].g;
+      if (g === 'majo' || !e.quartier || (g === 'proto' && /capitole/i.test(e.quartier))) return;
+      if (!filtreLieu(e.quartier)) return;
+      rdvQ.push({ date: e.date, fin: e.date_fin, heure: e.heure, titre: e.titre, quartier: e.quartier, secteur: secteurDuQuartier(e.quartier), lieu: e.lieu, lien: e.lien, coul: TYPES[typeDe(e)].c, type: e.type, ev: e });
     });
-    var secs = selQ.s ? [selQ.s] : Object.keys(SECTEURS);
-    secs.forEach(function (s) {
-      var b = el('section', 'bloc'); b.appendChild(el('h2', 'h2 orange', s));
-      var its = items.filter(function (it) { return (it.secteur || secteurDuQuartier(it.quartier)) === s; });
-      var rv = rdv.filter(function (e) { return secteurDuQuartier(e.quartier) === s; });
-      [['sb-agenda', 'Rendez-vous à venir dans l\'agenda', rv, 'ev'], ['sb-presse', 'Actualité dans la presse', its.filter(function (x) { return x.categorie !== 'Association'; }), 'Presse'], ['sb-asso', 'Associations, Facebook et sites de quartier', its.filter(function (x) { return x.categorie === 'Association'; }), 'Association']].forEach(function (z) {
-        var sb = el('div', 'sb ' + z[0]); sb.appendChild(el('div', 'sb-titre', z[1]));
-        if (!z[2].length) sb.appendChild(el('p', 'nb', 'Rien de repéré pour l\'instant.'));
-        z[2].forEach(function (x) { sb.appendChild(z[3] === 'ev' ? carteEv(x, true) : carteItem(x, z[3])); });
-        b.appendChild(sb);
-      });
-      v.appendChild(b);
+    D.quartiers.forEach(function (it) {
+      if (it.categorie !== 'Association' || !filtreLieu(it.quartier, it.secteur)) return;
+      rdvQ.push({ date: it.date, heure: it.heure, titre: it.titre, quartier: it.quartier, secteur: it.secteur || secteurDuQuartier(it.quartier), lieu: '', lien: it.lien, coul: '#e08a1e', type: 'Association', texte: it.texte, source: it.source });
     });
-  }
+    rdvQ.sort(function (x, y) { return (x.date + (x.heure || '99')).localeCompare(y.date + (y.heure || '99')); });
+    function ce(x, k) { return x.date === k || (x.fin && x.date < k && x.fin >= k); }
 
+    // Une ligne compacte ; on la déroule pour voir le détail et cocher sa présence
+    function ligneQ(x, avecQuartier) {
+      var d = el('details', 'lq'); d.style.setProperty('--c', x.coul);
+      var sm = el('summary');
+      sm.appendChild(el('span', 'lq-h', x.heure ? hFmt(x.heure) : '—'));
+      var t = el('span', 'lq-t', x.titre); sm.appendChild(t);
+      if (avecQuartier && x.quartier) sm.appendChild(el('span', 'lq-q', x.quartier));
+      if (x.ev && aPresence(x.ev)) sm.appendChild(el('span', 'lq-p', '✓ ' + Object.keys(D.presences[x.ev.id]).length));
+      d.appendChild(sm);
+      if (x.ev) d.appendChild(carteEv(x.ev));
+      else { var c = el('div', 'item'); if (x.texte) c.appendChild(el('p', '', x.texte)); if (x.lien) { var s = el('span', 'src'); s.appendChild(lien(x.lien, x.source || 'Voir l\'annonce')); c.appendChild(s); } d.appendChild(c); }
+      return d;
+    }
+
+    // 1. Aujourd'hui dans les quartiers, rangé par secteur puis quartier
+    var auj = el('section', 'bloc bloc-q');
+    auj.appendChild(el('h2', 'grand-titre', 'Aujourd\'hui dans les quartiers'));
+    auj.appendChild(el('p', 'sous-titre', JOURS[new Date().getDay()] + ' ' + new Date().getDate() + ' ' + MOIS[new Date().getMonth()]));
+    var duJour = rdvQ.filter(function (x) { return ce(x, AUJ); });
+    if (!duJour.length) auj.appendChild(el('p', 'vide', 'Rien de repéré aujourd\'hui dans les quartiers.'));
+    var grille = el('div', 'grille-q');
+    Object.keys(SECTEURS).concat(['']).forEach(function (s) {
+      var its = duJour.filter(function (x) { return (x.secteur || '') === s; }); if (!its.length) return;
+      var col = el('div', 'sect'); col.appendChild(el('h3', 'sect-t', s || 'Autres lieux'));
+      var parQ = {}; its.forEach(function (x) { (parQ[x.quartier] = parQ[x.quartier] || []).push(x); });
+      Object.keys(parQ).forEach(function (q) {
+        col.appendChild(el('div', 'quart-t', q));
+        parQ[q].forEach(function (x) { col.appendChild(ligneQ(x, false)); });
+      });
+      grille.appendChild(col);
+    });
+    auj.appendChild(grille); v.appendChild(auj);
+
+    // 2. À venir dans nos quartiers : les 10 prochains jours, rangés par jour
+    var av = el('section', 'bloc bloc-q');
+    av.appendChild(el('h2', 'grand-titre', 'À venir dans nos quartiers'));
+    av.appendChild(el('p', 'sous-titre', 'les 10 prochains jours'));
+    var rien = true;
+    for (var i = 1; i <= 10; i++) {
+      var k = cle(ajout(new Date(), i)), dd = dDe(k);
+      var its = rdvQ.filter(function (x) { return x.date === k; }); if (!its.length) continue;
+      rien = false;
+      av.appendChild(el('div', 'jour-q', JOURS[dd.getDay()] + ' ' + dd.getDate() + ' ' + MOIS[dd.getMonth()]));
+      its.forEach(function (x) { av.appendChild(ligneQ(x, true)); });
+    }
+    if (rien) av.appendChild(el('p', 'vide', 'Rien de repéré pour les 10 prochains jours.'));
+    v.appendChild(av);
+
+    // 3. Actualité des quartiers (presse et associations), par secteur, enroulée
+    var depuis = cle(ajout(new Date(), -31));
+    var items = D.quartiers.filter(function (it) { return it.date >= depuis && it.date <= AUJ && filtreLieu(it.quartier, it.secteur); })
+      .sort(function (x, y) { return y.date.localeCompare(x.date); });
+    var act = el('section', 'bloc bloc-q'); act.appendChild(el('h2', 'grand-titre petit', 'Actualité des quartiers'));
+    act.appendChild(el('p', 'sous-titre', 'presse et associations, le mois écoulé'));
+    (selQ.s ? [selQ.s] : Object.keys(SECTEURS)).forEach(function (s) {
+      var its = items.filter(function (it) { return (it.secteur || secteurDuQuartier(it.quartier)) === s; }); if (!its.length) return;
+      var d = el('details', 'mini mini-sect'); d.open = !!selQ.s; d.appendChild(el('summary', '', s + ' · ' + its.length));
+      its.forEach(function (it) { d.appendChild(carteItem(it, it.categorie === 'Association' ? 'Association' : 'Presse')); });
+      act.appendChild(d);
+    });
+    if (!items.length) act.appendChild(el('p', 'vide', 'Rien de repéré ce mois-ci.'));
+    v.appendChild(act);
+  }
   // ---------- Vue : Archives ----------
   function vueArchives(v) {
     var mois = {};

@@ -173,6 +173,28 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .item p{margin:2px 0 0;font-size:13px}
 .nb{font-size:12.5px;color:var(--gris);margin:4px 2px}
 
+/* Page Quartiers */
+.grand-titre{margin:2px 0 0;text-align:center;font:400 clamp(30px,7vw,46px)/1 var(--titre);letter-spacing:.03em;text-transform:uppercase;color:var(--vert);-webkit-mask-image:var(--grain-leger);mask-image:var(--grain-leger);-webkit-mask-size:160px;mask-size:160px}
+.grand-titre.petit{font-size:clamp(24px,5vw,32px)}
+.sous-titre{text-align:center;margin:2px 0 12px;font-size:13px;font-weight:500;color:var(--gris)}
+.grille-q{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.sect{background:var(--rose-pale);border-radius:14px;padding:8px 10px}
+.sect-t{margin:0 0 4px;font:400 22px var(--titre);letter-spacing:.04em;text-transform:uppercase;color:var(--vert)}
+.quart-t{display:inline-block;margin:6px 0 2px;font-size:12px;font-weight:600;color:var(--vert-fonce);background:var(--rose);border-radius:999px;padding:0 10px}
+.jour-q{margin:14px 0 4px;padding:3px 14px;border-radius:999px;background:var(--vert);color:var(--rose);font:400 20px var(--titre);letter-spacing:.04em;text-transform:uppercase}
+.jour-q:first-of-type{margin-top:4px}
+.lq{background:#fff;border:1px solid #eee3e8;border-left:4px solid var(--c);border-radius:10px;margin:4px 0}
+.lq>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:6px 10px}
+.lq>summary::-webkit-details-marker{display:none}
+.lq-h{font:400 17px var(--titre);letter-spacing:.03em;color:var(--c);min-width:42px}
+.lq-t{flex:1 1 160px;font-weight:600;font-size:14px;line-height:1.3}
+.lq-q{font-size:11.5px;font-weight:600;color:var(--vert-fonce);background:var(--rose);border-radius:999px;padding:0 9px}
+.lq-p{font-size:11.5px;font-weight:700;color:#fff;background:var(--vert);border-radius:999px;padding:0 8px}
+.lq[open]{padding:0 6px 6px}
+.lq[open]>summary{border-bottom:1px dashed #eee3e8}
+.lq .ev{border:0;border-radius:8px;margin:6px 0 0}
+.mini-sect{background:#fff;border:1px dashed var(--trait)}.mini-sect>summary{color:var(--vert);font-size:13.5px}
+
 /* Choix du nom : fenêtre verte, comme le bloc « Je m'engage » */
 .modale{position:fixed;inset:0;z-index:50;background:rgba(14,50,34,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .modale-boite{background:var(--vert);color:#fff;border-radius:20px;max-width:420px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
