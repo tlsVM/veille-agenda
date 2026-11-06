@@ -524,7 +524,7 @@
     function sansArticle(q) { return q.replace(/^(Les|Le|La) /, '').replace(/^L'/, ''); }
     var termes = selQ.q ? 'quartier "' + sansArticle(selQ.q) + '" Toulouse' : 'quartier (' + SECTEURS[selQ.s].map(function (q) { return '"' + sansArticle(q) + '"'; }).join(' OR ') + ') Toulouse';
     var rz = el('div', 'rech-presse');
-    var gn = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent(termes + ' when:7d'), '📰 Presse en ligne · 7 derniers jours'); gn.className = 'bt-presse';
+    var gn = lien('https://www.google.com/search?tbm=nws&tbs=qdr:w&hl=fr&gl=fr&q=' + encodeURIComponent(termes), '📰 Presse en ligne · 7 derniers jours'); gn.className = 'bt-presse';
     rz.appendChild(gn); act2.appendChild(rz);
     var presse = items.filter(function (x) { return x.categorie !== 'Association'; });
     var asso = items.filter(function (x) { return x.categorie === 'Association'; });
