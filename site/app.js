@@ -211,13 +211,19 @@
     if (a.source || a.lien) { var s = el('span', 'src'); if (a.lien) s.appendChild(lien(a.lien, a.source || 'Source')); else s.textContent = a.source; c.appendChild(s); }
     return c;
   }
+  // Solution de secours sans IA : Google Actualités, 7 derniers jours
+  function lienNews(q) {
+    var p = el('p', 'nb'); var a = lien('https://news.google.com/search?hl=fr&gl=FR&ceid=FR:fr&q=' + encodeURIComponent('"' + q + '" Toulouse when:7d'), '→ Ouvrir Google Actualités sur « ' + q + ' » (7 derniers jours)');
+    p.appendChild(a); return p;
+  }
   function chercherPresse(q, res, bt) {
     bt.disabled = true; res.textContent = ''; res.appendChild(el('p', 'nb', 'Recherche en cours… (jusqu\'à 30 secondes)'));
     fetch('api.php?a=presse&q=' + encodeURIComponent(q), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       bt.disabled = false; res.textContent = '';
       if (d.erreur) {
         var m = { cle: 'La recherche n\'est pas encore activée : il manque la clé Gemini sur le serveur (étape à faire par Hugo).', plafond: 'Nombre maximal de recherches atteint pour aujourd\'hui. Réessayez demain.', quota: 'Le quota gratuit de Gemini est atteint pour aujourd\'hui. Réessayez demain.' }[d.erreur] || 'La recherche n\'a pas abouti. Réessayez dans un instant.';
-        res.appendChild(el('p', 'nb', m)); if (d.detail || d.code) res.appendChild(el('p', 'nb', 'Détail technique : ' + (d.code ? 'code ' + d.code + ' · ' : '') + (d.detail || ''))); return;
+        res.appendChild(el('p', 'nb', m)); if (d.detail || d.code) res.appendChild(el('p', 'nb', 'Détail technique : ' + (d.code ? 'code ' + d.code + ' · ' : '') + (d.detail || '')));
+        res.appendChild(lienNews(q)); return;
       }
       var t = el('div', 'nb', 'Recherche du ' + new Date(d.le).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + ' · articles trouvés par Gemini, à vérifier en ouvrant les liens'); res.appendChild(t);
       if (!d.articles.length) res.appendChild(el('p', 'vide', d.brut || 'Aucun article trouvé sur ce quartier ces 7 derniers jours.'));
