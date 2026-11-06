@@ -372,7 +372,7 @@
     if (!majo.length) return;
     var pan = el('div', 'majo-pan'); pan.hidden = true;
     majo.forEach(function (e) { var li = el('div', 'majo-li' + (/maire/i.test(e.qui || e.source || '') ? ' maire' : '')); li.appendChild(el('b', '', (hFmt(e.heure) || '') + (e.qui ? ' · ' + e.qui : ''))); li.appendChild(document.createTextNode(' ' + e.titre + (e.lieu ? ' → ' + e.lieu : ''))); pan.appendChild(li); });
-    var b = el('button', 'oeil', '👁 '); b.appendChild(el('span', 'oeil-txt', 'Majorité · ')); b.appendChild(document.createTextNode(majo.length)); b.type = 'button'; b.title = 'Agenda du maire et de la majorité'; b.setAttribute('aria-expanded', 'false');
+    var b = el('button', 'oeil'); b.appendChild(el('span', 'oeil-i', '👀')); b.appendChild(el('span', 'oeil-txt', 'Majorité · ')); b.appendChild(document.createTextNode(majo.length)); b.type = 'button'; b.title = 'Agenda du maire et de la majorité'; b.setAttribute('aria-expanded', 'false');
     b.addEventListener('click', function () { pan.hidden = !pan.hidden; b.classList.toggle('on', !pan.hidden); b.setAttribute('aria-expanded', String(!pan.hidden)); });
     var em = barre.querySelector('em'); if (em) barre.insertBefore(b, em); else barre.appendChild(b);
     apres.parentNode.insertBefore(pan, apres.nextSibling);
