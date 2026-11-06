@@ -276,3 +276,15 @@ a.bt-presse{display:inline-block;text-decoration:none}
 .cal-pop{left:50%;transform:translateX(-50%);width:300px}
 .legende-d{flex:none;text-align:center}
 .legende-d .legende{justify-content:center}
+/* Téléphone : bandeau compact et sobre (logo + nom sur une ligne) */
+@media (max-width:759px){
+  .entete{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:calc(6px + env(safe-area-inset-top,0px)) 12px 9px}
+  .entete::after{height:3px}
+  .logo{margin:0;width:96px;flex:none}
+  .entete h1{display:none}
+  .moi{margin:0;padding:2px 3px 2px 10px;font-size:11px;box-shadow:0 0 0 1.5px var(--vert)}
+  .moi label{display:none}
+  .moi select{font-size:12.5px;padding:4px 8px;max-width:52vw}
+  .onglets{padding:7px 10px}
+  .onglets button{font-size:13px;padding:4px 12px}
+}
