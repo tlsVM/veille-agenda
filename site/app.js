@@ -23,21 +23,26 @@
   var AUJ = cle(new Date());
 
   // Types d'événements : couleur et rangement
+  // Couleurs reprises de l'agenda Gmail « Agenda élu.e.s mairie Vivre Mieux »
+  // c = couleur, f = fond de la carte, h = heure (si la couleur est claire), k = texte de l'étiquette
+  var GLYCINE = { c: '#b39ddb', f: '#f6f2fc', h: '#6a4fa3', k: '#2e1f55', g: 'groupe' };
+  var FLAMANT = { c: '#e67c73', f: '#fdf3f2', h: '#c2554b', g: 'quartier' };
+  var MYRTILLE = { c: '#3f51b5', f: '#f1f3fb', g: 'proto' };
+  var PAON = { c: '#039be5', f: '#eef8fd', h: '#0277bd', g: 'proto' };
   var TYPES = {
-    'Protocole': { c: '#4a86c5', f: '#f3f8fd', g: 'proto' },
-    'Cérémonie': { c: '#4a86c5', f: '#f3f8fd', g: 'proto' },
-    'Commission': { c: '#2f5f8f', f: '#f1f5fa', g: 'proto' },
-    'Conseil municipal': { c: '#2f5f8f', f: '#f1f5fa', g: 'proto' },
-    'Réunion officielle': { c: '#158c57', f: '#eef8f2', g: 'quartier' },
-    'Concertation': { c: '#158c57', f: '#eef8f2', g: 'quartier' },
+    'Réunion de groupe': GLYCINE,
+    'Protocole': MYRTILLE, 'Cérémonie': MYRTILLE, 'Inauguration': MYRTILLE,
+    'Commission': PAON, 'Conseil municipal': PAON,
+    'Réunion officielle': FLAMANT, 'Concertation': FLAMANT, 'Réunion publique': FLAMANT,
     'Association de quartier': { c: '#e08a1e', f: '#fff7ec', g: 'quartier' },
     'Vie associative': { c: '#e08a1e', f: '#fff7ec', g: 'quartier' },
     'Militant': { c: '#d32f2f', f: '#fdf6f6', g: 'militant' },
     'Institutionnel': { c: '#56708a', f: '#fff', g: 'autre' },
     'Autre': { c: '#56708a', f: '#fff', g: 'autre' },
     'Culture': { c: '#a9874f', f: '#fffaf1', g: 'culture' },
-    'Conférence': { c: '#3a9b63', f: '#f1faf4', g: 'culture' },
-    'Mairie': { c: '#6f8fb3', f: '#f6f9fc', g: 'mairie' },
+    'Conférence': { c: '#0b8043', f: '#eef7f1', g: 'culture' },
+    'Café-débat': { c: '#0b8043', f: '#eef7f1', g: 'culture' },
+    'Mairie': { c: '#c9c9c9', f: '#fff', h: '#616161', k: '#333', g: 'mairie' },
     'Majorité': { c: '#5b4b8a', f: '#f8f6fc', g: 'majo' }
   };
   function typeDe(e) { return TYPES[e.type] ? e.type : 'Autre'; }
@@ -57,9 +62,20 @@
     return fetch('api.php?a=data' + (frais ? '&frais=1' : ''), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.erreur && !d.evenements) { afficherErreur(d.erreur); return; }
       D = d; D.evenements = d.evenements || []; D.actus = d.actus || []; D.quartiers = d.quartiers || []; D.presences = d.presences || {};
+      ajouterReunionsGroupe();
       D.evenements.sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
       remplirMoi(); rendre();
     }).catch(function () { afficherErreur('reseau'); });
+  }
+  // Réunion de groupe : tous les lundis à 12h30, ajoutée automatiquement.
+  // Une ligne « Réunion de groupe » dans la feuille à la même date la remplace (autre heure, lieu, « Annulée »…).
+  function ajouterReunionsGroupe() {
+    var deja = {};
+    D.evenements.forEach(function (e) { if (e.type === 'Réunion de groupe') deja[e.date] = 1; });
+    for (var d = dDe('2026-10-05'), fin = ajout(new Date(), 70); d <= fin; d = ajout(d, 7)) {
+      var k = cle(d); if (deja[k]) continue;
+      D.evenements.push({ id: 'rg' + k.replace(/-/g, ''), date: k, heure: '12:30', type: 'Réunion de groupe', titre: 'Réunion de groupe Vivre Mieux', lieu: '', details: '' });
+    }
   }
   function rafraichirPresences() {
     fetch('api.php?a=pres', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
@@ -172,7 +188,7 @@
   // ---------- Cartes ----------
   function carteEv(e, avecDate) {
     var t = TYPES[typeDe(e)], c = el('div', 'ev' + (e.important === 'oui' ? ' cle' : ''));
-    c.style.setProperty('--c', t.c); c.style.setProperty('--f', t.f);
+    c.style.setProperty('--c', t.c); c.style.setProperty('--f', t.f); if (t.h) c.style.setProperty('--h', t.h); if (t.k) c.style.setProperty('--k', t.k);
     var h = el('div', 'haut');
     if (avecDate) h.appendChild(el('span', 'h', courte(e.date)));
     if (e.heure) h.appendChild(el('span', 'h', hFmt(e.heure)));
@@ -243,8 +259,8 @@
     });
     v.appendChild(f);
     var lg = el('div', 'legende');
-    [['#4a86c5', 'Protocole'], ['#158c57', 'Réunion officielle'], ['#e08a1e', 'Association'], ['#d32f2f', 'Militant'], ['#a9874f', 'Culture'], ['#3a9b63', 'Conférence'], ['#6f8fb3', 'Mairie']].forEach(function (x) {
-      var s = el('span'); var i = el('i'); i.style.background = x[0]; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s);
+    [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#d32f2f', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
+      var s = el('span'); var i = el('i'); i.style.background = x[0]; if (x[0] === '#fff') i.style.boxShadow = 'inset 0 0 0 1px #999'; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lg.appendChild(s);
     });
     v.appendChild(lg);
 
@@ -252,7 +268,7 @@
     var parJour = {};
     D.evenements.forEach(function (e) {
       var g = TYPES[typeDe(e)].g;
-      if (filtre !== 'tout' && g !== filtre) return;
+      if (filtre !== 'tout' && g !== filtre && g !== 'groupe') return;
       var k = e.date; if (k < cle(debut) || k > cle(fin)) { if (!(e.date_fin && e.date < cle(debut) && e.date_fin >= cle(debut))) return; k = cle(debut); }
       (parJour[k] = parJour[k] || []).push(e);
     });

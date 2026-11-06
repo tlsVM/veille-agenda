@@ -104,12 +104,12 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .jour-corps{padding:6px 8px 4px}
 .ev{position:relative;border:1px solid #eee3e8;border-left:4px solid var(--c,#56708a);background:var(--f,#fff);border-radius:11px;padding:8px 11px;margin:6px 0}
 .ev .haut{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
-.ev .h{font:400 19px var(--titre);letter-spacing:.03em;color:var(--c,#56708a);min-width:46px}
-.ev .tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:var(--c,#56708a);border-radius:999px;padding:0 8px}
+.ev .h{font:400 19px var(--titre);letter-spacing:.03em;color:var(--h,var(--c,#56708a));min-width:46px}
+.ev .tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--k,#fff);background:var(--c,#56708a);border-radius:999px;padding:0 8px}
 .ev .imp{font-size:10px;font-weight:700;letter-spacing:.05em;color:#fff;background:var(--rose-fort);border-radius:999px;padding:0 8px}
 .ev .t{flex-basis:100%;font-weight:700;font-size:15px;line-height:1.35;margin-top:2px}
 .ev .t a{color:inherit;text-decoration-color:var(--c,#56708a);text-underline-offset:2px}
-.ev .qp{display:inline-block;font-size:12px;font-weight:600;color:#fff;background:var(--c,#56708a);border-radius:999px;padding:1px 10px;margin-top:3px}
+.ev .qp{display:inline-block;font-size:12px;font-weight:600;color:var(--k,#fff);background:var(--c,#56708a);border-radius:999px;padding:1px 10px;margin-top:3px}
 .ev .l{font-size:13px;color:var(--gris);margin-top:2px}
 .ev .d{font-size:13px;color:#3d4a43;margin-top:1px}
 .ev.cle{box-shadow:0 0 0 2px var(--rose)}
