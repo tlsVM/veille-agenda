@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icone-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Vivre Mieux">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 <header class="bandeau">
@@ -19,13 +19,7 @@
   <h1>Veille et agenda</h1>
   <img class="bl bl-vert" src="logo-vm-vert.svg" alt="" aria-hidden="true" width="1260" height="580">
 </header>
-<div class="barre-moi">
-  <div class="moi">
-    <label for="moi">Je coche pour</label>
-    <select id="moi"></select>
-  </div>
-</div>
-
+<div class="barre-nav">
 <nav class="onglets" aria-label="Rubriques">
   <button type="button" data-v="jour" class="on">Actualité</button>
   <button type="button" data-v="agenda">Agenda</button>
@@ -33,6 +27,11 @@
   <button type="button" data-v="archives">Archives</button>
   <button type="button" data-v="recherche" aria-label="Rechercher">🔍</button>
 </nav>
+<div class="moi">
+    <label for="moi">Je coche pour</label>
+    <select id="moi"></select>
+  </div>
+</div>
 
 <main id="vue" class="page" aria-live="polite">
   <p class="chargement">Chargement…</p>
