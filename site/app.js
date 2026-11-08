@@ -56,7 +56,6 @@
   var moisCal = '';
   var moi = store('vm-moi') || '';
   var selQ = { s: store('vm-sec') || '', q: store('vm-q') || '' };
-  var moisArch = '';
   var recherche = '';
 
   // ---------- Données ----------
@@ -588,25 +587,92 @@
     v.appendChild(blocAvenir('À venir · ' + nom, 'aujourd\'hui et les 30 prochains jours', 0, 30));
   }
   // ---------- Vue : Archives ----------
-  function vueArchives(v) {
-    var mois = {};
-    [].concat(D.actus, D.quartiers, D.evenements).forEach(function (x) { if (x.date && x.date < AUJ) mois[x.date.slice(0, 7)] = 1; });
-    var liste = Object.keys(mois).sort().reverse();
-    if (!liste.length) { v.appendChild(el('p', 'vide', 'Pas encore d\'archives.')); return; }
-    if (!moisArch || liste.indexOf(moisArch) < 0) moisArch = liste[0];
-    var sel = el('div', 'selecteurs bloc'), l = el('label', '', 'Mois'), s = el('select'); l.appendChild(s);
-    liste.forEach(function (m) { var p = m.split('-'); var o = el('option', '', MOIS[+p[1] - 1] + ' ' + p[0]); o.value = m; if (m === moisArch) o.selected = true; s.appendChild(o); });
-    s.addEventListener('change', function () { moisArch = s.value; rendre(); });
-    sel.appendChild(l); v.appendChild(sel);
-    var dans = function (x) { return x.date && x.date.slice(0, 7) === moisArch && x.date < AUJ; };
-    var desc = function (a, b) { return b.date.localeCompare(a.date); };
-    var a = D.actus.filter(dans).sort(desc), q = D.quartiers.filter(dans).sort(desc), e = D.evenements.filter(function (x) { return dans(x) && TYPES[typeDe(x)].g !== 'majo'; }).sort(desc);
-    var b1 = el('section', 'bloc'); b1.appendChild(el('h2', 'h2 rouge', 'Actualités · ' + a.length)); a.forEach(function (x) { var c = carteActu(x); c.insertBefore(el('span', 'dt', courte(x.date) + ' '), c.firstChild); b1.appendChild(c); }); v.appendChild(b1);
-    var b2 = el('section', 'bloc'); b2.appendChild(el('h2', 'h2 orange', 'Quartiers · ' + q.length)); q.forEach(function (x) { b2.appendChild(carteItem(x, x.categorie)); }); v.appendChild(b2);
-    var b3 = el('details', 'bloc repli'); b3.appendChild(el('summary', '', 'Rendez-vous passés · ' + e.length)); b3.querySelector('summary').style.cssText = 'background:#2f5f8f;color:#fff'; e.forEach(function (x) { b3.appendChild(carteEv(x, true)); }); v.appendChild(b3);
+  // ---------- Vue : Archives = moteur de recherche (mois, thème, quartier, mot-clé) ----------
+  var arch = { mois: '', theme: '', lieu: '', mot: '', lance: false };
+  var THEMES_ARCH = [
+    ['', 'Tous les thèmes'],
+    ['presse', 'Actualité presse'],
+    ['quartier', 'Comités de quartier et réunions publiques'],
+    ['culture', 'Infos culturelles et conférences'],
+    ['doleance', 'Mobilisations et doléances'],
+    ['institution', 'Protocole, commissions et institutions']
+  ];
+  function themeDe(x) {
+    if (x._t === 'actu') return 'presse';
+    if (x._t === 'q') { var c = x.categorie || ''; if (/^(dol|mobil)/i.test(c)) return 'doleance'; if (c === 'Association') return 'quartier'; return 'presse'; }
+    var g = TYPES[typeDe(x)].g, t = x.type || '';
+    if (g === 'culture') return 'culture';
+    if (g === 'quartier') return 'quartier';
+    if (g === 'majo') return 'majo';
+    if (/militant/i.test(t)) return 'militant';
+    return 'institution';
   }
+  function vueArchives(v) {
+    var tout = [].concat(
+      D.actus.map(function (x) { return Object.assign({ _t: 'actu' }, x); }),
+      D.quartiers.map(function (x) { return Object.assign({ _t: 'q' }, x); }),
+      D.evenements.map(function (x) { return Object.assign({ _t: 'ev' }, x); })
+    ).filter(function (x) { return x.date; });
+    var mois = {}; tout.forEach(function (x) { if (x.date <= AUJ) mois[x.date.slice(0, 7)] = 1; });
+    var liste = Object.keys(mois).sort().reverse();
 
-  // ---------- Vue : Recherche ----------
+    var bx = el('section', 'bloc bloc-q moteur');
+    bx.appendChild(el('h2', 'grand-titre petit', 'Rechercher dans les archives'));
+    bx.appendChild(el('p', 'sous-titre', 'toute la veille enregistrée : presse, quartiers, Facebook, agenda'));
+    var g = el('div', 'selecteurs');
+    function choix(label, opts, val, cb) {
+      var l = el('label', '', label), s = el('select'); l.appendChild(s);
+      opts.forEach(function (o) {
+        if (o.groupe) { var og = document.createElement('optgroup'); og.label = o.groupe; o.items.forEach(function (it) { var op = el('option', '', it[1]); op.value = it[0]; if (it[0] === val) op.selected = true; og.appendChild(op); }); s.appendChild(og); return; }
+        var op = el('option', '', o[1]); op.value = o[0]; if (o[0] === val) op.selected = true; s.appendChild(op);
+      });
+      s.addEventListener('change', function () { cb(s.value); });
+      g.appendChild(l); return s;
+    }
+    choix('Mois', [['', 'Tous les mois']].concat(liste.map(function (m) { var p = m.split('-'); return [m, MOIS[+p[1] - 1] + ' ' + p[0]]; })), arch.mois, function (x) { arch.mois = x; });
+    choix('Thème', THEMES_ARCH, arch.theme, function (x) { arch.theme = x; });
+    var optsLieu = [['', 'Tous les quartiers']];
+    optsLieu.push({ groupe: 'Secteurs', items: Object.keys(SECTEURS).map(function (s) { return ['s:' + s, 'Secteur ' + s]; }) });
+    Object.keys(SECTEURS).forEach(function (s) { optsLieu.push({ groupe: s, items: SECTEURS[s].map(function (q) { return ['q:' + q, q]; }) }); });
+    choix('Quartier ou secteur', optsLieu, arch.lieu, function (x) { arch.lieu = x; });
+    var lm = el('label', '', 'Mot-clé (facultatif)'), im = el('input'); im.type = 'search'; im.placeholder = 'ex. vélo, Bordeblanche, crèche…'; im.value = arch.mot; lm.appendChild(im); g.appendChild(lm);
+    bx.appendChild(g);
+    var go = el('button', 'bt-presse bt-loupe', '🔍 Rechercher'); go.type = 'button';
+    function lancer() { arch.mot = im.value.trim(); arch.lance = true; rendre(); }
+    go.addEventListener('click', lancer);
+    im.addEventListener('keydown', function (e) { if (e.key === 'Enter') lancer(); });
+    var cz = el('div', 'rech-presse'); cz.appendChild(go); bx.appendChild(cz);
+    v.appendChild(bx);
+    if (!arch.lance) { v.appendChild(el('p', 'vide', 'Choisissez vos critères puis appuyez sur 🔍 Rechercher.')); return; }
+
+    // filtrage
+    var mots = norm(arch.mot).split(/\s+/).filter(Boolean);
+    var res = tout.filter(function (x) {
+      if (arch.mois && x.date.slice(0, 7) !== arch.mois) return false;
+      var th = themeDe(x);
+      if (arch.theme) { if (th !== arch.theme) return false; }
+      else if (th === 'majo') return false;
+      if (arch.lieu) {
+        var q = x.quartier || '', sec = x.secteur || secteurDuQuartier(q);
+        if (arch.lieu.indexOf('s:') === 0) { if (sec !== arch.lieu.slice(2)) return false; }
+        else { var nq = arch.lieu.slice(2); if (!(correspond(q, nq) || norm(q).indexOf(norm(nq)) > -1)) return false; }
+      }
+      if (mots.length) { var h = norm([x.titre, x.texte, x.details, x.lieu, x.quartier, x.source, x.qui].join(' ')); if (!mots.every(function (m) { return h.indexOf(m) > -1; })) return false; }
+      return true;
+    }).sort(function (a, b) { return (b.date + (b.heure || '')).localeCompare(a.date + (a.heure || '')); });
+
+    var rz = el('section', 'bloc');
+    rz.appendChild(el('h2', 'h2', res.length + ' résultat' + (res.length > 1 ? 's' : '')));
+    if (!res.length) rz.appendChild(el('p', 'vide', 'Aucun résultat avec ces critères. Essayez « Tous les mois » ou un thème plus large.'));
+    var max = 150;
+    res.slice(0, max).forEach(function (x) {
+      if (x._t === 'ev') { rz.appendChild(carteEv(x, true)); return; }
+      if (x._t === 'actu') { var c = carteActu(x); c.insertBefore(el('span', 'dt', courte(x.date) + ' '), c.firstChild); rz.appendChild(c); return; }
+      rz.appendChild(carteItem(x, /^(dol|mobil)/i.test(x.categorie || '') ? 'Doléance' : x.categorie));
+    });
+    if (res.length > max) rz.appendChild(el('p', 'nb', 'Seuls les ' + max + ' plus récents sont affichés : affinez la recherche.'));
+    v.appendChild(rz);
+  }
   function vueRecherche(v) {
     var b = el('div', 'bloc recherche'); var i = el('input'); i.type = 'search'; i.placeholder = 'Un quartier, un mot, un nom…'; i.value = recherche; b.appendChild(i); v.appendChild(b);
     var res = el('div'); v.appendChild(res);
