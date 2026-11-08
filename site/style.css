@@ -368,3 +368,67 @@ a.bt-presse{display:inline-block;text-decoration:none}
   .barre-nav .moi{position:absolute;right:20px;top:50%;transform:translateY(-50%)}
 }
 @media (max-width:420px){.barre-nav .onglets{gap:4px}.barre-nav .onglets button{padding:4px 10px;font-size:12.5px}}
+
+/* =====================================================================
+   DA « bandeau » appliquée à toute l'application
+   Principes : fond clair et aéré, titres condensés verts avec un léger
+   décalage rose (écho du titre du bandeau), filet bicolore rose/vert fin
+   comme signature, cartes blanches, couleurs de thème réservées aux
+   repères (bord gauche, heure, étiquette). Pas de grain, pas d'aplat lourd.
+   ===================================================================== */
+:root{--fond:#fffafc;--trait:#f1dde7;--ombre:0 1px 2px rgba(18,51,38,.04),0 4px 14px rgba(200,67,127,.05)}
+.grain,.grand-titre,.modale-boite h2,.jour-tete b,.entete h1{-webkit-mask-image:none!important;mask-image:none!important}
+
+/* Titres de section : vert, petit décalage rose, filet bicolore dessous */
+.h2,.grand-titre,.semaine,.sect-t{color:var(--vert);text-shadow:1.5px 1.5px 0 var(--rose)}
+.h2{font-size:26px;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+.h2.rouge,.h2.bleu,.h2.orange{color:var(--vert)}
+.h2 small{text-shadow:none}
+.h2::after{content:"";flex:0 0 100%;height:3px;margin-top:6px;background:linear-gradient(90deg,var(--rose) 0 28px,var(--vert) 28px 56px,transparent 56px)}
+.grand-titre{text-shadow:2px 2px 0 var(--rose)}
+.grand-titre::after{content:"";display:block;width:64px;height:3px;margin:8px auto 0;border-radius:2px;background:linear-gradient(90deg,var(--rose) 0 50%,var(--vert) 50% 100%)}
+.semaine::after{height:2px;background:linear-gradient(90deg,var(--rose),var(--rose) 50%,var(--vert) 50%,var(--vert));opacity:.6}
+
+/* Blocs et cartes : blancs, fins, aérés */
+.bloc,.jour{background:#fff;border:1px solid var(--trait);box-shadow:var(--ombre);border-radius:16px}
+.ev{background:#fff;border:1px solid #f0e6eb;border-left:4px solid var(--c,#56708a);border-radius:10px}
+.ev.cle{box-shadow:0 0 0 1.5px var(--rose)}
+.lq{border-color:#f0e6eb}
+.actu{background:#fff;border:1px solid #f0e6eb;border-left:4px solid var(--rose)}
+.actu .q,.item .q,.lq-q,.quart-t{background:var(--rose-pale);color:var(--vert-fonce);box-shadow:inset 0 0 0 1px #f3c9dc}
+.sect{background:#fff;border:1px solid var(--trait)}
+.sb{background:#fff!important;border:1px solid #f0e6eb}
+.sb-presse{border-left:4px solid var(--bleu)!important}.sb-asso{border-left:4px solid #e08a1e!important}.sb-agenda{border-left:4px solid var(--vert)!important}
+
+/* Barre des jours : vert franc mais fine, date blanche avec l'écho rose */
+.jour-tete{background:var(--vert);min-height:44px;padding-top:8px;padding-bottom:8px}
+.jour-tete b{text-shadow:1px 1px 0 rgba(245,181,210,.75)}
+.jour.auj{box-shadow:0 0 0 2px var(--rose),var(--ombre)}
+.jour.auj .jour-tete{background:var(--rose)}
+.jour.auj .jour-tete b{color:var(--vert-fonce);text-shadow:1.5px 1.5px 0 #fff}
+.jour-q{background:#fff;color:var(--vert);box-shadow:inset 0 0 0 1.5px var(--vert);text-shadow:1px 1px 0 var(--rose)}
+
+/* Menus repliés (thèmes du jour, semaines) : discrets */
+.mini{background:#fff!important;border:1px dashed #e8d6df!important}
+details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--ombre);text-shadow:1px 1px 0 var(--rose)}
+
+/* Filtres et pilules : contour vert fin, actif = vert plein (comme les onglets) */
+.filtres button{border-width:1px}
+.filtres button.on{background:var(--vert);border-color:var(--vert);color:#fff}
+.pb{border-width:1px}
+.bt-cal{box-shadow:0 2px 0 var(--rose),0 4px 14px rgba(21,140,87,.18)}
+
+/* Bloc épinglé : rouge discret plutôt qu'aplat */
+.epingle{background:#fff;border:1.5px solid #f0b4b4}
+.epingle .grand-titre{color:#c00000;text-shadow:1.5px 1.5px 0 #f9d0d0}
+
+/* Fenêtres : fond blanc, titre dans l'esprit du bandeau */
+.modale-boite{background:#fff;color:var(--encre);border-top:6px solid;border-image:linear-gradient(90deg,var(--rose) 0 50%,var(--vert) 50% 100%) 1}
+.modale-boite h2{color:var(--vert);text-shadow:2px 2px 0 var(--rose)}
+.modale-boite p{color:var(--gris)}
+.choix-liste button{background:#fff;color:var(--vert-fonce);box-shadow:inset 0 0 0 1.5px var(--vert)}
+.choix-liste button:hover{background:var(--vert);color:#fff}
+
+/* Barre de navigation : filet bicolore très fin sous la barre */
+.barre-nav{border-bottom:0;box-shadow:0 2px 10px rgba(21,140,87,.06)}
+.barre-nav::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:2px;background:linear-gradient(90deg,var(--rose) 0 50%,var(--vert) 50% 100%);opacity:.7}
