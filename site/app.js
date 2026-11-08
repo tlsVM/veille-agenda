@@ -275,7 +275,7 @@
     var du = D.actus.filter(function (a) { return a.date === der; });
     var loc = du.filter(function (a) { return a.niveau === 'Toulouse' || !a.niveau; });
     if (!du.length) b.appendChild(el('p', 'vide', 'Pas encore d\'actualités aujourd\'hui.'));
-    loc.forEach(function (a) { b.appendChild(carteActu(a)); });
+    var ag = el('div', 'actu-g'); loc.forEach(function (a) { ag.appendChild(carteActu(a)); }); b.appendChild(ag);
     [['France', 'r-france'], ['Europe', 'r-europe'], ['Monde', 'r-monde'], ['Facebook', 'r-facebook']].forEach(function (n) {
       var its = du.filter(function (a) { return a.niveau === n[0]; }); if (!its.length) return;
       var d = el('details', 'repli ' + n[1]); d.appendChild(el('summary', '', n[0] === 'Facebook' ? 'Groupes de quartier' : n[0]));
@@ -368,15 +368,16 @@
       }
       if (s === ouverte) { cont = el('div', 'sem-1'); cont.appendChild(el('div', 'semaine', s === cle(debut) ? lib : 'Cette semaine → ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()])); }
       else { cont = el('details', 'sem'); var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); sm.appendChild(sd); cont.appendChild(sm); }
-      var prec = null, nPrec = 0;
+      var prec = null, nPrec = 0, grilleJ = el('div', 'jours-g');
       groupes[s].forEach(function (k) {
         var j = blocJour(k, parJour[k]);
         if (k < AUJ) {
           if (!prec) { prec = el('details', 'prec'); var ps = el('summary'); ps.appendChild(el('b', '', 'Jours précédents ')); ps.appendChild(el('span', 'pd')); prec.appendChild(ps); cont.appendChild(prec); prec._d1 = k; }
           prec.appendChild(j); nPrec++;
           prec.querySelector('.pd').textContent = (nPrec > 1 ? JC[dDe(prec._d1).getDay()] + ' ' + dDe(prec._d1).getDate() + ' → ' : '') + JC[dDe(k).getDay()] + ' ' + courte(k);
-        } else cont.appendChild(j);
+        } else grilleJ.appendChild(j);
       });
+      cont.appendChild(grilleJ);
       v.appendChild(cont);
     });
   }
