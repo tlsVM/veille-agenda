@@ -399,7 +399,7 @@
   ];
   function rangerJour(evs, c, toutOuvert) {
     var haut = evs.filter(enAvant), reste = evs.filter(function (e) { return !enAvant(e); });
-    haut.forEach(function (e) { c.appendChild(carteEv(e)); });
+    var eg = el('div', 'ev-g'); haut.forEach(function (e) { eg.appendChild(carteEv(e)); }); if (haut.length) c.appendChild(eg);
     THEMES.forEach(function (th) {
       var its = reste.filter(function (e) { return th[1].indexOf(typeDe(e)) >= 0; }); if (!its.length) return;
       var d = el('details', 'mini ' + th[2]); d.open = toutOuvert;
