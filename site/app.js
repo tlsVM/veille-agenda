@@ -283,17 +283,6 @@
       its.forEach(function (a) { d.appendChild(carteActu(a)); }); b.appendChild(d);
     });
     v.appendChild(b);
-    // Le programme du jour et de demain
-    [[AUJ, 'Aujourd\'hui dans l\'agenda'], [cle(ajout(new Date(), 1)), 'Demain']].forEach(function (x) {
-      var tous = D.evenements.filter(function (e) { return enCours(e, x[0]); });
-      var evs = tous.filter(function (e) { return TYPES[typeDe(e)].g !== 'majo'; });
-      var majo = tous.filter(function (e) { return TYPES[typeDe(e)].g === 'majo'; });
-      var s = el('section', 'bloc'); var hd = el('div', 'tete-bloc'); hd.appendChild(el('h2', 'h2 bleu', x[1])); s.appendChild(hd);
-      if (!evs.length && !majo.length) s.appendChild(el('p', 'vide', 'Rien de prévu dans l\'agenda.'));
-      rangerJour(evs, s, false);
-      blocMajo(majo, hd, hd);
-      v.appendChild(s);
-    });
   }
   function enCours(e, k) { return e.date === k || (e.date_fin && e.date < k && e.date_fin >= k); }
 
