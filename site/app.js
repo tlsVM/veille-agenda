@@ -327,7 +327,7 @@
     var pop = el('div', 'cal-pop'); pop.hidden = true;
     bcal.addEventListener('click', function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) dessinerCal(pop, moisCal); });
     var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(pop); outils.appendChild(wrap);
-    var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', '🎨 Légende des couleurs'));
+    var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', 'légende'));
     var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
       var s = el('span'); var i = el('i'); i.style.background = x[0]; if (x[0] === '#fff') i.style.boxShadow = 'inset 0 0 0 1px #999'; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lgc.appendChild(s);
@@ -352,6 +352,7 @@
       var k = e.date; if (k < cle(debut) || k > cle(fin)) { if (!(e.date_fin && e.date < cle(debut) && e.date_fin >= cle(debut))) return; k = cle(debut); }
       (parJour[k] = parJour[k] || []).push(e);
     });
+    var dimanche = new Date().getDay() === 0, ouverte = dimanche ? cle(ajout(debut, 7)) : cle(debut);
     var jours = Object.keys(parJour).sort();
     if (!jours.length) { v.appendChild(el('p', 'vide', 'Aucun rendez-vous dans cette sélection.')); return; }
     var groupes = {};
@@ -360,7 +361,12 @@
       var lu = dDe(s), di = ajout(lu, 6);
       var lib = (i === 0 && s === cle(debut) ? 'Cette semaine' : 'Semaine du ' + lu.getDate()) + (i === 0 && s === cle(debut) ? ' → ' + lu.getDate() : '') + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()];
       var cont;
-      if (s === cle(debut)) { cont = el('div', 'sem-1'); cont.appendChild(el('div', 'semaine', lib)); }
+      if (dimanche && s === cle(debut)) {
+        // le dimanche, la semaine qui s'achève passe en petit menu gris replié
+        cont = el('details', 'sem-prec'); var sp = el('summary'); sp.appendChild(el('b', '', 'Semaine précédente ')); sp.appendChild(el('span', '', lu.getDate() + ' → ' + di.getDate() + ' ' + MC[di.getMonth()]));
+        cont.appendChild(sp); groupes[s].forEach(function (k) { cont.appendChild(blocJour(k, parJour[k])); }); v.appendChild(cont); return;
+      }
+      if (s === ouverte) { cont = el('div', 'sem-1'); cont.appendChild(el('div', 'semaine', s === cle(debut) ? lib : 'Cette semaine → ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()])); }
       else { cont = el('details', 'sem'); var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); sm.appendChild(sd); cont.appendChild(sm); }
       var prec = null, nPrec = 0;
       groupes[s].forEach(function (k) {
