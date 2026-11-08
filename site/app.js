@@ -512,7 +512,19 @@
       return av;
     }
     var depuis = cle(ajout(new Date(), -31));
-    var items = D.quartiers.filter(function (it) { return it.date >= depuis && it.date <= AUJ && filtreLieu(it.quartier, it.secteur); })
+    // 📎 Mobilisations et doléances : épinglées en haut, 60 derniers jours
+    function estDoleance(it) { return /^(dol[ée]ance|mobilisation)/i.test(it.categorie || ''); }
+    var depuis60 = cle(ajout(new Date(), -60));
+    var epingles = D.quartiers.filter(function (it) { return estDoleance(it) && it.date >= depuis60 && filtreLieu(it.quartier, it.secteur); })
+      .sort(function (x, y) { return y.date.localeCompare(x.date); });
+    if (epingles.length) {
+      var ep = el('section', 'bloc bloc-q epingle');
+      ep.appendChild(el('h2', 'grand-titre petit', 'Mobilisations et doléances'));
+      ep.appendChild(el('p', 'sous-titre', 'ce qui remonte des habitants et des comités de quartier · ' + epingles.length));
+      epingles.forEach(function (it) { ep.appendChild(carteItem(it, 'Doléance')); });
+      v.appendChild(ep);
+    }
+    var items = D.quartiers.filter(function (it) { return !estDoleance(it) && it.date >= depuis && it.date <= AUJ && filtreLieu(it.quartier, it.secteur); })
       .sort(function (x, y) { return y.date.localeCompare(x.date); });
 
     if (!nom) {

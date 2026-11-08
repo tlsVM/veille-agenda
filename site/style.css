@@ -288,3 +288,9 @@ a.bt-presse{display:inline-block;text-decoration:none}
   .onglets{padding:7px 10px}
   .onglets button{font-size:13px;padding:4px 12px}
 }
+
+/* 📎 Mobilisations et doléances épinglées */
+.epingle{border:2px solid #e00000;background:#fff6f6;position:relative}
+.epingle::before{content:"📎";position:absolute;top:-14px;left:18px;font-size:26px;transform:rotate(-20deg)}
+.epingle .grand-titre{color:#c00000}
+.epingle .item{background:#fff;border:1px solid #f3c4c4;border-left:4px solid #e00000;border-radius:10px;padding:8px 12px;margin:6px 0}
