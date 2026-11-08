@@ -328,10 +328,9 @@ a.bt-presse{display:inline-block;text-decoration:none}
 .legende-d[open]>summary{color:var(--gris)}
 .legende-d .legende{position:absolute;right:0;z-index:25;max-width:320px;background:#fff;border:1px solid var(--trait);border-radius:12px;padding:8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.12);justify-content:flex-start;text-align:left}
 
-/* Grand écran : on utilise toute la largeur (jours de l'agenda et actualités sur deux colonnes) */
-@media (min-width:1100px){
-  .page{max-width:1320px}
-  .jour-corps>.ev-g{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;align-items:start}
-  .bloc .actu-g{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;align-items:start}
+/* Grand écran : une seule colonne centrée (ordre chronologique), fond rose doux sur les côtés */
+@media (min-width:1000px){
+  body{background:#f6dbe8}
+  .page{max-width:960px;background:var(--fond);box-shadow:0 0 0 1px #efd3e0,0 6px 30px rgba(200,67,127,.08);min-height:100vh}
+  .onglets{background:#fff}
 }
-@media (min-width:1700px){.page{max-width:1600px}.jour-corps>.ev-g{grid-template-columns:1fr 1fr 1fr}}
