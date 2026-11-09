@@ -325,12 +325,10 @@ if ($a === 'code') {
 if (!codeOk()) { sortir(['erreur' => 'code'], 401); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'ajout') {
-  if (codeAttendu() === '') { sortir(['erreur' => 'sans_code'], 403); }
   enregistrerAjout();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'suppr') {
-  if (codeAttendu() === '') { sortir(['erreur' => 'sans_code'], 403); }
   $id = (string)($_POST['id'] ?? ''); $nom = (string)($_POST['nom'] ?? '');
   if (!preg_match('/^u[a-f0-9]{10}$/', $id) || !in_array($nom, ELUS, true)) { sortir(['erreur' => 'id'], 400); }
   modifierAjouts(function ($p) use ($id) { return array_filter($p, function ($x) use ($id) { return $x['id'] !== $id; }); });
@@ -371,7 +369,7 @@ if ($a === 'data') {
   $d = donnees();
   if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = array_merge($d['evenements'] ?? [], ajouts()); }
   $d['presences'] = presences();
-  $d['ajout_actif'] = codeAttendu() !== '';
+  $d['ajout_actif'] = true; // ajout ouvert à tous ; le code d'accès, s'il est mis en place, protégera toute la plateforme
   $d['elus'] = ELUS;
   sortir($d);
 }
