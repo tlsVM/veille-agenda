@@ -111,8 +111,8 @@
     plus.addEventListener('click', function () { m.hidden = true; }); l.appendChild(plus);
     m.hidden = false;
   }
-  function choisirMoi(n) { moi = n; store('vm-moi', n); document.getElementById('moi').value = n; majPresences(); }
-  document.getElementById('moi').addEventListener('change', function (e) { moi = e.target.value; store('vm-moi', moi); majPresences(); });
+  function choisirMoi(n) { moi = n; store('vm-moi', n); document.getElementById('moi').value = n; majPresences(); if (vue === 'agenda') rendre(); }
+  document.getElementById('moi').addEventListener('change', function (e) { moi = e.target.value; store('vm-moi', moi); majPresences(); if (vue === 'agenda') rendre(); }); // le bouton « Agenda de … » suit la personne choisie
 
   // ---------- Présences ----------
   var COURT = function (n) { var p = n.replace(' (collaborateur)', '').split(' '); return p.length > 1 ? p[0].charAt(0) + '. ' + p.slice(1).join(' ') : n; };
