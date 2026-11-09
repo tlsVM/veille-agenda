@@ -582,3 +582,18 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
 }
 .outils-ag .bt-presences{white-space:nowrap}@media (min-width:701px){.outils-ag .tri-theme select{width:165px}.outils-ag{gap:8px 10px}}
 @media (min-width:701px){.outils-ag .tri-theme select{width:190px}}
+/* Bouton rose « Agenda de … » */
+.outils-ag{grid-template-areas:"cal tri pres part" "mon mon leg leg"}
+.outils-ag .monag-wrap{grid-area:mon;justify-self:start}
+.bt-monag{height:40px;border:0;border-radius:999px;padding:0 18px;background:var(--rose,#f5b5d2);color:#7a1d4a;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;box-shadow:0 2px 0 var(--vert),0 4px 14px rgba(232,80,142,.2);white-space:nowrap}
+.bt-monag:hover{filter:brightness(1.04)}
+.bt-monag.on{background:#fff;border:1.5px solid #e8508e;color:#c8437f;box-shadow:none}
+.monag-barre{background:#fff7fb;border:1.5px solid #f5b5d2;border-radius:16px;padding:14px 16px 10px;margin:12px 0 6px;text-align:center}
+.monag-titre{margin:0 0 2px;font:400 30px/1.1 var(--titre);color:#c8437f;text-shadow:1.5px 1.5px 0 #fff}
+.monag-barre .nb{margin:0 0 10px}
+.monag-barre .ps-actions{justify-content:center}
+.monag-ag{margin-top:6px}
+@media (max-width:700px){
+  .outils-ag{grid-template-areas:"cal cal" "mon mon" "tri tri" "pres part" "leg leg"}
+  .outils-ag .monag-wrap{justify-self:stretch}.bt-monag{width:100%}
+}

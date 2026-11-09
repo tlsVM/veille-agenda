@@ -53,6 +53,7 @@
   var vue = store('vm-vue') || 'jour';
   var filtre = 'tout';
   var jourChoisi = '';
+  var monAgenda = false; // bouton rose « Agenda de … » : seulement mes présences
   var moisCal = '';
   var moi = store('vm-moi') || '';
   var selQ = { s: store('vm-sec') || '', q: store('vm-q') || '' };
@@ -859,6 +860,28 @@
     m.appendChild(im); m.addEventListener('click', function () { m.remove(); }); document.body.appendChild(m);
   }
 
+  // ---------- Mon agenda : mes présences, à copier, télécharger ou ajouter à mon agenda ----------
+  function mesEvenements(debutK) {
+    return D.evenements.filter(function (e) { return e.date >= debutK && (D.presences[e.id] || {})[moi]; })
+      .sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); })
+      .map(function (e) { return D.presences[e.id][moi] === 'peut' ? Object.assign({}, e, { titre: '❔ ' + e.titre + ' (à confirmer)' }) : e; });
+  }
+  function barreMonAgenda(debut) {
+    var z = el('div', 'monag-barre'), nom = nomLong(moi);
+    z.appendChild(el('h2', 'monag-titre', 'Agenda de ' + nom));
+    z.appendChild(el('p', 'nb', 'Les événements où vous avez coché « Présent·e » ou « Peut-être » (❔).'));
+    var titre = function () { return 'Agenda de ' + nom; };
+    var texte = function () { var d = new Date(); return texteListe('📅 Agenda de ' + nom, 'À partir du ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear(), mesEvenements(AUJ)); };
+    boutonsPartage(z, texte, titre);
+    if (D.cles_agenda) {
+      var ag = el('div', 'ps-actions monag-ag');
+      var a2 = el('button', 'bt-ps', '📅 Ajouter à mon agenda'); a2.type = 'button'; a2.addEventListener('click', function () { ouvrirAbonnement(moi); });
+      var a1 = el('a', 'bt-ps', '⬇️ Télécharger le .ics'); a1.href = lienAbonnement(moi, true) + '&du=' + AUJ;
+      ag.appendChild(a2); ag.appendChild(a1); z.appendChild(ag);
+    }
+    return z;
+  }
+
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
     var bAj = el('button', 'bt-ajout', '➕ Ajouter un RDV'); bAj.type = 'button'; bAj.title = 'Ajouter un rendez-vous';
@@ -879,6 +902,14 @@
     var bpa = el('button', 'bt-presences bt-partager', '📤 Partager'); bpa.type = 'button';
     bpa.addEventListener('click', ouvrirPartage);
     var paw = el('div', 'part-wrap'); paw.appendChild(bpa); outils.appendChild(paw);
+    // Agenda personnel (bouton rose) : seulement si un nom est choisi dans « Je coche pour »
+    if (moi && D.elus && D.elus.indexOf(moi) >= 0) {
+      var prenom = moi.replace(/ \(collaborateur\)$/, '').split(' ')[0];
+      var bma = el('button', 'bt-monag' + (monAgenda ? ' on' : ''), monAgenda ? '✕ Fermer mon agenda' : '📅 Agenda de ' + prenom); bma.type = 'button';
+      bma.setAttribute('aria-pressed', monAgenda ? 'true' : 'false');
+      bma.addEventListener('click', function () { monAgenda = !monAgenda; jourChoisi = ''; rendre(); window.scrollTo(0, 0); });
+      var mw = el('div', 'monag-wrap'); mw.appendChild(bma); outils.appendChild(mw);
+    } else monAgenda = false;
     var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', 'légende'));
     var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
@@ -896,17 +927,19 @@
       zc.appendChild(ret); zc.appendChild(blocJour(jourChoisi, evsJ)); v.appendChild(zc);
     }
 
-    var debut = lundi(new Date()), fin = ajout(new Date(), 31), finSem1 = ajout(debut, 6);
+    var debut = lundi(new Date()), fin = ajout(new Date(), monAgenda ? 180 : 31), finSem1 = ajout(debut, 6);
+    if (monAgenda) v.appendChild(barreMonAgenda(debut));
     var parJour = {};
     D.evenements.forEach(function (e) {
       var g = TYPES[typeDe(e)].g;
+      if (monAgenda && !(D.presences[e.id] || {})[moi]) return;
       if (filtre !== 'tout' && g !== filtre) return;
       var k = e.date; if (k < cle(debut) || k > cle(fin)) { if (!(e.date_fin && e.date < cle(debut) && e.date_fin >= cle(debut))) return; k = cle(debut); }
       (parJour[k] = parJour[k] || []).push(e);
     });
     var dimanche = new Date().getDay() === 0, ouverte = dimanche ? cle(ajout(debut, 7)) : cle(debut);
     var jours = Object.keys(parJour).sort();
-    if (!jours.length) { v.appendChild(el('p', 'vide', 'Aucun rendez-vous dans cette sélection.')); return; }
+    if (!jours.length) { v.appendChild(el('p', 'vide', monAgenda ? 'Aucune présence cochée pour l\'instant : cochez « Présent·e » ou « Peut-être » sur les événements de l\'agenda.' : 'Aucun rendez-vous dans cette sélection.')); return; }
     var groupes = {};
     jours.forEach(function (k) { var s = cle(lundi(dDe(k))); (groupes[s] = groupes[s] || []).push(k); });
     Object.keys(groupes).sort().forEach(function (s, i) {
@@ -919,7 +952,7 @@
         cont.appendChild(sp); groupes[s].forEach(function (k) { cont.appendChild(blocJour(k, parJour[k])); }); v.appendChild(cont); return;
       }
       if (s === ouverte) { cont = el('div', 'sem-1'); cont.appendChild(el('div', 'semaine', s === cle(debut) ? lib : 'Cette semaine → ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()])); }
-      else { cont = el('details', 'sem'); var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); sm.appendChild(sd); cont.appendChild(sm); }
+      else { cont = el('details', 'sem'); if (monAgenda) cont.open = true; var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); sm.appendChild(sd); cont.appendChild(sm); }
       var prec = null, nPrec = 0, grilleJ = el('div', 'jours-g');
       groupes[s].forEach(function (k) {
         var j = blocJour(k, parJour[k]);
