@@ -518,3 +518,10 @@ details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--om
 .jour-tete b .bt-copie{margin-left:6px;color:#fff;opacity:.45}
 .jour-tete b .bt-copie:hover{background:rgba(255,255,255,.15);color:#fff}
 .jour.auj .jour-tete b .bt-copie{color:var(--vert-fonce)}
+
+/* Proposition d'installation de l'appli (discrète, en bas) */
+.install{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;gap:10px;max-width:520px;margin:0 auto;background:#fff;border-radius:14px;padding:9px 10px 9px 12px;box-shadow:0 6px 24px rgba(18,51,38,.18);border-top:4px solid;border-image:linear-gradient(90deg,var(--rose) 0 50%,var(--vert) 50% 100%) 1}
+.install-ico{font-size:20px}
+.install-t{flex:1;font-size:13px;line-height:1.35;color:var(--encre)}
+.install-go{cursor:pointer;border:0;border-radius:999px;background:var(--vert);color:#fff;font:600 13px var(--texte);padding:7px 14px}
+.install-x{cursor:pointer;border:0;background:none;color:#999;font-size:15px;padding:4px 6px}

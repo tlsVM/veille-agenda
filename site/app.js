@@ -902,4 +902,31 @@
   charger();
   setInterval(rafraichirPresences, 20000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { AUJ = cle(new Date()); rafraichirPresences(); } });
+
+  // ---------- Application installable ----------
+  if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+  (function () {
+    var installe = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (installe) return;
+    var masque = false; try { masque = localStorage.getItem('vm-install-masque') === '1'; } catch (x) {}
+    if (masque) return;
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var ev = null;
+    function bandeauInstall(texte, action) {
+      if (document.querySelector('.install')) return;
+      var b = el('div', 'install'); b.appendChild(el('span', 'install-ico', '📲'));
+      var t = el('span', 'install-t'); t.innerHTML = texte; b.appendChild(t);
+      if (action) { var go = el('button', 'install-go', 'Installer'); go.type = 'button'; go.addEventListener('click', action); b.appendChild(go); }
+      var x = el('button', 'install-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
+      x.addEventListener('click', function () { b.remove(); try { localStorage.setItem('vm-install-masque', '1'); } catch (y) {} });
+      b.appendChild(x); document.body.appendChild(b);
+    }
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault(); ev = e;
+      bandeauInstall('<b>Installer l\'appli</b> sur cet appareil', function () { ev.prompt(); ev.userChoice.finally(function () { var b = document.querySelector('.install'); if (b) b.remove(); }); });
+    });
+    if (ios && /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent)) {
+      setTimeout(function () { bandeauInstall('Pour l\'avoir en appli : touchez <b>Partager</b> <span aria-hidden="true">⎙</span> puis <b>« Sur l\'écran d\'accueil »</b>'); }, 2500);
+    }
+  })();
 })();
