@@ -508,3 +508,13 @@ details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--om
   .outils-ag .tri-theme{justify-self:stretch}
   .outils-ag .pres-wrap{justify-self:end}
 }
+
+/* Bouton « copier » ultra discret */
+.bt-copie{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:none;color:#b9a9b1;cursor:pointer;opacity:.55;border-radius:6px;vertical-align:middle;font-size:12px}
+.bt-copie:hover,.bt-copie:focus-visible{opacity:1;color:var(--vert);background:rgba(21,140,87,.08)}
+.bt-copie.ok{opacity:1;color:var(--vert)}
+.ev>.bt-copie{position:absolute;top:5px;right:5px}
+.ev .haut{padding-right:20px}
+.jour-tete b .bt-copie{margin-left:6px;color:#fff;opacity:.45}
+.jour-tete b .bt-copie:hover{background:rgba(255,255,255,.15);color:#fff}
+.jour.auj .jour-tete b .bt-copie{color:var(--vert-fonce)}

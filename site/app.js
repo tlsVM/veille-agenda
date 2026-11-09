@@ -187,6 +187,25 @@
   }
 
   // ---------- Cartes ----------
+  // Petit bouton « copier » discret (deux feuilles superposées)
+  var ICO_COPIE = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><rect x="5" y="5" width="8.5" height="9" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3.5 10.5h-.3A1.4 1.4 0 0 1 1.8 9.1V3.2A1.4 1.4 0 0 1 3.2 1.8h5.9a1.4 1.4 0 0 1 1.4 1.4v.3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+  function texteEv(e, avecJour) {
+    var d = dDe(e.date), l = [];
+    l.push((avecJour ? JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + (e.heure ? ' · ' : '') : '') + (e.heure ? e.heure.replace(':', 'h') : '') + ((avecJour || e.heure) ? ' · ' : '') + e.titre);
+    if (e.lieu || e.quartier) l.push('📍 ' + (e.lieu || '') + (e.quartier ? (e.lieu ? ' (' + e.quartier + ')' : e.quartier) : ''));
+    if (e.details) l.push(e.details);
+    if (e.lien) l.push('🔗 ' + e.lien);
+    return l.join('\n');
+  }
+  function btCopie(getTexte, titre) {
+    var b = el('button', 'bt-copie'); b.type = 'button'; b.title = titre || 'Copier'; b.setAttribute('aria-label', titre || 'Copier'); b.innerHTML = ICO_COPIE;
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation(); var t = getTexte();
+      function ok() { b.classList.add('ok'); b.textContent = '✓'; setTimeout(function () { b.classList.remove('ok'); b.innerHTML = ICO_COPIE; }, 1300); }
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(ok).catch(function () { var ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (x) {} ta.remove(); });
+    });
+    return b;
+  }
   function carteEv(e, avecDate) {
     var t = TYPES[typeDe(e)], c = el('div', 'ev' + (e.important === 'oui' ? ' cle' : ''));
     c.style.setProperty('--c', t.c); c.style.setProperty('--f', t.f); if (t.h) c.style.setProperty('--h', t.h); if (t.k) c.style.setProperty('--k', t.k);
@@ -202,6 +221,7 @@
     if (e.lieu) c.appendChild(el('div', 'l', '→ ' + e.lieu + (e.date_fin && e.date_fin !== e.date ? ' · jusqu\'au ' + courte(e.date_fin) : '')));
     if (e.details) c.appendChild(el('div', 'd', e.details));
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
+    c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
     return c;
   }
   function carteActu(a) {
@@ -594,6 +614,10 @@
     var d = dDe(k), j = el('section', 'jour' + (k === AUJ ? ' auj' : ''));
     var t = el('div', 'jour-tete'); t.appendChild(el('b', '', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
     if (k === AUJ) t.appendChild(el('em', '', 'AUJOURD\'HUI'));
+    t.querySelector('b').appendChild(btCopie(function () {
+      var liste = evs.filter(function (e) { return TYPES[typeDe(e)].g !== 'majo' && (filtre === 'tout' || TYPES[typeDe(e)].g === filtre); }).sort(function (a, b) { return (a.heure || '99').localeCompare(b.heure || '99'); });
+      return JOURS[d.getDay()].toUpperCase() + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()].toUpperCase() + '\n\n' + liste.map(function (e) { return '• ' + texteEv(e, false).replace(/\n/g, '\n  '); }).join('\n');
+    }, 'Copier la journée'));
     j.appendChild(t);
     var c = el('div', 'jour-corps');
     var majo = evs.filter(function (e) { return TYPES[typeDe(e)].g === 'majo'; });
