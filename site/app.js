@@ -1042,6 +1042,9 @@
     var r = rondStory(slides, 'La semaine du maire et de la majorité', dep); r.classList.add('sem'); zone.appendChild(r);
   }
   function ouvrirStory(slides, i0) {
+    // Sur ordinateur, la semaine entière s'affiche sur une seule page qu'on fait défiler
+    var pageUnique = !MOBILE.matches && slides.length > 1;
+    if (pageUnique) { slides = [{ semaine: slides }]; i0 = 0; }
     var idx = i0, ov = el('div', 'story'), boite = el('div', 'story-boite');
     var barres = el('div', 'story-barres'), tete = el('div', 'story-tete'), corps = el('div', 'story-corps');
     slides.forEach(function () { var x = el('i'); x.appendChild(el('b')); barres.appendChild(x); });
@@ -1064,7 +1067,20 @@
       corps.appendChild(z);
     }
     function montrer() {
-      var sl = slides[idx], d = dDe(sl.k); corps.textContent = ''; corps.scrollTop = 0;
+      var sl = slides[idx]; corps.textContent = ''; corps.scrollTop = 0;
+      if (sl.semaine) {
+        var d1 = lundi(dDe(sl.semaine[0].k)), d2 = ajout(d1, 6);
+        tt.innerHTML = ''; tt.appendChild(el('b', '', 'Maire et majorité')); tt.appendChild(el('span', 'sem', 'Semaine du ' + d1.getDate() + (d1.getMonth() !== d2.getMonth() ? ' ' + MOIS[d1.getMonth()] : '') + ' au ' + d2.getDate() + ' ' + MOIS[d2.getMonth()]));
+        barres.hidden = true;
+        sl.semaine.forEach(function (j) {
+          var dj = dDe(j.k), h = el('h2', 'story-jour' + (j.k === AUJ ? ' auj' : ''), JOURS[dj.getDay()] + ' ' + dj.getDate() + ' ' + MOIS[dj.getMonth()]); corps.appendChild(h);
+          liste('🏛️ Le maire, Jean-Luc Moudenc', j.evs.filter(estMaire), true);
+          liste('👥 Les élu·es de la majorité', j.evs.filter(function (e) { return !estMaire(e); }), false);
+        });
+        var a = corps.querySelector('.story-jour.auj'); if (a) setTimeout(function () { corps.scrollTop = a.offsetTop - corps.offsetTop - 4; }, 30);
+        return;
+      }
+      var d = dDe(sl.k);
       tt.innerHTML = ''; tt.appendChild(el('b', '', 'Maire et majorité')); tt.appendChild(el('span', '', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
       [].forEach.call(barres.children, function (b, n) { b.className = n < idx ? 'vu' : n === idx ? 'on' : ''; });
       liste('🏛️ Le maire, Jean-Luc Moudenc', sl.evs.filter(estMaire), true);
