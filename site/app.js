@@ -972,8 +972,8 @@
         cont = el('details', 'sem-prec'); var sp = el('summary'); sp.appendChild(el('b', '', 'Semaine précédente ')); sp.appendChild(el('span', '', lu.getDate() + ' → ' + di.getDate() + ' ' + MC[di.getMonth()]));
         cont.appendChild(sp); groupes[s].forEach(function (k) { cont.appendChild(blocJour(k, parJour[k])); }); v.appendChild(cont); return;
       }
-      if (s === ouverte) { cont = el('div', 'sem-1'); cont.appendChild(el('div', 'semaine', s === cle(debut) ? lib : 'Cette semaine → ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()])); }
-      else { cont = el('details', 'sem'); if (monAgenda) cont.open = true; var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); sm.appendChild(sd); cont.appendChild(sm); }
+      if (s === ouverte) { cont = el('div', 'sem-1'); var sd1 = el('div', 'semaine', s === cle(debut) ? lib : 'Cette semaine → ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()]); rondSemaine(sd1, s); cont.appendChild(sd1); }
+      else { cont = el('details', 'sem'); if (monAgenda) cont.open = true; var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); rondSemaine(sd, s); sm.appendChild(sd); cont.appendChild(sm); }
       var prec = null, nPrec = 0, grilleJ = el('div', 'jours-g');
       groupes[s].forEach(function (k) {
         var j = blocJour(k, parJour[k]);
@@ -1016,14 +1016,87 @@
   }
   // Agenda du maire et de la majorité : petit bloc enroulé
   // Agenda du maire et de la majorité : petit bouton 👁 dans la barre du jour, qui ouvre la liste juste en dessous
-  function blocMajo(majo, barre, apres) {
+  // ---------- Agenda du maire et de la majorité : petits ronds « story » ----------
+  function estMaire(e) { return /maire|moudenc/i.test((e.qui || '') + ' ' + (e.source || '')); }
+  function majoDu(debutK, finK) {
+    return D.evenements.filter(function (e) { return TYPES[typeDe(e)].g === 'majo' && e.date >= debutK && e.date <= finK; })
+      .sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
+  }
+  function rondStory(slides, titre, depart) {
+    var b = el('button', 'story-rond'); b.type = 'button'; b.title = titre; b.setAttribute('aria-label', titre);
+    b.appendChild(el('span', 'story-in', '🏛️'));
+    b.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); ouvrirStory(slides, depart || 0); });
+    return b;
+  }
+  function blocMajo(majo, barre, k) {
     if (!majo.length) return;
-    var pan = el('div', 'majo-pan'); pan.hidden = true;
-    majo.forEach(function (e) { var li = el('div', 'majo-li' + (/maire/i.test(e.qui || e.source || '') ? ' maire' : '')); li.appendChild(el('b', '', (hFmt(e.heure) || '') + (e.qui ? ' · ' + e.qui : ''))); li.appendChild(document.createTextNode(' ' + e.titre + (e.lieu ? ' → ' + e.lieu : ''))); pan.appendChild(li); });
-    var b = el('button', 'oeil'); b.appendChild(el('span', 'oeil-i', '👀')); b.appendChild(el('span', 'oeil-txt', 'Majorité · ')); b.appendChild(document.createTextNode(majo.length)); b.type = 'button'; b.title = 'Agenda du maire et de la majorité'; b.setAttribute('aria-expanded', 'false');
-    b.addEventListener('click', function () { pan.hidden = !pan.hidden; b.classList.toggle('on', !pan.hidden); b.setAttribute('aria-expanded', String(!pan.hidden)); });
-    var em = barre.querySelector('em'); if (em) barre.insertBefore(b, em); else barre.appendChild(b);
-    apres.parentNode.insertBefore(pan, apres.nextSibling);
+    barre.classList.add('avec-story');
+    barre.appendChild(rondStory([{ k: k, evs: majo }], 'Agenda du maire et de la majorité'));
+  }
+  function rondSemaine(zone, lundiK) {
+    if (monAgenda || filtre !== 'tout') return;
+    var fin = cle(ajout(dDe(lundiK), 6)), evs = majoDu(lundiK, fin); if (!evs.length) return;
+    var parJ = {}; evs.forEach(function (e) { (parJ[e.date] = parJ[e.date] || []).push(e); });
+    var slides = Object.keys(parJ).sort().map(function (k) { return { k: k, evs: parJ[k] }; });
+    var dep = 0; slides.forEach(function (x, i) { if (x.k <= AUJ) dep = i; });
+    var r = rondStory(slides, 'La semaine du maire et de la majorité', dep); r.classList.add('sem'); zone.appendChild(r);
+  }
+  function ouvrirStory(slides, i0) {
+    var idx = i0, ov = el('div', 'story'), boite = el('div', 'story-boite');
+    var barres = el('div', 'story-barres'), tete = el('div', 'story-tete'), corps = el('div', 'story-corps');
+    slides.forEach(function () { var x = el('i'); x.appendChild(el('b')); barres.appendChild(x); });
+    var av = el('span', 'story-av', '🏛️'), tt = el('div', 'story-tt'), x = el('button', 'story-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
+    tete.appendChild(av); tete.appendChild(tt); tete.appendChild(x);
+    boite.appendChild(barres); boite.appendChild(tete); boite.appendChild(corps); ov.appendChild(boite); document.body.appendChild(ov);
+    document.documentElement.classList.add('story-ouverte');
+    requestAnimationFrame(function () { ov.classList.add('vis'); });
+    function liste(titre, evs, maire) {
+      if (!evs.length) return;
+      var z = el('div', 'story-bloc' + (maire ? ' maire' : '')); z.appendChild(el('h3', '', titre));
+      evs.forEach(function (e) {
+        var li = el('div', 'story-li'); li.appendChild(el('span', 'story-h', hFmt(e.heure) || '—'));
+        var tx = el('div'); if (!maire && e.qui) tx.appendChild(el('b', '', e.qui));
+        tx.appendChild(el('span', 'story-titre', e.titre));
+        if (e.lieu) tx.appendChild(el('span', 'story-lieu', '📍 ' + e.lieu));
+        if (e.details) tx.appendChild(el('span', 'story-det', e.details));
+        li.appendChild(tx); z.appendChild(li);
+      });
+      corps.appendChild(z);
+    }
+    function montrer() {
+      var sl = slides[idx], d = dDe(sl.k); corps.textContent = ''; corps.scrollTop = 0;
+      tt.innerHTML = ''; tt.appendChild(el('b', '', 'Maire et majorité')); tt.appendChild(el('span', '', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
+      [].forEach.call(barres.children, function (b, n) { b.className = n < idx ? 'vu' : n === idx ? 'on' : ''; });
+      liste('🏛️ Le maire, Jean-Luc Moudenc', sl.evs.filter(estMaire), true);
+      liste('👥 Les élu·es de la majorité', sl.evs.filter(function (e) { return !estMaire(e); }), false);
+      if (!corps.children.length) corps.appendChild(el('p', 'story-vide', 'Rien d\'annoncé ce jour-là.'));
+      if (slides.length > 1) corps.appendChild(el('p', 'story-aide', idx < slides.length - 1 ? 'Touchez à droite pour le jour suivant →' : 'Fin de la semaine'));
+    }
+    function fermer() { ov.classList.remove('vis'); ov.classList.add('sort'); document.documentElement.classList.remove('story-ouverte'); document.removeEventListener('keydown', clav); setTimeout(function () { ov.remove(); }, 260); }
+    function aller(n) { if (n < 0) return; if (n >= slides.length) { fermer(); return; } idx = n; montrer(); }
+    function clav(e) { if (e.key === 'Escape') fermer(); else if (e.key === 'ArrowRight') aller(idx + 1); else if (e.key === 'ArrowLeft') aller(idx - 1); }
+    document.addEventListener('keydown', clav);
+    x.addEventListener('click', function (e) { e.stopPropagation(); fermer(); });
+    ov.addEventListener('click', function (e) { if (e.target === ov) fermer(); });
+    // Toucher à gauche / à droite pour changer de jour ; glisser vers le bas pour fermer, comme une story
+    var y0 = null, x0 = 0, dy = 0, dx = 0, t0 = 0;
+    boite.addEventListener('touchstart', function (e) { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = 0; dx = 0; t0 = Date.now(); boite.style.transition = 'none'; }, { passive: true });
+    boite.addEventListener('touchmove', function (e) {
+      if (y0 === null) return; dy = e.touches[0].clientY - y0; dx = e.touches[0].clientX - x0;
+      if (dy > 0 && dy > Math.abs(dx) && corps.scrollTop <= 0) { boite.style.transform = 'translateY(' + dy + 'px) scale(' + Math.max(.85, 1 - dy / 1500) + ')'; ov.style.background = 'rgba(10,30,20,' + Math.max(.2, .82 - dy / 600) + ')'; }
+    }, { passive: true });
+    boite.addEventListener('touchend', function () {
+      boite.style.transition = ''; ov.style.background = '';
+      if (dy > 110 && dy > Math.abs(dx)) { fermer(); y0 = null; return; }
+      boite.style.transform = '';
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) aller(idx + (dx < 0 ? 1 : -1));
+      y0 = null;
+    });
+    boite.addEventListener('click', function (e) {
+      if (e.target.closest('.story-x') || slides.length < 2) return;
+      var r = boite.getBoundingClientRect(); if (e.clientX - r.left > r.width * 0.35) aller(idx + 1); else aller(idx - 1);
+    });
+    montrer();
   }
   // Si une présence fait monter ou descendre un événement, on réaffiche (en gardant la position)
   var signature = '';
@@ -1093,7 +1166,7 @@
     var c = el('div', 'jour-corps');
     var majo = evs.filter(function (e) { return TYPES[typeDe(e)].g === 'majo'; });
     rangerJour(evs.filter(function (e) { return TYPES[typeDe(e)].g !== 'majo'; }), c, filtre !== 'tout');
-    if (filtre === 'tout') blocMajo(majo, t, t);
+    if (filtre === 'tout' && !monAgenda) blocMajo(majo, t, k);
     if (!c.childNodes.length) c.appendChild(el('p', 'vide', '—'));
     j.appendChild(c);
     return j;
