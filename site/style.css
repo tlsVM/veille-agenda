@@ -581,3 +581,4 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
   .outils-ag .pres-wrap,.outils-ag .part-wrap{justify-self:stretch}.outils-ag .pres-wrap button,.outils-ag .part-wrap button{width:100%;justify-content:center;white-space:nowrap}
 }
 .outils-ag .bt-presences{white-space:nowrap}@media (min-width:701px){.outils-ag .tri-theme select{width:165px}.outils-ag{gap:8px 10px}}
+@media (min-width:701px){.outils-ag .tri-theme select{width:190px}}

@@ -870,11 +870,11 @@
     var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(bAj); wrap.appendChild(pop); outils.appendChild(wrap);
     // Trier par thème (menu déroulant à droite)
     var tl = el('label', 'tri-theme'); var ts = el('select'); ts.setAttribute('aria-label', 'Trier par thème');
-    FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Tous les thèmes' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });
+    FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Trier par thème' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });
     ts.addEventListener('change', function () { filtre = ts.value; rendre(); });
     var bps = el('button', 'bt-presences', '👥 Vision des présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
     bps.addEventListener('click', function () { ouvrirPresencesSemaine(new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()))); });
-    tl.appendChild(el('span', '', 'Trier par thème')); tl.appendChild(ts); outils.appendChild(tl);
+    tl.appendChild(ts); outils.appendChild(tl);
     var pw = el('div', 'pres-wrap'); pw.appendChild(bps); outils.appendChild(pw);
     var bpa = el('button', 'bt-presences bt-partager', '📤 Partager'); bpa.type = 'button';
     bpa.addEventListener('click', ouvrirPartage);
