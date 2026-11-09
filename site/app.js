@@ -254,11 +254,11 @@
     var note = el('div', 'ab-note');
     note.appendChild(el('p', '', 'Une seule fois : vos rendez-vous cochés « Présent·e » (et « Peut-être », marqués ❔) apparaîtront ensuite tout seuls dans votre agenda, et se mettront à jour.'));
     note.appendChild(el('p', '', 'Délai de mise à jour : environ 1 h sur iPhone et Outlook, jusqu\'à 12 h sur Google Agenda.'));
-    var cp = el('button', 'bt-ps', '📋 Copier le lien d\'abonnement'); cp.type = 'button';
+    var cp = el('button', 'bt-ps', '📋 Copier le lien (autre agenda)'); cp.type = 'button';
     cp.addEventListener('click', function () { (navigator.clipboard ? navigator.clipboard.writeText(https) : Promise.reject()).then(function () { cp.textContent = '✓ Lien copié'; }).catch(function () { prompt('Copiez ce lien :', https); }); });
     note.appendChild(cp);
     note.appendChild(el('p', 'ab-perso', 'Ce lien est personnel : ne le partagez pas.'));
-    choixAgenda('Abonner mon agenda', 'Agenda de ' + nomLong(nom), [
+    choixAgenda('Ajouter à mon agenda', 'Les rendez-vous de ' + nomLong(nom) + ', mis à jour automatiquement', [
       ['Google Agenda', 'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(web), 'sur ordinateur de préférence'],
       ['iPhone, iPad, Mac', web, 'appuyez puis « S\'abonner »'],
       ['Outlook', 'https://outlook.office.com/calendar/0/addfromweb?url=' + encodeURIComponent(https) + '&name=' + encodeURIComponent('Vivre Mieux'), 'agenda Microsoft (mairie, pro)']
@@ -505,8 +505,8 @@
       if (pers && D.cles_agenda) {
         var za = el('div', 'ps-monag'); za.appendChild(el('b', '', '📅 Dans l\'agenda personnel de ' + nomLong(pers)));
         var ag = el('div', 'ps-actions');
-        var a1 = el('a', 'bt-ps', '⬇️ Ajouter cette semaine'); a1.href = lienAbonnement(pers, true) + '&du=' + lundiK + '&au=' + cle(di);
-        var a2 = el('button', 'bt-ps', '🔄 Abonner mon agenda'); a2.type = 'button'; a2.addEventListener('click', function () { ouvrirAbonnement(pers); });
+        var a1 = el('a', 'bt-ps', '⬇️ Télécharger le .ics de la semaine'); a1.href = lienAbonnement(pers, true) + '&du=' + lundiK + '&au=' + cle(di);
+        var a2 = el('button', 'bt-ps', '📅 Ajouter à mon agenda'); a2.type = 'button'; a2.addEventListener('click', function () { ouvrirAbonnement(pers); });
         ag.appendChild(a1); ag.appendChild(a2); za.appendChild(ag); bx.appendChild(za);
       }
       var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', fermer); bx.appendChild(f);
