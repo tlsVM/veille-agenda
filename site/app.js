@@ -411,10 +411,10 @@
     var tl = el('label', 'tri-theme'); var ts = el('select'); ts.setAttribute('aria-label', 'Trier par thème');
     FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Tous les thèmes' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });
     ts.addEventListener('change', function () { filtre = ts.value; rendre(); });
-    var bps = el('button', 'bt-presences', '👥 Présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
+    var bps = el('button', 'bt-presences', '👥 Vision des présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
     bps.addEventListener('click', function () { ouvrirPresencesSemaine(new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()))); });
-    var droite = el('div', 'outils-d'); droite.appendChild(bps);
-    tl.appendChild(el('span', '', 'Trier par thème')); tl.appendChild(ts); droite.appendChild(tl); outils.appendChild(droite);
+    tl.appendChild(el('span', '', 'Trier par thème')); tl.appendChild(ts); outils.appendChild(tl);
+    var pw = el('div', 'pres-wrap'); pw.appendChild(bps); outils.appendChild(pw);
     var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', 'légende'));
     var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
