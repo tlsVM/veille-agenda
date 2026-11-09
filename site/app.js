@@ -315,18 +315,17 @@
   document.addEventListener('click', function (e) { var p = document.querySelector('.cal-pop'); if (p && !p.hidden && !p.contains(e.target)) p.hidden = true; });
 
   function vueAgenda(v) {
-    var f = el('div', 'filtres');
-    FILTRES.forEach(function (x) {
-      var b = el('button', x[0] === filtre ? 'on' : '', x[1]); b.type = 'button';
-      b.addEventListener('click', function () { filtre = x[0]; rendre(); }); f.appendChild(b);
-    });
-    v.appendChild(f);
     // Barre d'outils : calendrier + légende repliée
     var outils = el('div', 'outils-ag');
     var bcal = el('button', 'bt-cal', '📅 Choisir un jour'); bcal.type = 'button';
     var pop = el('div', 'cal-pop'); pop.hidden = true;
     bcal.addEventListener('click', function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) dessinerCal(pop, moisCal); });
     var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(pop); outils.appendChild(wrap);
+    // Trier par thème (menu déroulant à droite)
+    var tl = el('label', 'tri-theme'); var ts = el('select'); ts.setAttribute('aria-label', 'Trier par thème');
+    FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Tous les thèmes' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });
+    ts.addEventListener('change', function () { filtre = ts.value; rendre(); });
+    tl.appendChild(el('span', '', 'Trier par thème')); tl.appendChild(ts); outils.appendChild(tl);
     var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', 'légende'));
     var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
