@@ -9,6 +9,12 @@
  *   GET  api.php?a=data   → événements, actus, infos de quartier, présences
  *   GET  api.php?a=pres   → présences seulement (rafraîchissement régulier)
  *   POST api.php  a=pres&id=…&nom=…&statut=present|peut|  → enregistre une présence
+ *   POST api.php?a=ajout  (JSON)  → ajoute ou corrige un rendez-vous saisi par un élu (+ photo)
+ *   POST api.php  a=suppr&id=…&nom=…  → supprime un rendez-vous ajouté
+ *   GET  api.php?a=photo&id=…  → photo jointe à un rendez-vous
+ *   POST api.php  a=code&code=…  → vérifie le code d'accès du groupe
+ *
+ * Code d'accès : si config.php contient 'code_acces' => '…', toute la plateforme le demande.
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -222,9 +228,126 @@ function strftime_fr() {
   return date('j') . ' ' . $m[(int)date('n') - 1] . ' ' . date('Y');
 }
 
+// ---------- Code d'accès du groupe ----------
+
+function codeAttendu() { $c = config(); return trim((string)(($c ?? [])['code_acces'] ?? '')); }
+function codeOk() {
+  $att = codeAttendu();
+  if ($att === '') { return true; } // pas encore de code choisi : plateforme ouverte (lecture seule pour les ajouts)
+  return hash_equals($att, (string)($_COOKIE['vmcode'] ?? ''));
+}
+
+// ---------- Rendez-vous ajoutés par les élus (fichier JSON + photos hors du dossier public) ----------
+
+const TYPES_AJOUT = ['Réunion publique', 'Concertation', 'Association de quartier', 'Vie associative', 'Militant', 'Culture',
+  'Conférence', 'Café-débat', 'Commission', 'Conseil municipal', 'Inauguration', 'Cérémonie', 'Protocole', 'Réunion de groupe', 'Mairie', 'Autre'];
+
+function ajouts() {
+  global $DATA;
+  $f = "$DATA/ajouts.json";
+  if (!is_file($f)) { return []; }
+  $p = json_decode(file_get_contents($f), true);
+  return is_array($p) ? $p : [];
+}
+
+function modifierAjouts($fn) {
+  global $DATA;
+  $h = fopen("$DATA/ajouts.json", 'c+');
+  if (!$h) { sortir(['erreur' => 'ecriture'], 500); }
+  flock($h, LOCK_EX);
+  $p = json_decode(stream_get_contents($h), true);
+  if (!is_array($p)) { $p = []; }
+  $p = $fn($p);
+  ftruncate($h, 0); rewind($h);
+  fwrite($h, json_encode(array_values($p), JSON_UNESCAPED_UNICODE));
+  fflush($h); flock($h, LOCK_UN); fclose($h);
+  return $p;
+}
+
+function champ($d, $k, $max) {
+  $v = trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', (string)($d[$k] ?? '')));
+  return mb_substr($v, 0, $max);
+}
+
+function enregistrerAjout() {
+  global $DATA;
+  $d = json_decode(file_get_contents('php://input'), true);
+  if (!is_array($d)) { sortir(['erreur' => 'format'], 400); }
+  $nom = (string)($d['nom'] ?? '');
+  if (!in_array($nom, ELUS, true)) { sortir(['erreur' => 'nom'], 400); }
+  $e = [
+    'date' => lireDate(champ($d, 'date', 10)), 'heure' => lireHeure(champ($d, 'heure', 5)),
+    'titre' => champ($d, 'titre', 160), 'lieu' => champ($d, 'lieu', 200), 'quartier' => champ($d, 'quartier', 80),
+    'lien' => champ($d, 'lien', 400), 'details' => champ($d, 'details', 1500), 'type' => champ($d, 'type', 40),
+  ];
+  if ($e['date'] === '' || $e['titre'] === '') { sortir(['erreur' => 'champs'], 400); }
+  if (!in_array($e['type'], TYPES_AJOUT, true)) { $e['type'] = 'Autre'; }
+  if ($e['lien'] !== '' && !preg_match('#^https?://#i', $e['lien'])) { $e['lien'] = ''; }
+  $id = (string)($d['id'] ?? '');
+  if ($id !== '' && !preg_match('/^u[a-f0-9]{10}$/', $id)) { sortir(['erreur' => 'id'], 400); }
+  $nouveau = $id === '';
+  if ($nouveau) { $id = 'u' . bin2hex(random_bytes(5)); }
+
+  // Photo (JPEG déjà réduite par le téléphone), facultative
+  $photo = (string)($d['photo'] ?? '');
+  if ($photo !== '' && $photo !== 'garder') {
+    if (!is_dir("$DATA/photos")) { @mkdir("$DATA/photos", 0700, true); }
+    $bin = base64_decode(preg_replace('#^data:image/jpeg;base64,#', '', $photo), true);
+    if ($bin === false || strlen($bin) > 4000000) { sortir(['erreur' => 'photo'], 400); }
+    $info = @getimagesizefromstring($bin);
+    if (!$info || $info[2] !== IMAGETYPE_JPEG) { sortir(['erreur' => 'photo'], 400); }
+    file_put_contents("$DATA/photos/$id.jpg", $bin, LOCK_EX);
+  }
+  if ($photo === 'retirer') { @unlink("$DATA/photos/$id.jpg"); }
+
+  modifierAjouts(function ($p) use ($e, $id, $nom, $nouveau, $DATA) {
+    $e['id'] = $id; $e['ajoute'] = 'oui'; $e['photo'] = is_file("$DATA/photos/$id.jpg") ? 'oui' : '';
+    foreach ($p as $i => $x) {
+      if ($x['id'] === $id) { $e['auteur'] = $x['auteur']; $e['cree'] = $x['cree']; $e['modifie'] = date('c'); $p[$i] = $e; return $p; }
+    }
+    $e['auteur'] = $nom; $e['cree'] = date('c'); $p[] = $e; return $p;
+  });
+  @file_put_contents("$DATA/journal-ajouts.log", date('c') . "\t" . ($nouveau ? 'ajout' : 'modif') . "\t$id\t$nom\t{$e['date']}\t{$e['titre']}\n", FILE_APPEND | LOCK_EX);
+  sortir(['ok' => true, 'id' => $id]);
+}
+
 // ---------- Aiguillage ----------
 
 $a = $_REQUEST['a'] ?? 'data';
+
+if ($a === 'code') {
+  $att = codeAttendu();
+  $ok = $att !== '' && hash_equals($att, (string)($_POST['code'] ?? ''));
+  if (!$ok) { sleep(1); } // ralentit les essais au hasard
+  sortir(['ok' => $ok]);
+}
+
+if (!codeOk()) { sortir(['erreur' => 'code'], 401); }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'ajout') {
+  if (codeAttendu() === '') { sortir(['erreur' => 'sans_code'], 403); }
+  enregistrerAjout();
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'suppr') {
+  if (codeAttendu() === '') { sortir(['erreur' => 'sans_code'], 403); }
+  $id = (string)($_POST['id'] ?? ''); $nom = (string)($_POST['nom'] ?? '');
+  if (!preg_match('/^u[a-f0-9]{10}$/', $id) || !in_array($nom, ELUS, true)) { sortir(['erreur' => 'id'], 400); }
+  modifierAjouts(function ($p) use ($id) { return array_filter($p, function ($x) use ($id) { return $x['id'] !== $id; }); });
+  @rename("$DATA/photos/$id.jpg", "$DATA/photos/supprime-$id.jpg"); // gardée de côté, au cas où
+  @file_put_contents("$DATA/journal-ajouts.log", date('c') . "\tsuppr\t$id\t$nom\n", FILE_APPEND | LOCK_EX);
+  sortir(['ok' => true]);
+}
+
+if ($a === 'photo') {
+  $id = (string)($_GET['id'] ?? '');
+  $f = "$DATA/photos/$id.jpg";
+  if (!preg_match('/^u[a-f0-9]{10}$/', $id) || !is_file($f)) { http_response_code(404); exit; }
+  header('Content-Type: image/jpeg');
+  header('Cache-Control: private, max-age=86400');
+  readfile($f);
+  exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
   $id = (string)($_POST['id'] ?? '');
@@ -246,7 +369,9 @@ if ($a === 'presse' && !empty((config() ?? [])['presse_ia'])) { // désactivé :
 
 if ($a === 'data') {
   $d = donnees();
+  if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = array_merge($d['evenements'] ?? [], ajouts()); }
   $d['presences'] = presences();
+  $d['ajout_actif'] = codeAttendu() !== '';
   $d['elus'] = ELUS;
   sortir($d);
 }

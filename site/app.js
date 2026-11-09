@@ -61,6 +61,7 @@
   // ---------- Données ----------
   function charger(frais) {
     return fetch('api.php?a=data' + (frais ? '&frais=1' : ''), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.erreur === 'code') { afficherCode(); return; }
       if (d.erreur && !d.evenements) { afficherErreur(d.erreur); return; }
       D = d; D.evenements = d.evenements || []; D.actus = d.actus || []; D.quartiers = d.quartiers || []; D.presences = d.presences || {};
       ajouterReunionsGroupe(); signature = sigPresences();
@@ -220,6 +221,20 @@
     if (e.qui) c.appendChild(el('div', 'l', e.qui));
     if (e.lieu) c.appendChild(el('div', 'l', '→ ' + e.lieu + (e.date_fin && e.date_fin !== e.date ? ' · jusqu\'au ' + courte(e.date_fin) : '')));
     if (e.details) c.appendChild(el('div', 'd', e.details));
+    if (e.photo === 'oui') {
+      var ph = el('button', 'ev-photo'); ph.type = 'button'; ph.title = 'Voir la photo';
+      var mi = el('img'); mi.src = 'api.php?a=photo&id=' + e.id; mi.alt = 'Photo jointe'; mi.loading = 'lazy'; ph.appendChild(mi);
+      ph.addEventListener('click', function (ev) { ev.stopPropagation(); voirPhoto(e); }); c.appendChild(ph);
+    }
+    if (e.ajoute === 'oui') {
+      var pa = el('div', 'par-qui', 'ajouté par ' + COURT(e.auteur || ''));
+      if (moi && (moi === e.auteur || /collaborateur/.test(moi))) {
+        var bm = el('button', 'lien-discret', 'modifier'); bm.type = 'button'; bm.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirAjout(e); });
+        var bs = el('button', 'lien-discret', 'supprimer'); bs.type = 'button'; bs.addEventListener('click', function (ev) { ev.stopPropagation(); supprimerAjout(e); });
+        pa.appendChild(document.createTextNode(' · ')); pa.appendChild(bm); pa.appendChild(document.createTextNode(' · ')); pa.appendChild(bs);
+      }
+      c.appendChild(pa);
+    }
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
     c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
     return c;
@@ -494,8 +509,219 @@
     var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
   }
 
+  // ---------- Code d'accès du groupe ----------
+  function afficherCode() {
+    var v = document.getElementById('vue'); v.textContent = '';
+    var b = el('form', 'code-acces');
+    b.appendChild(el('h2', '', 'Accès réservé'));
+    b.appendChild(el('p', '', 'Cette plateforme est réservée au groupe Vivre Mieux. Saisissez le code d\'accès transmis par Hugo (une seule fois sur cet appareil).'));
+    var i = el('input'); i.type = 'password'; i.autocomplete = 'current-password'; i.placeholder = 'Code d\'accès'; i.required = true;
+    var bt = el('button', 'bt-valider', 'Entrer'); bt.type = 'submit';
+    var msg = el('p', 'nb');
+    b.appendChild(i); b.appendChild(bt); b.appendChild(msg);
+    b.addEventListener('submit', function (e) {
+      e.preventDefault(); bt.disabled = true; msg.textContent = 'Vérification…';
+      fetch('api.php', { method: 'POST', body: new URLSearchParams({ a: 'code', code: i.value.trim() }) }).then(function (r) { return r.json(); }).then(function (d) {
+        bt.disabled = false;
+        if (!d.ok) { msg.textContent = 'Code incorrect.'; i.select(); return; }
+        document.cookie = 'vmcode=' + encodeURIComponent(i.value.trim()) + '; max-age=34560000; path=/; SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : '');
+        msg.textContent = ''; charger(true);
+      }).catch(function () { bt.disabled = false; msg.textContent = 'Pas de connexion. Réessayez.'; });
+    });
+    v.appendChild(b); setTimeout(function () { i.focus(); }, 50);
+  }
+
+  // ---------- Ajouter un rendez-vous : lecture automatique d'un texte collé ----------
+  var MOISRE = { janv: 1, janvier: 1, fevr: 2, fev: 2, fevrier: 2, mars: 3, avr: 4, avril: 4, mai: 5, juin: 6, juil: 7, juillet: 7, aout: 8, sept: 9, sep: 9, septembre: 9, oct: 10, octobre: 10, nov: 11, novembre: 11, dec: 12, decembre: 12 };
+  function annee(m, j) { // sans année : la prochaine occurrence de cette date
+    var a = new Date().getFullYear(), d = new Date(a, m - 1, j);
+    if (d < ajout(new Date(), -2)) a++;
+    return a;
+  }
+  function k3(a, m, j) { return a + '-' + ('0' + m).slice(-2) + '-' + ('0' + j).slice(-2); }
+  function trouverDate(t) {
+    var n = norm(t), m;
+    m = /\b(\d{1,2})(?:er)?\s+(janvier|janv|fevrier|fevr|fev|mars|avril|avr|mai|juin|juillet|juil|aout|septembre|sept|sep|octobre|oct|novembre|nov|decembre|dec)\.?(?:\s+(20\d\d))?/.exec(n);
+    if (m && +m[1] >= 1 && +m[1] <= 31) { var mo = MOISRE[m[2]]; return k3(m[3] || annee(mo, +m[1]), mo, +m[1]); }
+    m = /\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/.exec(n);
+    if (m && +m[1] >= 1 && +m[1] <= 31 && +m[2] >= 1 && +m[2] <= 12) { var y = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : annee(+m[2], +m[1]); return k3(y, +m[2], +m[1]); }
+    m = /\b(20\d\d)-(\d{2})-(\d{2})\b/.exec(n); if (m) return m[0];
+    if (/\bapres-demain\b/.test(n)) return cle(ajout(new Date(), 2));
+    if (/\bdemain\b/.test(n)) return cle(ajout(new Date(), 1));
+    if (/\b(aujourd'hui|ce soir|ce midi|ce matin)\b/.test(n)) return AUJ;
+    m = /\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/.exec(n);
+    if (m) { var w = JOURS.indexOf(m[1]), d = new Date(), ec = (w - d.getDay() + 7) % 7; if (/prochain/.test(n.slice(m.index, m.index + 25)) && ec === 0) ec = 7; return cle(ajout(d, ec)); }
+    return '';
+  }
+  function trouverHeure(t) {
+    var n = norm(t).replace(/\b\d{1,2}[\/.]\d{1,2}([\/.]\d{2,4})?\b/g, ' ');
+    var m = /\b([01]?\d|2[0-3])\s*(?:h|:)\s*([0-5]\d)?(?![\d])/.exec(n);
+    if (m) return ('0' + m[1]).slice(-2) + ':' + (m[2] || '00');
+    if (/\bmidi\b/.test(n)) return '12:00';
+    return '';
+  }
+  function trouverLieu(t) {
+    var m = /(?:^|\n)\s*(?:lieu|adresse|ou|où|rendez-vous|rdv)\s*[:\-–]\s*([^\n]{3,140})/i.exec(t) || /📍\s*([^\n]{3,140})/.exec(t);
+    if (m) return m[1].trim();
+    m = /\b((?:salle|maison de (?:quartier|la citoyenneté|l'économie|la culture)|maison|centre (?:culturel|social|d'animation)|espace|place|parc|jardin|mairie de quartier|capitole|gymnase|école|groupe scolaire|collège|lycée|médiathèque|bibliothèque|théâtre|halle|salle des fêtes|marché|cinéma|bar|café)\b[^\n.;]{2,80})/i.exec(t);
+    return m ? m[1].replace(/\s*(?:à|a|de)\s*\d{1,2}\s*h.*$/i, '').trim() : '';
+  }
+  var MOTS_THEME = [
+    [/r[ée]union publique|concertation|atelier citoyen|r[ée]union de (?:quartier|concertation)|bilan de mandat/, 'Réunion publique'],
+    [/inauguration/, 'Inauguration'], [/c[ée]r[ée]monie|comm[ée]moration|d[ée]p[ôo]t de gerbe/, 'Cérémonie'],
+    [/conseil municipal/, 'Conseil municipal'], [/commission/, 'Commission'],
+    [/manif|rassemblement|gr[èe]ve|mobilisation|tractage|porte-?[àa]-?porte|marche (?:pour|contre)|piquet/, 'Militant'],
+    [/conf[ée]rence|table ronde|d[ée]bat|colloque|rencontre-d[ée]bat/, 'Conférence'],
+    [/concert|exposition|expo\b|spectacle|vernissage|festival|th[ée][âa]tre|cin[ée]ma|projection|lecture|danse/, 'Culture'],
+    [/assembl[ée]e g[ée]n[ée]rale|\bag\b|comit[ée] de quartier|association|f[êe]te de quartier|vide-grenier|repas de quartier|apéro/, 'Association de quartier']
+  ];
+  function trouverTheme(t) { var n = t.toLowerCase(); for (var i = 0; i < MOTS_THEME.length; i++) if (MOTS_THEME[i][0].test(n)) return MOTS_THEME[i][1]; return 'Autre'; }
+  function trouverTitre(t) {
+    var m = /(?:^|\n)\s*(?:objet|sujet|titre)\s*:\s*([^\n]{3,160})/i.exec(t); if (m) return m[1].trim();
+    var lignes = t.split(/\n+/).map(function (l) { return l.replace(/^[\s•\-–*#>]+/, '').trim(); }).filter(function (l) {
+      return l.length > 3 && !/^(bonjour|bonsoir|madame|monsieur|mesdames|cher|chère|chers|salut|coucou|hello|de\s*:|à\s*:|envoyé|le .* a écrit)/i.test(l) && !/^https?:\/\//.test(l);
+    });
+    var l = lignes[0] || ''; if (l.length > 110) l = l.slice(0, 107).replace(/\s+\S*$/, '') + '…';
+    return l;
+  }
+  function analyser(t) {
+    var lienM = /https?:\/\/[^\s<>"')]+/.exec(t);
+    return { titre: trouverTitre(t), date: trouverDate(t), heure: trouverHeure(t), lieu: trouverLieu(t), lien: lienM ? lienM[0].replace(/[.,;]+$/, '') : '', type: trouverTheme(t) };
+  }
+
+  // Photo : réduite dans le téléphone (1600 px max) avant l'envoi
+  function reduirePhoto(fichier) {
+    return new Promise(function (ok, ko) {
+      var img = new Image(), u = URL.createObjectURL(fichier);
+      img.onload = function () {
+        var max = 1600, w = img.naturalWidth, h = img.naturalHeight, r = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas'); c.width = Math.round(w * r); c.height = Math.round(h * r);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+        ok({ data: c.toDataURL('image/jpeg', 0.82), canvas: c });
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); ko(); };
+      img.src = u;
+    });
+  }
+  // Lecture du texte d'une photo : module hébergé sur notre serveur (dossier ocr/), chargé seulement au premier usage
+  var tesseractP = null;
+  function lireTextePhoto(canvas, etat) {
+    if (!tesseractP) tesseractP = new Promise(function (ok, ko) {
+      var s = document.createElement('script'); s.src = 'ocr/tesseract.min.js';
+      s.onload = function () { ok(window.Tesseract); }; s.onerror = function () { tesseractP = null; ko(); }; document.head.appendChild(s);
+    });
+    var base = new URL('ocr/', location.href).href, wk;
+    return tesseractP.then(function (T) {
+      etat('Préparation de la lecture (une seule fois)…');
+      return T.createWorker('fra', 1, { workerPath: base + 'worker.min.js', corePath: base, langPath: base, gzip: false, cacheMethod: 'write',
+        logger: function (m) { if (m.status === 'recognizing text') etat('Lecture de la photo… ' + Math.round(m.progress * 100) + ' %'); } });
+    }).then(function (w) { wk = w; return w.recognize(canvas); })
+      .then(function (r) { wk.terminate(); return r.data.text || ''; })
+      .catch(function (e) { if (wk) wk.terminate(); throw e; });
+  }
+
+  var THEMES_AJOUT = [['Réunion publique', 'Réunion publique, concertation'], ['Association de quartier', 'Association, comité de quartier'], ['Militant', 'Militant'], ['Culture', 'Culture'], ['Conférence', 'Conférence, café-débat'], ['Commission', 'Commission'], ['Conseil municipal', 'Conseil municipal'], ['Inauguration', 'Inauguration'], ['Cérémonie', 'Cérémonie, commémoration'], ['Mairie', 'Événement mairie'], ['Autre', 'Autre']];
+
+  function ouvrirAjout(existant) {
+    if (!D.ajout_actif) { alert('L\'ajout de rendez-vous sera disponible dès que Hugo aura mis en place le code d\'accès du groupe.'); return; }
+    if (!moi) { ouvrirChoix(); return; }
+    var e0 = existant || {};
+    var m = el('div', 'modale'), bx = el('form', 'modale-boite ajout'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', existant ? 'Modifier le rendez-vous' : 'Ajouter un rendez-vous'));
+    var photoData = e0.photo === 'oui' ? 'garder' : '';
+    if (!existant) {
+      bx.appendChild(el('p', '', 'Collez le message reçu ou ajoutez une photo : les champs se remplissent tout seuls. Vérifiez puis ajoutez.'));
+      var ta = el('textarea', 'aj-colle'); ta.rows = 4; ta.placeholder = 'Collez ici le mail, le SMS, le message WhatsApp…';
+      bx.appendChild(ta);
+    }
+    var lignePh = el('div', 'aj-photo');
+    var inp = el('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.hidden = true;
+    var bph = el('button', 'bt-photo', '📷 ' + (e0.photo === 'oui' ? 'Changer la photo' : 'Ajouter une photo')); bph.type = 'button';
+    bph.addEventListener('click', function () { inp.click(); });
+    var apercu = el('div', 'aj-apercu'), etat = el('span', 'nb');
+    if (e0.photo === 'oui') { var im0 = el('img'); im0.src = 'api.php?a=photo&id=' + e0.id; im0.alt = ''; apercu.appendChild(im0); }
+    lignePh.appendChild(bph); lignePh.appendChild(inp); lignePh.appendChild(etat); lignePh.appendChild(apercu); bx.appendChild(lignePh);
+
+    function champ(lab, type, val, attrs) {
+      var l = el('label', 'aj-champ'); l.appendChild(el('span', '', lab));
+      var i = type === 'textarea' ? el('textarea') : el('input'); if (type !== 'textarea') i.type = type; i.value = val || '';
+      Object.keys(attrs || {}).forEach(function (k) { i.setAttribute(k, attrs[k]); });
+      l.appendChild(i); bx.appendChild(l); return i;
+    }
+    var fT = champ('Titre', 'text', e0.titre, { required: '', maxlength: '160' });
+    var dh = el('div', 'aj-dh'); bx.appendChild(dh);
+    var fD = champ('Date', 'date', e0.date, { required: '' }), fH = champ('Heure', 'time', e0.heure);
+    dh.appendChild(fD.parentNode); dh.appendChild(fH.parentNode);
+    var fL = champ('Lieu', 'text', e0.lieu, { maxlength: '200' });
+    var fQ = champ('Quartier (facultatif)', 'text', e0.quartier, { maxlength: '80' });
+    var ls = el('label', 'aj-champ'); ls.appendChild(el('span', '', 'Thème')); var fY = el('select');
+    THEMES_AJOUT.forEach(function (x) { var o = el('option', '', x[1]); o.value = x[0]; fY.appendChild(o); });
+    fY.value = THEMES_AJOUT.some(function (x) { return x[0] === e0.type; }) ? e0.type : 'Autre'; ls.appendChild(fY); bx.appendChild(ls);
+    var fK = champ('Lien (facultatif)', 'url', e0.lien, { placeholder: 'https://…' });
+    var fX = champ('Détails (facultatif)', 'textarea', e0.details, { rows: '3', maxlength: '1500' });
+    var pres = null;
+    if (!existant) {
+      var lp = el('label', 'aj-pres'); pres = el('input'); pres.type = 'checkbox';
+      lp.appendChild(pres); lp.appendChild(document.createTextNode(' Je serai présent·e (' + COURT(moi) + ')')); bx.appendChild(lp);
+    }
+    function remplir(t) {
+      var r = analyser(t);
+      if (r.titre) fT.value = r.titre; if (r.date) fD.value = r.date; if (r.heure) fH.value = r.heure;
+      if (r.lieu) fL.value = r.lieu; if (r.lien) fK.value = r.lien; fY.value = r.type;
+      if (!fX.value) fX.value = t.trim().slice(0, 600);
+      [fT, fD, fH, fL].forEach(function (x) { x.classList.toggle('vide-aj', !x.value); });
+    }
+    if (ta) ta.addEventListener('input', function () { if (ta.value.trim().length > 8) remplir(ta.value); });
+    inp.addEventListener('change', function () {
+      var f = inp.files[0]; if (!f) return;
+      etat.textContent = 'Préparation de la photo…';
+      reduirePhoto(f).then(function (r) {
+        photoData = r.data; apercu.textContent = ''; var im = el('img'); im.src = r.data; im.alt = ''; apercu.appendChild(im);
+        bph.textContent = '📷 Changer la photo';
+        if (existant) { etat.textContent = ''; return; }
+        return lireTextePhoto(r.canvas, function (s) { etat.textContent = s; }).then(function (txt) {
+          etat.textContent = txt.trim() ? 'Photo lue : vérifiez les champs.' : 'Pas de texte lisible : complétez à la main.';
+          if (txt.trim()) { ta.value = (ta.value ? ta.value + '\n' : '') + txt.trim(); remplir(ta.value); }
+        });
+      }).catch(function () { etat.textContent = 'Lecture impossible : complétez à la main (la photo reste jointe).'; });
+    });
+
+    var err = el('p', 'aj-err');
+    var act = el('div', 'aj-actions');
+    var ann = el('button', 'gest-fermer', 'Annuler'); ann.type = 'button'; ann.addEventListener('click', function () { m.remove(); });
+    var ok = el('button', 'bt-valider', existant ? 'Enregistrer' : '➕ Ajouter à l\'agenda'); ok.type = 'submit';
+    act.appendChild(ann); act.appendChild(ok); bx.appendChild(err); bx.appendChild(act);
+    bx.addEventListener('submit', function (ev) {
+      ev.preventDefault(); err.textContent = '';
+      if (!fT.value.trim() || !fD.value) { err.textContent = 'Il faut au moins un titre et une date.'; return; }
+      ok.disabled = true; ok.textContent = 'Envoi…';
+      var corps = { nom: moi, id: e0.id || '', titre: fT.value, date: fD.value, heure: fH.value, lieu: fL.value, quartier: fQ.value, type: fY.value, lien: fK.value, details: fX.value, photo: photoData };
+      fetch('api.php?a=ajout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) throw d;
+        m.remove();
+        if (pres && pres.checked) cocherPour(d.id, moi, 'present');
+        jourChoisi = fD.value; return charger(true);
+      }).catch(function () { ok.disabled = false; ok.textContent = 'Réessayer'; err.textContent = 'Le rendez-vous n\'a pas pu être enregistré. Vérifiez la connexion et réessayez.'; });
+    });
+    m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
+    m.appendChild(bx); document.body.appendChild(m);
+    if (ta) setTimeout(function () { ta.focus(); }, 50);
+  }
+  function supprimerAjout(e) {
+    if (!confirm('Supprimer « ' + e.titre + ' » de l\'agenda ?')) return;
+    fetch('api.php', { method: 'POST', body: new URLSearchParams({ a: 'suppr', id: e.id, nom: moi }) }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) throw d; charger(true);
+    }).catch(function () { alert('La suppression n\'a pas pu être faite. Réessayez.'); });
+  }
+  function voirPhoto(e) {
+    var m = el('div', 'modale photo-grande'), im = el('img'); im.src = 'api.php?a=photo&id=' + e.id; im.alt = e.titre;
+    m.appendChild(im); m.addEventListener('click', function () { m.remove(); }); document.body.appendChild(m);
+  }
+
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
+    var bAj = el('button', 'bt-ajout', '➕ Ajouter un rendez-vous'); bAj.type = 'button';
+    bAj.addEventListener('click', function () { ouvrirAjout(); }); v.appendChild(bAj);
     var outils = el('div', 'outils-ag');
     var bcal = el('button', 'bt-cal', '📅 Choisir un jour'); bcal.type = 'button';
     var pop = el('div', 'cal-pop'); pop.hidden = true;
