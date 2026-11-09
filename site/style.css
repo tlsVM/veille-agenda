@@ -446,3 +446,26 @@ details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--om
   .outils-ag .bt-cal{font-size:14px;padding:7px 14px}
   .tri-theme select{max-width:52vw;font-size:13px}
 }
+
+/* Bouton et fenêtre « Présences de la semaine » */
+.outils-d{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.bt-presences{cursor:pointer;font:600 13.5px var(--texte);color:var(--vert-fonce);background:var(--rose-pale);border:1.5px solid var(--rose);border-radius:999px;padding:7px 14px}
+.bt-presences:hover{background:var(--rose)}
+.pres-sem{max-width:520px}
+.ps-nav{display:flex;align-items:center;justify-content:space-between;margin:2px 0 8px}
+.ps-nav b{font:400 20px var(--titre);letter-spacing:.04em;text-transform:uppercase;color:var(--vert)}
+.ps-liste{max-height:52vh;overflow:auto;padding-right:2px}
+.ps-jour{margin:10px 0 4px;font:400 17px var(--titre);letter-spacing:.05em;text-transform:uppercase;color:var(--vert);border-bottom:2px solid var(--rose-pale)}
+.ps-ev{border-left:4px solid var(--c);background:#fff;border-radius:8px;padding:5px 10px;margin:5px 0;box-shadow:0 0 0 1px #f0e6eb}
+.ps-l1{display:flex;gap:8px;align-items:baseline}
+.ps-h{font:400 16px var(--titre);color:var(--c);min-width:40px}
+.ps-t{font-weight:600;font-size:13.5px;line-height:1.3}
+.ps-lieu{font-size:12px;color:var(--gris)}
+.ps-qui{font-size:12.5px;font-weight:600;color:var(--vert)}
+.ps-peut{font-size:12px;color:var(--rose-fort)}
+.ps-info{font-size:11.5px!important;margin:10px 0 6px!important}
+.ps-actions{display:flex;gap:6px;flex-wrap:wrap}
+.bt-ps{flex:1 1 auto;cursor:pointer;font:600 13px var(--texte);border:1.5px solid var(--vert);background:#fff;color:var(--vert-fonce);border-radius:999px;padding:7px 10px}
+.bt-ps:hover{background:var(--vert);color:#fff}
+.ps-msg{font-size:12px!important;color:var(--vert)!important;margin:6px 0 0!important;min-height:1em}
+@media (max-width:480px){.bt-presences{padding:7px 11px;font-size:13px}.outils-ag .cal-wrap{flex:1 1 100%}.outils-d{flex:1 1 100%;justify-content:space-between}}
