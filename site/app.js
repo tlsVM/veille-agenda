@@ -630,8 +630,8 @@
     bx.appendChild(el('h2', '', existant ? 'Modifier le rendez-vous' : 'Ajouter un rendez-vous'));
     var photoData = e0.photo === 'oui' ? 'garder' : '';
     if (!existant) {
-      bx.appendChild(el('p', '', 'Collez le message reçu ou ajoutez une photo : les champs se remplissent tout seuls. Vérifiez puis ajoutez.'));
-      var ta = el('textarea', 'aj-colle'); ta.rows = 4; ta.placeholder = 'Collez ici le mail, le SMS, le message WhatsApp…';
+      bx.appendChild(el('p', '', 'Collez le message reçu, collez une image ou ajoutez une photo : les champs se remplissent tout seuls. Vérifiez puis ajoutez.'));
+      var ta = el('textarea', 'aj-colle'); ta.rows = 4; ta.placeholder = 'Collez ici le mail, le SMS, le message WhatsApp… ou une image copiée';
       bx.appendChild(ta);
     }
     var lignePh = el('div', 'aj-photo');
@@ -672,8 +672,14 @@
       [fT, fD, fH, fL].forEach(function (x) { x.classList.toggle('vide-aj', !x.value); });
     }
     if (ta) ta.addEventListener('input', function () { if (ta.value.trim().length > 8) remplir(ta.value); });
-    inp.addEventListener('change', function () {
-      var f = inp.files[0]; if (!f) return;
+    inp.addEventListener('change', function () { traiterPhoto(inp.files[0]); });
+    // Coller une image (Ctrl+V ou appui long → Coller) n'importe où dans la fenêtre, ou la glisser-déposer
+    function imageDe(dt) { var fs = (dt && dt.files) || []; for (var i = 0; i < fs.length; i++) if (/^image\//.test(fs[i].type)) return fs[i]; return null; }
+    bx.addEventListener('paste', function (ev) { var f = imageDe(ev.clipboardData); if (f) { ev.preventDefault(); traiterPhoto(f); } });
+    bx.addEventListener('dragover', function (ev) { ev.preventDefault(); });
+    bx.addEventListener('drop', function (ev) { var f = imageDe(ev.dataTransfer); if (f) { ev.preventDefault(); traiterPhoto(f); } });
+    function traiterPhoto(f) {
+      if (!f) return;
       etat.textContent = 'Préparation de la photo…';
       reduirePhoto(f).then(function (r) {
         photoData = r.data; apercu.textContent = ''; var im = el('img'); im.src = r.data; im.alt = ''; apercu.appendChild(im);
@@ -684,7 +690,7 @@
           if (txt.trim()) { ta.value = (ta.value ? ta.value + '\n' : '') + txt.trim(); remplir(ta.value); }
         });
       }).catch(function () { etat.textContent = 'Lecture impossible : complétez à la main (la photo reste jointe).'; });
-    });
+    }
 
     var err = el('p', 'aj-err');
     var act = el('div', 'aj-actions');
