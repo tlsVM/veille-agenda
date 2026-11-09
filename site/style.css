@@ -612,3 +612,12 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
   .outils-ag .tri-theme select{width:150px;height:38px;font-size:13.5px}
 }
 @media (min-width:701px){.outils-ag .tri-theme select{width:168px;padding-right:22px}}
+/* Agenda de … : options discrètes sur une seule ligne */
+.monag-barre{padding:10px 12px 8px}
+.monag-barre .nb{margin:0 0 4px}
+.monag-barre .ps-actions{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:0;margin:0}
+.monag-barre .ps-actions .bt-ps{border:0;background:none;box-shadow:none;width:auto;height:auto;padding:2px 7px;font-size:13px;font-weight:500;color:#0e6b41;border-radius:6px;flex:0 0 auto}
+.monag-barre .ps-actions .bt-ps:hover{background:#fde7f1;text-decoration:underline}
+.monag-barre .ps-actions .bt-ps+.bt-ps::before{content:"·";color:#c9a3b6;margin:0 7px 0 -7px;text-decoration:none;display:inline-block}
+.monag-barre .monag-ag::before{content:"·";color:#c9a3b6;padding:2px 0}
+.monag-barre .ps-msg{margin:2px 0 0;font-size:12.5px}.monag-barre .ps-msg:empty{display:none}
