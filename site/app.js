@@ -927,6 +927,10 @@
       bma.addEventListener('click', function () { monAgenda = !monAgenda; jourChoisi = ''; rendre(); window.scrollTo(0, 0); });
       var mw = el('div', 'monag-wrap'); mw.appendChild(bma); outils.appendChild(mw);
     } else monAgenda = false;
+    var bmode = el('button', 'car-mode', modeJour ? '☰ Vue liste' : '↔ Jour par jour'); bmode.type = 'button';
+    bmode.title = modeJour ? 'Revenir à la liste des jours' : 'Afficher un jour à la fois, en glissant à gauche ou à droite';
+    bmode.addEventListener('click', function () { modeJour = !modeJour; store('vm-modejour', modeJour ? '1' : ''); rendre(); });
+    outils.appendChild(bmode);
     var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', 'légende'));
     var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
@@ -1027,32 +1031,55 @@
   // On ne réaffiche plus la page au moment du clic (ça refermait les semaines et faisait sauter l'écran) :
   // l'événement coché remontera en haut de sa journée au prochain affichage (changement d'onglet, rechargement).
   function verifierRangement() { signature = sigPresences(); }
-  // ---------- Téléphone : les jours d'une semaine en carrousel (on glisse à gauche / à droite) ----------
+  // ---------- Téléphone, en option : les jours d'une semaine en carrousel (glisser à gauche / à droite) ----------
   var MOBILE = window.matchMedia('(max-width:700px)');
+  var modeJour = store('vm-modejour') === '1';
   function carrousel(g) {
-    if (!MOBILE.matches || g.children.length < 2) return;
-    g.classList.add('carrousel');
-    var nav = el('div', 'car-nav'), puces = [];
-    [].forEach.call(g.children, function (j, i) {
+    if (!modeJour || !MOBILE.matches || g.children.length < 2) return;
+    var jours = [].slice.call(g.children), piste = el('div', 'car-piste');
+    jours.forEach(function (j) { piste.appendChild(j); });
+    g.appendChild(piste); g.classList.add('carrousel');
+    var nav = el('div', 'car-nav'), puces = [], idx = 0;
+    jours.forEach(function (j, i) {
       var k = j.getAttribute('data-k'), d = dDe(k);
-      var b = el('button', 'car-puce' + (i === 0 ? ' on' : ''), JC[d.getDay()] + ' ' + d.getDate()); b.type = 'button';
+      var b = el('button', 'car-puce', JC[d.getDay()] + ' ' + d.getDate()); b.type = 'button';
       if (k === AUJ) b.classList.add('auj');
-      b.addEventListener('click', function () { g.scrollTo({ left: j.offsetLeft - g.offsetLeft, behavior: 'smooth' }); });
+      b.addEventListener('click', function () { aller(i, true); });
       nav.appendChild(b); puces.push(b);
     });
     g.parentNode.insertBefore(nav, g);
-    var actif = -1, att = 0;
-    function maj() {
-      att = 0;
-      var i = Math.max(0, Math.min(g.children.length - 1, Math.round(g.scrollLeft / g.clientWidth)));
-      var h = g.children[i].offsetHeight; if (h) g.style.height = h + 'px';
-      if (i === actif) return; actif = i;
-      puces.forEach(function (p, n) { p.classList.toggle('on', n === i); });
-      var p = puces[i]; nav.scrollTo({ left: p.offsetLeft - nav.clientWidth / 2 + p.offsetWidth / 2, behavior: 'smooth' });
+    function hauteur() { var h = jours[idx].offsetHeight; if (h) g.style.height = h + 'px'; }
+    function aller(i, anim) {
+      idx = Math.max(0, Math.min(jours.length - 1, i));
+      piste.style.transition = anim ? 'transform .32s cubic-bezier(.22,.8,.3,1)' : 'none';
+      piste.style.transform = 'translateX(' + (-idx * 100) + '%)';
+      puces.forEach(function (p, n) { p.classList.toggle('on', n === idx); });
+      var p = puces[idx]; nav.scrollTo({ left: p.offsetLeft - nav.clientWidth / 2 + p.offsetWidth / 2, behavior: anim ? 'smooth' : 'auto' });
+      hauteur();
     }
-    g.addEventListener('scroll', function () { if (!att) att = requestAnimationFrame(maj); }, { passive: true });
-    if (window.ResizeObserver) { var ro = new ResizeObserver(function () { actif = -1; maj(); }); [].forEach.call(g.children, function (j) { ro.observe(j); }); }
-    setTimeout(maj, 0);
+    // Geste au doigt : suit le doigt, puis se cale sur le jour suivant ou précédent
+    var x0, y0, t0, dx, sens;
+    g.addEventListener('touchstart', function (e) { if (e.touches.length !== 1) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); dx = 0; sens = ''; }, { passive: true });
+    g.addEventListener('touchmove', function (e) {
+      if (x0 == null) return;
+      var mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (!sens) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; sens = Math.abs(mx) > Math.abs(my) ? 'h' : 'v'; }
+      if (sens !== 'h') return;
+      e.preventDefault(); dx = mx;
+      if ((idx === 0 && dx > 0) || (idx === jours.length - 1 && dx < 0)) dx = dx / 3; // résistance aux extrémités
+      piste.style.transition = 'none';
+      piste.style.transform = 'translateX(calc(' + (-idx * 100) + '% + ' + dx + 'px))';
+    }, { passive: false });
+    g.addEventListener('touchend', function () {
+      if (x0 == null) return; x0 = null;
+      if (sens !== 'h') return;
+      var rapide = Math.abs(dx) > 30 && Date.now() - t0 < 250;
+      if (dx < -g.clientWidth * 0.2 || (rapide && dx < 0)) aller(idx + 1, true);
+      else if (dx > g.clientWidth * 0.2 || (rapide && dx > 0)) aller(idx - 1, true);
+      else aller(idx, true);
+    });
+    if (window.ResizeObserver) { var ro = new ResizeObserver(hauteur); jours.forEach(function (j) { ro.observe(j); }); }
+    setTimeout(function () { aller(0, false); }, 0);
   }
   function blocJour(k, evs) {
     var d = dDe(k), j = el('section', 'jour' + (k === AUJ ? ' auj' : ''));

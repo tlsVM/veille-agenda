@@ -692,9 +692,9 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
   .car-puce{flex:none;border:1.5px solid #cfe3d8;background:#fff;color:#0e6b41;border-radius:999px;padding:4px 11px;font:600 12.5px/1.2 'Outfit',sans-serif;text-transform:capitalize;cursor:pointer;transition:background .2s,color .2s}
   .car-puce.auj{border-color:#f5b5d2}
   .car-puce.on{background:#158c57;border-color:#158c57;color:#fff}
-  .jours-g.carrousel{display:flex!important;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;align-items:flex-start;overscroll-behavior-x:contain;transition:height .25s ease}
-  .jours-g.carrousel::-webkit-scrollbar{display:none}
-  .jours-g.carrousel>*{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;margin-top:0!important;margin-bottom:0!important}
+  .jours-g.carrousel{display:block!important;overflow:hidden;transition:height .3s ease;touch-action:pan-y}
+  .car-piste{display:flex;will-change:transform}
+  .car-piste>*{flex:0 0 100%;min-width:0;box-sizing:border-box;margin:0!important;align-self:flex-start}
 }
 /* Tirer pour actualiser */
 .ptr{position:fixed;left:50%;top:calc(-46px + env(safe-area-inset-top,0px));z-index:200;transform:translate(-50%,0);display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:6px 14px 6px 6px;box-shadow:0 4px 16px rgba(18,51,38,.2);font:600 13px/1 'Outfit',sans-serif;color:#0e6b41;opacity:0;transition:opacity .15s;pointer-events:none}
@@ -705,3 +705,11 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
 @keyframes ptr-tourne{to{transform:rotate(360deg)}}
 html,body{overscroll-behavior-y:contain}
 .ptr{white-space:nowrap}
+
+/* Option « Jour par jour » (téléphone seulement) */
+.car-mode{display:none}
+@media (max-width:700px){
+  .outils-ag.outils-ag>.car-mode{display:inline-flex;order:7;grid-column:1/4!important;justify-self:start!important;align-items:center;border:1px solid #cfe3d8;background:#fff;color:#0e6b41;border-radius:999px;padding:3px 10px;font:600 11.5px/1.2 'Outfit',sans-serif;margin-top:2px;cursor:pointer}
+  .outils-ag.outils-ag>.car-mode::after{content:none!important}
+  .outils-ag.outils-ag>.legende-d{order:8;grid-column:4/-1!important}
+}
