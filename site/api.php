@@ -14,6 +14,9 @@
  *   GET  api.php?a=photo&id=…  → photo jointe à un rendez-vous
  *   POST api.php  a=code&code=…  → vérifie le code d'accès du groupe
  *
+ *   GET  api.php?a=ics&id=…  → un rendez-vous au format agenda (.ics)
+ *   GET  api.php?a=agenda&qui=…&k=…  → agenda personnel d'un élu (abonnement Google, Apple, Outlook)
+ *
  * Code d'accès : si config.php contient 'code_acces' => '…', toute la plateforme le demande.
  */
 
@@ -311,6 +314,66 @@ function enregistrerAjout() {
   sortir(['ok' => true, 'id' => $id]);
 }
 
+// ---------- Export vers les agendas personnels (Google, Apple, Outlook) ----------
+
+function secretIcs() {
+  global $DATA;
+  $f = "$DATA/secret-agenda.txt";
+  if (!is_file($f)) { file_put_contents($f, bin2hex(random_bytes(16)), LOCK_EX); @chmod($f, 0600); }
+  return trim(file_get_contents($f));
+}
+function cleIcs($nom) { return substr(hash_hmac('sha256', $nom, secretIcs()), 0, 20); }
+
+function tousEvenements() {
+  $d = donnees();
+  $evs = array_merge($d['evenements'] ?? [], ajouts());
+  $ids = [];
+  foreach ($evs as $e) { $ids[$e['id']] = 1; }
+  foreach (array_keys(presences()) as $id) { // réunions de groupe du lundi (créées par l'application)
+    if (!isset($ids[$id]) && preg_match('/^rg(\d{4})(\d{2})(\d{2})$/', $id, $m)) {
+      $evs[] = ['id' => $id, 'date' => "$m[1]-$m[2]-$m[3]", 'heure' => '12:30', 'type' => 'Réunion de groupe', 'titre' => 'Réunion de groupe Vivre Mieux', 'lieu' => '', 'details' => ''];
+    }
+  }
+  return $evs;
+}
+
+function icsTexte($t) { return str_replace(["\\", ';', ',', "\r\n", "\n"], ["\\\\", '\;', '\,', '\n', '\n'], (string)$t); }
+function icsLigne($l) { // lignes de 75 octets au plus
+  $out = ''; while (strlen($l) > 74) { $n = 74; while ($n > 0 && (ord($l[$n]) & 0xC0) === 0x80) { $n--; } $out .= substr($l, 0, $n) . "\r\n "; $l = substr($l, $n); }
+  return $out . $l . "\r\n";
+}
+function icsEvenement($e, $prefixe = '') {
+  $l = ['BEGIN:VEVENT', 'UID:' . $e['id'] . '@agenda.vivremieuxtoulouse.fr', 'DTSTAMP:' . gmdate('Ymd\THis\Z')];
+  $d = str_replace('-', '', $e['date']);
+  if (!empty($e['heure'])) {
+    $deb = new DateTime($e['date'] . ' ' . $e['heure'], new DateTimeZone('Europe/Paris'));
+    $fin = (clone $deb)->modify('+90 minutes');
+    $l[] = 'DTSTART;TZID=Europe/Paris:' . $deb->format('Ymd\THis');
+    $l[] = 'DTEND;TZID=Europe/Paris:' . $fin->format('Ymd\THis');
+  } else {
+    $f = new DateTime(!empty($e['date_fin']) ? $e['date_fin'] : $e['date']); $f->modify('+1 day');
+    $l[] = 'DTSTART;VALUE=DATE:' . $d; $l[] = 'DTEND;VALUE=DATE:' . $f->format('Ymd');
+  }
+  $l[] = 'SUMMARY:' . icsTexte($prefixe . ($e['titre'] ?? ''));
+  $lieu = trim(($e['lieu'] ?? '') . (!empty($e['quartier']) ? ' (' . $e['quartier'] . ')' : ''));
+  if ($lieu !== '') { $l[] = 'LOCATION:' . icsTexte($lieu); }
+  $desc = trim(($e['details'] ?? '') . (!empty($e['lien']) ? "\n" . $e['lien'] : ''));
+  if ($desc !== '') { $l[] = 'DESCRIPTION:' . icsTexte($desc); }
+  if (!empty($e['lien']) && preg_match('#^https?://#', $e['lien'])) { $l[] = 'URL:' . $e['lien']; }
+  $l[] = 'END:VEVENT';
+  return implode('', array_map('icsLigne', $l));
+}
+function sortirIcs($nomCal, $evsIcs, $fichier) {
+  header('Content-Type: text/calendar; charset=utf-8');
+  header('Content-Disposition: inline; filename="' . $fichier . '"');
+  header('Cache-Control: no-cache');
+  echo "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Vivre Mieux Toulouse//Veille et agenda//FR\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n";
+  echo icsLigne('X-WR-CALNAME:' . icsTexte($nomCal)) . "X-WR-TIMEZONE:Europe/Paris\r\nREFRESH-INTERVAL;VALUE=DURATION:PT1H\r\nX-PUBLISHED-TTL:PT1H\r\n";
+  echo "BEGIN:VTIMEZONE\r\nTZID:Europe/Paris\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nDTSTART:19700329T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nDTSTART:19701025T030000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n";
+  echo $evsIcs . "END:VCALENDAR\r\n";
+  exit;
+}
+
 // ---------- Aiguillage ----------
 
 $a = $_REQUEST['a'] ?? 'data';
@@ -320,6 +383,22 @@ if ($a === 'code') {
   $ok = $att !== '' && hash_equals($att, (string)($_POST['code'] ?? ''));
   if (!$ok) { sleep(1); } // ralentit les essais au hasard
   sortir(['ok' => $ok]);
+}
+
+// Abonnement personnel : protégé par une clé propre à chaque élu (les applications d'agenda ne connaissent pas le code d'accès)
+if ($a === 'agenda') {
+  $qui = (string)($_GET['qui'] ?? '');
+  if (!in_array($qui, ELUS, true) || !hash_equals(cleIcs($qui), (string)($_GET['k'] ?? ''))) { http_response_code(403); exit; }
+  $du = lireDate((string)($_GET['du'] ?? '')) ?: date('Y-m-d', strtotime('-30 days'));
+  $au = lireDate((string)($_GET['au'] ?? '')) ?: '2100-01-01';
+  $p = presences(); $sortie = '';
+  foreach (tousEvenements() as $e) {
+    $st = $p[$e['id']][$qui] ?? '';
+    if ($st === '' || $e['date'] < $du || $e['date'] > $au) { continue; }
+    $sortie .= icsEvenement($e, $st === 'peut' ? '❔ ' : '');
+  }
+  $court = preg_replace('/ \(collaborateur\)$/', '', $qui);
+  sortirIcs("Vivre Mieux · $court", $sortie, 'vivre-mieux.ics');
 }
 
 if (!codeOk()) { sortir(['erreur' => 'code'], 401); }
@@ -335,6 +414,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'suppr') {
   @rename("$DATA/photos/$id.jpg", "$DATA/photos/supprime-$id.jpg"); // gardée de côté, au cas où
   @file_put_contents("$DATA/journal-ajouts.log", date('c') . "\tsuppr\t$id\t$nom\n", FILE_APPEND | LOCK_EX);
   sortir(['ok' => true]);
+}
+
+if ($a === 'ics') {
+  $id = (string)($_GET['id'] ?? '');
+  foreach (tousEvenements() as $e) {
+    if ($e['id'] === $id) { sortirIcs('Vivre Mieux', icsEvenement($e), 'rendez-vous.ics'); }
+  }
+  http_response_code(404); exit;
 }
 
 if ($a === 'photo') {
@@ -371,6 +458,7 @@ if ($a === 'data') {
   $d['presences'] = presences();
   $d['ajout_actif'] = true; // ajout ouvert à tous ; le code d'accès, s'il est mis en place, protégera toute la plateforme
   $d['elus'] = ELUS;
+  $d['cles_agenda'] = array_combine(ELUS, array_map('cleIcs', ELUS));
   sortir($d);
 }
 

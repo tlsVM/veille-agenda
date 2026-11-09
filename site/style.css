@@ -557,3 +557,13 @@ details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--om
 .code-acces input{font:inherit;font-size:17px;text-align:center;border:1px solid #cfd8d3;border-radius:10px;padding:10px}
 .aj-actions .gest-fermer{width:auto;background:#eef2ef;color:var(--encre);padding:10px 16px;border-radius:10px}
 .modale-boite.ajout>*{flex-shrink:0}.aj-colle{min-height:100px}.modale-boite.ajout h2{font-size:30px}
+/* Ajouter à mon agenda */
+.ev>.bt-cal-ev{position:absolute;top:5px;right:30px}
+.choix-ag{display:flex;flex-direction:column;gap:9px}
+.bt-ag{display:block;text-decoration:none;border:1.5px solid var(--vert);border-radius:12px;padding:11px 14px;color:var(--vert-fonce);font-weight:600;font-size:15.5px;background:#fff}
+.bt-ag:hover{background:var(--vert-pale)}
+.bt-ag small{display:block;font-weight:400;font-size:12px;color:var(--gris)}
+.ab-note p{font-size:13px;margin:4px 0}.ab-note .ab-perso{color:var(--rose-fort);font-size:12px}
+.ps-monag{margin-top:14px;padding-top:10px;border-top:1px dashed #d8cdd2}
+.ps-monag>b{display:block;font-size:14px;color:var(--vert-fonce);margin-bottom:6px}
+a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}

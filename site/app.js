@@ -207,6 +207,64 @@
     });
     return b;
   }
+  // ---------- Ajouter à mon agenda (Google, Outlook, Apple) ----------
+  function bornes(e) { // début et fin (1h30 par défaut), ou journée entière
+    if (!e.heure) { var f = ajout(dDe(e.date_fin || e.date), 1); return { jour: true, d: e.date.replace(/-/g, ''), f: cle(f).replace(/-/g, ''), di: e.date, fi: cle(f) }; }
+    var p = e.date.split('-'), h = e.heure.split(':'), deb = new Date(+p[0], +p[1] - 1, +p[2], +h[0], +h[1]), fin = new Date(deb.getTime() + 90 * 60000);
+    function c(x) { return cle(x).replace(/-/g, '') + 'T' + ('0' + x.getHours()).slice(-2) + ('0' + x.getMinutes()).slice(-2) + '00'; }
+    function iso(x) { return cle(x) + 'T' + ('0' + x.getHours()).slice(-2) + ':' + ('0' + x.getMinutes()).slice(-2) + ':00'; }
+    return { jour: false, d: c(deb), f: c(fin), di: iso(deb), fi: iso(fin) };
+  }
+  function lieuDe(e) { return (e.lieu || '') + (e.quartier ? (e.lieu ? ' (' + e.quartier + ')' : e.quartier) : ''); }
+  function descDe(e) { return [e.details || '', e.lien || ''].filter(Boolean).join('\n'); }
+  function lienGoogle(e) {
+    var b = bornes(e);
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(e.titre) + '&dates=' + b.d + '/' + b.f + '&ctz=Europe/Paris&location=' + encodeURIComponent(lieuDe(e)) + '&details=' + encodeURIComponent(descDe(e));
+  }
+  function lienOutlook(e) {
+    var b = bornes(e);
+    return 'https://outlook.office.com/calendar/0/action/compose?subject=' + encodeURIComponent(e.titre) + '&startdt=' + b.di + '&enddt=' + b.fi + (b.jour ? '&allday=true' : '') + '&location=' + encodeURIComponent(lieuDe(e)) + '&body=' + encodeURIComponent(descDe(e));
+  }
+  function choixAgenda(titre, sousTitre, choix, note) {
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion choix-ag'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', titre)); if (sousTitre) bx.appendChild(el('p', '', sousTitre));
+    choix.forEach(function (c) {
+      var a = el('a', 'bt-ag', c[0]); a.href = c[1]; if (/^https/.test(c[1])) { a.target = '_blank'; a.rel = 'noopener'; }
+      if (c[2]) a.appendChild(el('small', '', c[2]));
+      a.addEventListener('click', function () { setTimeout(function () { m.remove(); }, 300); }); bx.appendChild(a);
+    });
+    if (note) bx.appendChild(note);
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
+    m.addEventListener('click', function (x) { if (x.target === m) m.remove(); });
+    m.appendChild(bx); document.body.appendChild(m);
+  }
+  function ouvrirAjoutAgenda(e) {
+    choixAgenda('Ajouter à mon agenda', (e.heure ? hFmt(e.heure) + ' · ' : '') + courte(e.date) + ' · ' + e.titre, [
+      ['Google Agenda', lienGoogle(e)],
+      ['Outlook', lienOutlook(e), 'agenda Microsoft (mairie, pro)'],
+      ['Apple ou autre agenda', 'api.php?a=ics&id=' + encodeURIComponent(e.id), 'iPhone, Mac, Outlook sur PC… (fichier .ics)']
+    ]);
+  }
+  function lienAbonnement(nom, https) {
+    var u = new URL('api.php?a=agenda&qui=' + encodeURIComponent(nom) + '&k=' + ((D.cles_agenda || {})[nom] || ''), location.href).href;
+    return https ? u : u.replace(/^https?:/, 'webcal:');
+  }
+  function ouvrirAbonnement(nom) {
+    var https = lienAbonnement(nom, true), web = lienAbonnement(nom, false);
+    var note = el('div', 'ab-note');
+    note.appendChild(el('p', '', 'Une seule fois : vos rendez-vous cochés « Présent·e » (et « Peut-être », marqués ❔) apparaîtront ensuite tout seuls dans votre agenda, et se mettront à jour.'));
+    note.appendChild(el('p', '', 'Délai de mise à jour : environ 1 h sur iPhone et Outlook, jusqu\'à 12 h sur Google Agenda.'));
+    var cp = el('button', 'bt-ps', '📋 Copier le lien d\'abonnement'); cp.type = 'button';
+    cp.addEventListener('click', function () { (navigator.clipboard ? navigator.clipboard.writeText(https) : Promise.reject()).then(function () { cp.textContent = '✓ Lien copié'; }).catch(function () { prompt('Copiez ce lien :', https); }); });
+    note.appendChild(cp);
+    note.appendChild(el('p', 'ab-perso', 'Ce lien est personnel : ne le partagez pas.'));
+    choixAgenda('Abonner mon agenda', 'Agenda de ' + nomLong(nom), [
+      ['Google Agenda', 'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(web), 'sur ordinateur de préférence'],
+      ['iPhone, iPad, Mac', web, 'appuyez puis « S\'abonner »'],
+      ['Outlook', 'https://outlook.office.com/calendar/0/addfromweb?url=' + encodeURIComponent(https) + '&name=' + encodeURIComponent('Vivre Mieux'), 'agenda Microsoft (mairie, pro)']
+    ], note);
+  }
+
   function carteEv(e, avecDate) {
     var t = TYPES[typeDe(e)], c = el('div', 'ev' + (e.important === 'oui' ? ' cle' : ''));
     c.style.setProperty('--c', t.c); c.style.setProperty('--f', t.f); if (t.h) c.style.setProperty('--h', t.h); if (t.k) c.style.setProperty('--k', t.k);
@@ -237,6 +295,11 @@
     }
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
     c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
+    if (t.g !== 'majo') {
+      var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
+      ba.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="11.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 6.3h12.4M5 1.3v3M11 1.3v3M8 8.3v4M6 10.3h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+      ba.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirAjoutAgenda(e); }); c.appendChild(ba);
+    }
     return c;
   }
   function carteActu(a) {
@@ -437,6 +500,15 @@
         msg.textContent = 'Choisissez « Enregistrer en PDF » dans la fenêtre d\'impression.';
       });
       bx.appendChild(info); bx.appendChild(act); bx.appendChild(msg);
+      // Mon agenda personnel : la semaine affichée, ou un abonnement qui se met à jour tout seul
+      var pers = qui || moi;
+      if (pers && D.cles_agenda) {
+        var za = el('div', 'ps-monag'); za.appendChild(el('b', '', '📅 Dans l\'agenda personnel de ' + nomLong(pers)));
+        var ag = el('div', 'ps-actions');
+        var a1 = el('a', 'bt-ps', '⬇️ Ajouter cette semaine'); a1.href = lienAbonnement(pers, true) + '&du=' + lundiK + '&au=' + cle(di);
+        var a2 = el('button', 'bt-ps', '🔄 Abonner mon agenda'); a2.type = 'button'; a2.addEventListener('click', function () { ouvrirAbonnement(pers); });
+        ag.appendChild(a1); ag.appendChild(a2); za.appendChild(ag); bx.appendChild(za);
+      }
       var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', fermer); bx.appendChild(f);
     }
     peindre();
