@@ -861,13 +861,13 @@
 
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
-    var bAj = el('button', 'bt-ajout', '➕ Ajouter un rendez-vous'); bAj.type = 'button';
-    bAj.addEventListener('click', function () { ouvrirAjout(); }); v.appendChild(bAj);
+    var bAj = el('button', 'bt-ajout', '➕ Ajouter un RDV'); bAj.type = 'button'; bAj.title = 'Ajouter un rendez-vous';
+    bAj.addEventListener('click', function () { ouvrirAjout(); });
     var outils = el('div', 'outils-ag');
     var bcal = el('button', 'bt-cal', '📅 Choisir un jour'); bcal.type = 'button';
     var pop = el('div', 'cal-pop'); pop.hidden = true;
     bcal.addEventListener('click', function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) dessinerCal(pop, moisCal); });
-    var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(pop); outils.appendChild(wrap);
+    var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(bAj); wrap.appendChild(pop); outils.appendChild(wrap);
     // Trier par thème (menu déroulant à droite)
     var tl = el('label', 'tri-theme'); var ts = el('select'); ts.setAttribute('aria-label', 'Trier par thème');
     FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Tous les thèmes' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });

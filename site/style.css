@@ -567,3 +567,17 @@ details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--om
 .ps-monag{margin-top:14px;padding-top:10px;border-top:1px dashed #d8cdd2}
 .ps-monag>b{display:block;font-size:14px;color:var(--vert-fonce);margin-bottom:6px}
 a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
+/* ➕ Ajouter un RDV à côté de « Choisir un jour » */
+.outils-ag .cal-wrap{display:flex;gap:8px;align-items:center}
+.outils-ag .bt-ajout{display:inline-flex;align-items:center;width:auto;max-width:none;margin:0;height:40px;padding:0 16px;font-size:14.5px;border-radius:999px;box-shadow:0 2px 0 var(--rose),0 4px 14px rgba(21,140,87,.18);white-space:nowrap}
+.outils-ag .bt-cal{white-space:nowrap}
+@media (max-width:700px){.outils-ag .bt-ajout{font-size:13px;padding:0 12px}}
+.outils-ag .tri-theme span{white-space:nowrap}
+.outils-ag .tri-theme select{min-width:0;width:190px}
+@media (max-width:700px){
+  .outils-ag{grid-template-columns:1fr 1fr;grid-template-areas:"cal cal" "tri tri" "pres part" "leg leg"}
+  .outils-ag .cal-wrap{justify-self:stretch}.outils-ag .cal-wrap>button{flex:1 1 0;justify-content:center}
+  .outils-ag .tri-theme select{width:auto;flex:1}
+  .outils-ag .pres-wrap,.outils-ag .part-wrap{justify-self:stretch}.outils-ag .pres-wrap button,.outils-ag .part-wrap button{width:100%;justify-content:center;white-space:nowrap}
+}
+.outils-ag .bt-presences{white-space:nowrap}@media (min-width:701px){.outils-ag .tri-theme select{width:165px}.outils-ag{gap:8px 10px}}
