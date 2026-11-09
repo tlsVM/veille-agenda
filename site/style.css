@@ -679,3 +679,8 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
   .outils-ag.outils-ag .ic{flex:none}
 }
 @media (max-width:700px){.outils-ag.outils-ag>*{grid-area:auto!important;justify-self:stretch}.outils-ag.outils-ag>.legende-d{grid-column:1/-1!important;justify-self:end!important}}
+/* Croix de fermeture des fenêtres */
+.modale-boite{position:relative}
+.modale-boite>.croix{position:sticky;top:0;float:right;z-index:5;margin:-6px -6px 0 8px;width:38px;height:38px;border-radius:50%;border:0;background:#f1f4f2;color:#123326;font:700 20px/1 sans-serif;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center}
+.modale-boite>.croix:hover{background:#fde7f1;color:#c8437f}
+.modale-boite>.gest-fermer[hidden]{display:none!important}

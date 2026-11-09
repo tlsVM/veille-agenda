@@ -623,6 +623,10 @@
       ['presences', 'Les événements où les élu·es sont présent·es', libSem, function () { return texteSemaine(lundiK, true, ''); }],
       ['mois', 'L\'agenda du mois', 'du ' + new Date().getDate() + ' au ' + finMois.getDate() + ' ' + MOIS[finMois.getMonth()], function () { var s = 'Du ' + new Date().getDate() + ' au ' + finMois.getDate() + ' ' + MOIS[finMois.getMonth()] + ' ' + finMois.getFullYear(); return texteListe('📅 Agenda Vivre Mieux · ' + MOIS[finMois.getMonth()], s, evsPeriode(AUJ, cle(finMois))); }]
     ];
+    if (moi && D.elus && D.elus.indexOf(moi) >= 0) {
+      var pn = moi.replace(/ \(collaborateur\)$/, '').split(' ')[0];
+      OPTIONS.push(['moi', 'Agenda de ' + pn, 'Mes présences et « peut-être », à partir d\'aujourd\'hui', function () { var d = new Date(); return texteListe('📅 Agenda de ' + nomLong(moi), 'À partir du ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear(), mesEvenements(AUJ)); }]);
+    }
     var choix = 'semaine';
     var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion pres-sem'); bx.setAttribute('role', 'dialog');
     m.appendChild(bx); document.body.appendChild(m);
@@ -641,7 +645,7 @@
     function apercu() { ap.textContent = opt()[3](); }
     apercu();
     bx.appendChild(el('p', 'ps-info', 'Sans l\'agenda de la majorité ni la réunion de groupe interne.'));
-    boutonsPartage(bx, function () { return opt()[3](); }, function () { return 'Agenda Vivre Mieux · ' + opt()[1]; });
+    boutonsPartage(bx, function () { return opt()[3](); }, function () { return choix === 'moi' ? 'Agenda de ' + nomLong(moi) : 'Agenda Vivre Mieux · ' + opt()[1]; });
     var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
   }
 
@@ -882,6 +886,18 @@
   }
 
   // Bouton : icône + libellé (sur téléphone, il devient un petit rond façon « stories », libellé court dessous)
+  // Toutes les fenêtres : une croix bien visible en haut à droite (remplace le bouton « Fermer » du bas)
+  new MutationObserver(function (muts) {
+    muts.forEach(function (mu) { mu.addedNodes.forEach(function (n) {
+      if (!n.classList || !n.classList.contains('modale') || n.id === 'choix-nom') return;
+      var bx = n.querySelector('.modale-boite'); if (!bx || bx.querySelector('.croix')) return;
+      var bas = [].filter.call(bx.children, function (c) { return c.classList.contains('gest-fermer'); })[0];
+      var x = el('button', 'croix', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer'); x.title = 'Fermer';
+      x.addEventListener('click', function () { if (bas) bas.click(); else n.remove(); });
+      if (bas) bas.hidden = true;
+      bx.insertBefore(x, bx.firstChild);
+    }); });
+  }).observe(document.body, { childList: true });
   function habiller(b, ic, txt, court) { b.textContent = ''; b.appendChild(el('span', 'ic', ic)); b.appendChild(el('span', 'lb', txt)); b.setAttribute('data-court', court); b.title = txt; }
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
