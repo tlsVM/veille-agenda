@@ -490,15 +490,9 @@
         if (navigator.share) navigator.share({ title: 'Présences des élu·es Vivre Mieux', text: t }).catch(function () {});
         else { copier(t); msg.textContent = 'Partage direct indisponible sur cet appareil : le texte a été copié.'; }
       });
-      bouton('⬇️ Télécharger', function () {
-        var t = texteSemaine(lundiK, true, qui), lu2 = dDe(lundiK);
-        var w = window.open('', '_blank');
-        if (!w) { msg.textContent = 'Autorisez les fenêtres pour télécharger.'; return; }
-        var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
-        w.document.write('<!doctype html><meta charset="utf-8"><title>Présences Vivre Mieux · semaine du ' + lu2.getDate() + ' ' + MOIS[lu2.getMonth()] + '</title><style>body{font:15px/1.5 Arial,sans-serif;max-width:640px;margin:30px auto;padding:0 16px;color:#123326}h1{color:#158c57;font-size:22px;border-bottom:3px solid #f5b5d2;padding-bottom:6px}pre{white-space:pre-wrap;font:inherit}</style><h1>Vivre Mieux Toulouse · groupe municipal d\'opposition</h1><pre>' + esc(t) + '</pre><script>setTimeout(function(){print()},300)<\/script>');
-        w.document.close();
-        msg.textContent = 'Choisissez « Enregistrer en PDF » dans la fenêtre d\'impression.';
-      });
+      var titreSem = function () { var lu2 = dDe(lundiK); return 'Présences Vivre Mieux semaine du ' + lu2.getDate() + ' ' + MOIS[lu2.getMonth()] + (qui ? ' ' + nomLong(qui) : ''); };
+      bouton('⬇️ PDF', function () { telechargerDoc('pdf', titreSem(), texteSemaine(lundiK, true, qui), msg); });
+      bouton('🖼️ Image', function () { telechargerDoc('png', titreSem(), texteSemaine(lundiK, true, qui), msg); });
       bx.appendChild(info); bx.appendChild(act); bx.appendChild(msg);
       // Mon agenda personnel : la semaine affichée, ou un abonnement qui se met à jour tout seul
       var pers = qui || moi;
@@ -531,6 +525,80 @@
     return D.evenements.filter(function (e) { return e.date >= debutK && e.date <= finK && TYPES[typeDe(e)].g !== 'majo' && e.type !== 'Réunion de groupe'; })
       .sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
   }
+  // ---------- Télécharger en image (PNG) ou en PDF, sans passer par l'impression ----------
+  function nomFichier(t) { return norm(t).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'vivre-mieux'; }
+  function dessinerTexte(titre, t) {
+    var W = 1080, P = 70, LH = 46, c = document.createElement('canvas'), x = c.getContext('2d');
+    var F = '"Outfit", Arial, sans-serif', lignes = [], coupes = [];
+    x.font = '400 30px ' + F;
+    function couper(l, font, larg) {
+      x.font = font; var mots = l.split(' '), cur = '', out = [];
+      mots.forEach(function (m) {
+        var e = cur ? cur + ' ' + m : m;
+        if (x.measureText(e).width <= larg) { cur = e; return; }
+        if (cur) out.push(cur); cur = '';
+        while (x.measureText(m).width > larg) { var n = m.length; while (n > 1 && x.measureText(m.slice(0, n)).width > larg) n--; out.push(m.slice(0, n)); m = m.slice(n); } // liens très longs
+        cur = m;
+      });
+      out.push(cur); return out;
+    }
+    t.split('\n').forEach(function (l, i) {
+      var titreJour = /^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/i.test(l.trim());
+      var gras = i === 0 || titreJour, font = (gras ? '600 ' : '400 ') + (i === 0 ? '34px ' : '30px ') + F;
+      if (!l.trim()) { lignes.push({ t: '', f: font, vide: true }); return; }
+      var retrait = /^\s/.test(l) ? 34 : 0, puce = /^[•✓❔-]/.test(l.trim()) ? 26 : 0;
+      couper(l.trim(), font, W - 2 * P - retrait - puce).forEach(function (s2, j) { lignes.push({ t: s2, f: font, x: P + retrait + (j ? puce : 0), c: titreJour ? '#158c57' : i === 1 ? '#5b6a61' : '#123326' }); });
+    });
+    var H0 = 190, H = H0 + lignes.reduce(function (s, l) { return s + (l.vide ? LH / 2 : LH); }, 0) + 110;
+    c.width = W; c.height = H; x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+    // bandeau bicolore
+    x.fillStyle = '#f5b5d2'; x.fillRect(0, 0, W, 130);
+    x.fillStyle = '#158c57'; x.beginPath(); x.moveTo(W * 0.52, 0); x.lineTo(W, 0); x.lineTo(W, 130); x.lineTo(W * 0.49, 130); x.closePath(); x.fill();
+    x.font = '400 64px "Bebas Neue", Impact, sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'center';
+    x.lineWidth = 6; x.strokeStyle = '#0e6b41'; x.strokeText('VIVRE MIEUX TOULOUSE', W / 2, 62); x.fillStyle = '#fff'; x.fillText('VIVRE MIEUX TOULOUSE', W / 2, 62);
+    x.font = '600 20px ' + F; x.lineWidth = 3; x.strokeText('GROUPE MUNICIPAL D\'OPPOSITION', W / 2, 108); x.fillStyle = '#fff'; x.fillText('GROUPE MUNICIPAL D\'OPPOSITION', W / 2, 108);
+    x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+    var y = H0;
+    lignes.forEach(function (l) { if (l.vide) { y += LH / 2; coupes.push(y); return; } x.font = l.f; x.fillStyle = l.c; x.fillText(l.t, l.x, y); y += LH; coupes.push(y - 30); });
+    x.fillStyle = '#f5b5d2'; x.fillRect(P, H - 70, W - 2 * P, 3);
+    x.font = '400 22px ' + F; x.fillStyle = '#8a958f'; x.fillText('agenda.vivremieuxtoulouse.fr', P, H - 30);
+    return { canvas: c, coupes: coupes };
+  }
+  function envoyerFichier(blob, nom, msg) {
+    var f = null; try { f = new File([blob], nom, { type: blob.type }); } catch (e) {}
+    // Téléphone : feuille de partage (Enregistrer, WhatsApp, Telegram…) ; ordinateur : téléchargement direct
+    if (f && matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files: [f] })) {
+      navigator.share({ files: [f], title: nom }).catch(function () {}); return;
+    }
+    var u = URL.createObjectURL(blob), a = el('a'); a.href = u; a.download = nom; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+    if (msg) msg.textContent = '✓ Fichier téléchargé : ' + nom;
+  }
+  var jspdfP = null;
+  function telechargerDoc(fmt, titre, t, msg) {
+    if (msg) msg.textContent = 'Préparation…';
+    var polices = document.fonts ? Promise.all([document.fonts.load('400 30px Outfit'), document.fonts.load('600 30px Outfit'), document.fonts.load('64px "Bebas Neue"')]).catch(function () {}) : Promise.resolve();
+    polices.then(function () {
+      var r = dessinerTexte(titre, t), c = r.canvas, nom = nomFichier(titre);
+      if (fmt === 'png') { c.toBlob(function (b) { envoyerFichier(b, nom + '.png', msg); }, 'image/png'); return; }
+      if (!jspdfP) jspdfP = new Promise(function (ok, ko) { var s = document.createElement('script'); s.src = 'lib/jspdf.umd.min.js'; s.onload = function () { ok(window.jspdf.jsPDF); }; s.onerror = function () { jspdfP = null; ko(); }; document.head.appendChild(s); });
+      return jspdfP.then(function (JsPDF) {
+        var pdf = new JsPDF({ unit: 'mm', format: 'a4' }), pxMm = c.width / 190, hautPage = Math.floor(277 * pxMm), y0 = 0, page = 0;
+        while (y0 < c.height - 5) {
+          var fin = Math.min(c.height, y0 + hautPage);
+          if (fin < c.height) { var cand = r.coupes.filter(function (k) { return k > y0 + 100 && k <= fin; }); if (cand.length) fin = cand[cand.length - 1]; }
+          var p = document.createElement('canvas'); p.width = c.width; p.height = fin - y0;
+          p.getContext('2d').drawImage(c, 0, y0, c.width, fin - y0, 0, 0, c.width, fin - y0);
+          if (page++) pdf.addPage();
+          pdf.addImage(p.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, 190, (fin - y0) / pxMm);
+          y0 = fin;
+        }
+        envoyerFichier(pdf.output('blob'), nom + '.pdf', msg);
+      });
+    }).catch(function () { if (msg) msg.textContent = 'Le fichier n\'a pas pu être créé. Réessayez.'; });
+  }
+
   function boutonsPartage(zone, getTexte, titreDoc) {
     var act = el('div', 'ps-actions'), msg = el('p', 'ps-msg');
     function copier(t) {
@@ -540,13 +608,8 @@
     function b(txt, f) { var x = el('button', 'bt-ps', txt); x.type = 'button'; x.addEventListener('click', f); act.appendChild(x); }
     b('📋 Copier', function () { copier(getTexte()); });
     b('📤 Partager', function () { var t = getTexte(); if (navigator.share) navigator.share({ title: titreDoc(), text: t }).catch(function () {}); else { copier(t); msg.textContent = 'Partage direct indisponible sur cet appareil : le texte a été copié.'; } });
-    b('⬇️ Télécharger', function () {
-      var t = getTexte(), w = window.open('', '_blank');
-      if (!w) { msg.textContent = 'Autorisez les fenêtres pour télécharger.'; return; }
-      var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
-      w.document.write('<!doctype html><meta charset="utf-8"><title>' + esc(titreDoc()) + '</title><style>body{font:15px/1.5 Arial,sans-serif;max-width:640px;margin:30px auto;padding:0 16px;color:#123326}h1{color:#158c57;font-size:22px;border-bottom:3px solid #f5b5d2;padding-bottom:6px}pre{white-space:pre-wrap;font:inherit}</style><h1>Vivre Mieux Toulouse · groupe municipal d\'opposition</h1><pre>' + esc(t) + '</pre><script>setTimeout(function(){print()},300)<\/script>');
-      w.document.close(); msg.textContent = 'Choisissez « Enregistrer en PDF » dans la fenêtre d\'impression.';
-    });
+    b('⬇️ PDF', function () { telechargerDoc('pdf', titreDoc(), getTexte(), msg); });
+    b('🖼️ Image', function () { telechargerDoc('png', titreDoc(), getTexte(), msg); });
     zone.appendChild(act); zone.appendChild(msg);
   }
   function ouvrirPartage() {
