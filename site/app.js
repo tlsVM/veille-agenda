@@ -869,7 +869,6 @@
   function barreMonAgenda(debut) {
     var z = el('div', 'monag-barre'), nom = nomLong(moi);
     z.appendChild(el('h2', 'monag-titre', 'Agenda de ' + nom));
-    z.appendChild(el('p', 'nb', 'Les événements où vous avez coché « Présent·e » ou « Peut-être » (❔).'));
     var titre = function () { return 'Agenda de ' + nom; };
     var texte = function () { var d = new Date(); return texteListe('📅 Agenda de ' + nom, 'À partir du ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear(), mesEvenements(AUJ)); };
     boutonsPartage(z, texte, titre);
