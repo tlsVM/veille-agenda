@@ -407,6 +407,73 @@
     peindre();
   }
 
+  // ---------- Bouton « Partager » : semaine en cours, présences, ou agenda jusqu'à la fin du mois ----------
+  function texteListe(titre, sousTitre, evs) {
+    var lignes = [titre, sousTitre, ''], jc = '', n = 0;
+    evs.forEach(function (e) {
+      if (e.date !== jc) { jc = e.date; var d = dDe(e.date); lignes.push((n ? '\n' : '') + JOURS[d.getDay()].toUpperCase() + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()].toUpperCase()); }
+      n++;
+      lignes.push('• ' + (e.heure ? e.heure.replace(':', 'h') + ' · ' : '') + e.titre);
+      if (e.lieu || e.quartier) lignes.push('  📍 ' + (e.lieu || '') + (e.quartier ? (e.lieu ? ' (' + e.quartier + ')' : e.quartier) : ''));
+      if (e.lien) lignes.push('  🔗 ' + e.lien);
+    });
+    if (!n) lignes.push('Aucun rendez-vous.');
+    return lignes.join('\n');
+  }
+  function evsPeriode(debutK, finK) {
+    return D.evenements.filter(function (e) { return e.date >= debutK && e.date <= finK && TYPES[typeDe(e)].g !== 'majo' && e.type !== 'Réunion de groupe'; })
+      .sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
+  }
+  function boutonsPartage(zone, getTexte, titreDoc) {
+    var act = el('div', 'ps-actions'), msg = el('p', 'ps-msg');
+    function copier(t) {
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { msg.textContent = '✓ Copié : collez-le dans Telegram, WhatsApp ou un mail.'; })
+        .catch(function () { var ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); msg.textContent = '✓ Copié.'; } catch (x) { msg.textContent = 'Copie impossible ici.'; } ta.remove(); });
+    }
+    function b(txt, f) { var x = el('button', 'bt-ps', txt); x.type = 'button'; x.addEventListener('click', f); act.appendChild(x); }
+    b('📋 Copier', function () { copier(getTexte()); });
+    b('📤 Partager', function () { var t = getTexte(); if (navigator.share) navigator.share({ title: titreDoc(), text: t }).catch(function () {}); else { copier(t); msg.textContent = 'Partage direct indisponible sur cet appareil : le texte a été copié.'; } });
+    b('⬇️ Télécharger', function () {
+      var t = getTexte(), w = window.open('', '_blank');
+      if (!w) { msg.textContent = 'Autorisez les fenêtres pour télécharger.'; return; }
+      var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+      w.document.write('<!doctype html><meta charset="utf-8"><title>' + esc(titreDoc()) + '</title><style>body{font:15px/1.5 Arial,sans-serif;max-width:640px;margin:30px auto;padding:0 16px;color:#123326}h1{color:#158c57;font-size:22px;border-bottom:3px solid #f5b5d2;padding-bottom:6px}pre{white-space:pre-wrap;font:inherit}</style><h1>Vivre Mieux Toulouse · groupe municipal d\'opposition</h1><pre>' + esc(t) + '</pre><script>setTimeout(function(){print()},300)<\/script>');
+      w.document.close(); msg.textContent = 'Choisissez « Enregistrer en PDF » dans la fenêtre d\'impression.';
+    });
+    zone.appendChild(act); zone.appendChild(msg);
+  }
+  function ouvrirPartage() {
+    var lundiK = new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()));
+    var lu = dDe(lundiK), di = ajout(lu, 6);
+    var finMois = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+    var libSem = 'Semaine du ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MOIS[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MOIS[di.getMonth()] + ' ' + di.getFullYear();
+    var OPTIONS = [
+      ['semaine', 'Tous les événements de la semaine', libSem, function () { return texteListe('📅 Agenda Vivre Mieux', libSem, evsPeriode(lundiK, cle(di))); }],
+      ['presences', 'Les événements où les élu·es sont présent·es', libSem, function () { return texteSemaine(lundiK, true, ''); }],
+      ['mois', 'L\'agenda du mois', 'du ' + new Date().getDate() + ' au ' + finMois.getDate() + ' ' + MOIS[finMois.getMonth()], function () { var s = 'Du ' + new Date().getDate() + ' au ' + finMois.getDate() + ' ' + MOIS[finMois.getMonth()] + ' ' + finMois.getFullYear(); return texteListe('📅 Agenda Vivre Mieux · ' + MOIS[finMois.getMonth()], s, evsPeriode(AUJ, cle(finMois))); }]
+    ];
+    var choix = 'semaine';
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion pres-sem'); bx.setAttribute('role', 'dialog');
+    m.appendChild(bx); document.body.appendChild(m);
+    m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
+    bx.appendChild(el('h2', '', 'Partager l\'agenda'));
+    bx.appendChild(el('p', '', 'Que voulez-vous partager ?'));
+    var liste = el('div', 'part-opts');
+    OPTIONS.forEach(function (o, i) {
+      var l = el('label', 'part-opt'); var r = el('input'); r.type = 'radio'; r.name = 'part'; r.value = o[0]; r.checked = i === 0;
+      r.addEventListener('change', function () { choix = o[0]; apercu(); });
+      l.appendChild(r); var t = el('span'); t.appendChild(el('b', '', (i + 1) + '. ' + o[1])); t.appendChild(el('small', '', o[2])); l.appendChild(t); liste.appendChild(l);
+    });
+    bx.appendChild(liste);
+    var ap = el('pre', 'part-apercu'); bx.appendChild(ap);
+    function opt() { return OPTIONS.filter(function (o) { return o[0] === choix; })[0]; }
+    function apercu() { ap.textContent = opt()[3](); }
+    apercu();
+    bx.appendChild(el('p', 'ps-info', 'Sans l\'agenda de la majorité ni la réunion de groupe interne.'));
+    boutonsPartage(bx, function () { return opt()[3](); }, function () { return 'Agenda Vivre Mieux · ' + opt()[1]; });
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
+  }
+
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
     var outils = el('div', 'outils-ag');
@@ -422,6 +489,9 @@
     bps.addEventListener('click', function () { ouvrirPresencesSemaine(new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()))); });
     tl.appendChild(el('span', '', 'Trier par thème')); tl.appendChild(ts); outils.appendChild(tl);
     var pw = el('div', 'pres-wrap'); pw.appendChild(bps); outils.appendChild(pw);
+    var bpa = el('button', 'bt-presences bt-partager', '📤 Partager'); bpa.type = 'button';
+    bpa.addEventListener('click', ouvrirPartage);
+    var paw = el('div', 'part-wrap'); paw.appendChild(bpa); outils.appendChild(paw);
     var lg = el('details', 'legende-d'); lg.appendChild(el('summary', '', 'légende'));
     var lgc = el('div', 'legende');
     [['#b39ddb', 'Réunion de groupe'], ['#3f51b5', 'Protocole, inauguration'], ['#039be5', 'Commission'], ['#e67c73', 'Réunion de quartier'], ['#e08a1e', 'Association'], ['#e00000', 'Militant'], ['#a9874f', 'Culture'], ['#0b8043', 'Conférence, café-débat'], ['#fff', 'Mairie']].forEach(function (x) {
