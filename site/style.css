@@ -597,3 +597,18 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
   .outils-ag{grid-template-areas:"cal cal" "mon mon" "tri tri" "pres part" "leg leg"}
   .outils-ag .monag-wrap{justify-self:stretch}.bt-monag{width:100%}
 }
+/* Barre de l'agenda sur une seule ligne (ordinateur) + couleurs des boutons */
+.outils-ag .bt-cal{background:#7d8782!important;border-color:#7d8782!important;color:#fff!important;box-shadow:0 2px 0 #c9cfcc,0 4px 12px rgba(0,0,0,.12)!important}
+.outils-ag .bt-cal:hover{background:#6b746f!important}
+.outils-ag .bt-nospres{background:#e0457b;border-color:#e0457b;color:#fff}
+.outils-ag .bt-nospres:hover{background:#c93a6b}
+.outils-ag .bt-partager{background:#4fb3e8;border-color:#4fb3e8;color:#fff}
+.outils-ag .bt-partager:hover{background:#3a9fd6}
+@media (min-width:701px){
+  .outils-ag{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 8px}
+  .outils-ag .cal-wrap{order:1}.outils-ag .tri-theme{order:2}.outils-ag .monag-wrap{order:3}.outils-ag .pres-wrap{order:4}.outils-ag .part-wrap{order:5}
+  .outils-ag .legende-d{order:6;flex-basis:100%;text-align:right}
+  .outils-ag .bt-cal,.outils-ag .bt-ajout,.outils-ag .bt-monag,.outils-ag .bt-presences{height:38px;padding:0 12px;font-size:13.5px}
+  .outils-ag .tri-theme select{width:150px;height:38px;font-size:13.5px}
+}
+@media (min-width:701px){.outils-ag .tri-theme select{width:168px;padding-right:22px}}
