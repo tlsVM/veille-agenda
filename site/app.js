@@ -977,9 +977,9 @@
           if (!prec) { prec = el('details', 'prec'); var ps = el('summary'); ps.appendChild(el('b', '', 'Jours précédents ')); ps.appendChild(el('span', 'pd')); prec.appendChild(ps); cont.appendChild(prec); prec._d1 = k; }
           prec.appendChild(j); nPrec++;
           prec.querySelector('.pd').textContent = (nPrec > 1 ? JC[dDe(prec._d1).getDay()] + ' ' + dDe(prec._d1).getDate() + ' → ' : '') + JC[dDe(k).getDay()] + ' ' + courte(k);
-        } else grilleJ.appendChild(j);
+        } else { j.setAttribute('data-k', k); grilleJ.appendChild(j); }
       });
-      cont.appendChild(grilleJ);
+      cont.appendChild(grilleJ); carrousel(grilleJ);
       v.appendChild(cont);
     });
   }
@@ -1027,6 +1027,33 @@
   // On ne réaffiche plus la page au moment du clic (ça refermait les semaines et faisait sauter l'écran) :
   // l'événement coché remontera en haut de sa journée au prochain affichage (changement d'onglet, rechargement).
   function verifierRangement() { signature = sigPresences(); }
+  // ---------- Téléphone : les jours d'une semaine en carrousel (on glisse à gauche / à droite) ----------
+  var MOBILE = window.matchMedia('(max-width:700px)');
+  function carrousel(g) {
+    if (!MOBILE.matches || g.children.length < 2) return;
+    g.classList.add('carrousel');
+    var nav = el('div', 'car-nav'), puces = [];
+    [].forEach.call(g.children, function (j, i) {
+      var k = j.getAttribute('data-k'), d = dDe(k);
+      var b = el('button', 'car-puce' + (i === 0 ? ' on' : ''), JC[d.getDay()] + ' ' + d.getDate()); b.type = 'button';
+      if (k === AUJ) b.classList.add('auj');
+      b.addEventListener('click', function () { g.scrollTo({ left: j.offsetLeft - g.offsetLeft, behavior: 'smooth' }); });
+      nav.appendChild(b); puces.push(b);
+    });
+    g.parentNode.insertBefore(nav, g);
+    var actif = -1, att = 0;
+    function maj() {
+      att = 0;
+      var i = Math.max(0, Math.min(g.children.length - 1, Math.round(g.scrollLeft / g.clientWidth)));
+      var h = g.children[i].offsetHeight; if (h) g.style.height = h + 'px';
+      if (i === actif) return; actif = i;
+      puces.forEach(function (p, n) { p.classList.toggle('on', n === i); });
+      var p = puces[i]; nav.scrollTo({ left: p.offsetLeft - nav.clientWidth / 2 + p.offsetWidth / 2, behavior: 'smooth' });
+    }
+    g.addEventListener('scroll', function () { if (!att) att = requestAnimationFrame(maj); }, { passive: true });
+    if (window.ResizeObserver) { var ro = new ResizeObserver(function () { actif = -1; maj(); }); [].forEach.call(g.children, function (j) { ro.observe(j); }); }
+    setTimeout(maj, 0);
+  }
   function blocJour(k, evs) {
     var d = dDe(k), j = el('section', 'jour' + (k === AUJ ? ' auj' : ''));
     var t = el('div', 'jour-tete'); t.appendChild(el('b', '', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
