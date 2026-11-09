@@ -1113,6 +1113,13 @@
       var r = boite.getBoundingClientRect(); if (e.clientX - r.left > r.width * 0.35) aller(idx + 1); else aller(idx - 1);
     });
     montrer();
+    // Première ouverture sur téléphone : une flèche et un geste éphémères montrent le sens
+    if (slides.length > 1 && MOBILE.matches && store('vm-story-aide') !== '1') {
+      store('vm-story-aide', '1');
+      var h = el('div', 'story-hint'); h.appendChild(el('span', 'story-hint-main', '👆')); h.appendChild(el('span', 'story-hint-fl', '←'));
+      h.appendChild(el('span', 'story-hint-txt', 'Glissez pour le jour suivant'));
+      boite.appendChild(h); setTimeout(function () { h.remove(); }, 2600);
+    }
   }
   // Si une présence fait monter ou descendre un événement, on réaffiche (en gardant la position)
   var signature = '';
