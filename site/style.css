@@ -765,3 +765,26 @@ details.sem>summary .semaine>.story-rond.sem{width:34px;height:34px}
 @keyframes sh-geste{0%{transform:translateX(70px);opacity:0}20%{opacity:1}80%{opacity:1}100%{transform:translateX(-70px);opacity:0}}
 @keyframes sh-fond{0%,80%{opacity:1}100%{opacity:0}}
 .story-in{overflow:hidden;padding:0}.story-in img,.story-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}.story-av{overflow:hidden;background:#fff}
+
+/* ===== Stories du maire et de la majorité aux couleurs d'Aimer Toulouse (bleu marine, rouge, noir) ===== */
+.story-rond{background:conic-gradient(from 200deg,#e30613,#1a1a1a,#1f3c78,#e30613)}
+.story{background:rgba(15,25,50,.85)}
+.story-boite{background:linear-gradient(170deg,#1f3c78 0 30%,#f4f6fa 30% 100%)}
+.story-barres i{background:rgba(255,255,255,.35)}
+.story-barres i b{background:#e30613}
+.story-av{box-shadow:0 0 0 2.5px #e30613}
+.story-tt b{color:#fff}
+.story-tt span,.story-tt span.sem{color:#ffd9dc}
+.story-x{background:#fff;color:#1f3c78}
+.story-bloc{border-left-color:#1f3c78}
+.story-bloc.maire{border-left-color:#e30613}
+.story-bloc h3{color:#1f3c78}
+.story-h{color:#1f3c78}
+.story-bloc.maire .story-h{color:#e30613}
+.story-li b{color:#1f3c78}
+.story-li{border-top-color:#e6e9f0;color:#1a1a1a}
+.story-jour{background:#1f3c78;color:#fff}
+.story-jour.auj{background:#e30613;color:#fff}
+.story-hint{background:rgba(15,25,50,.4)}
+.story-boite.page{background:#f4f6fa}.story-boite.page .story-tete{background:#1f3c78;padding-top:12px}.story-boite.page .story-corps{padding-top:0}.story-boite.page .story-jour{margin-top:0}
+.story-boite{padding:0!important;border:0!important}

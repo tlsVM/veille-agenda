@@ -1050,7 +1050,7 @@
     slides.forEach(function () { var x = el('i'); x.appendChild(el('b')); barres.appendChild(x); });
     var av = el('span', 'story-av'), avi = el('img'); avi.src = 'logo-aimer-toulouse.png'; avi.alt = 'Aimer Toulouse'; av.appendChild(avi); var tt = el('div', 'story-tt'), x = el('button', 'story-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
     tete.appendChild(av); tete.appendChild(tt); tete.appendChild(x);
-    boite.appendChild(barres); boite.appendChild(tete); boite.appendChild(corps); ov.appendChild(boite); document.body.appendChild(ov);
+    if (pageUnique) boite.classList.add('page'); boite.appendChild(barres); boite.appendChild(tete); boite.appendChild(corps); ov.appendChild(boite); document.body.appendChild(ov);
     document.documentElement.classList.add('story-ouverte');
     requestAnimationFrame(function () { ov.classList.add('vis'); });
     function liste(titre, evs, maire) {
