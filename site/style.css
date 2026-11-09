@@ -696,3 +696,12 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
   .jours-g.carrousel::-webkit-scrollbar{display:none}
   .jours-g.carrousel>*{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;margin-top:0!important;margin-bottom:0!important}
 }
+/* Tirer pour actualiser */
+.ptr{position:fixed;left:50%;top:calc(-46px + env(safe-area-inset-top,0px));z-index:200;transform:translate(-50%,0);display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:6px 14px 6px 6px;box-shadow:0 4px 16px rgba(18,51,38,.2);font:600 13px/1 'Outfit',sans-serif;color:#0e6b41;opacity:0;transition:opacity .15s;pointer-events:none}
+.ptr.vis{opacity:1}
+.ptr-rond{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f5b5d2;color:#fff;font-size:18px;font-weight:700}
+.ptr.pret .ptr-rond{background:#158c57}
+.ptr.charge .ptr-rond{background:#158c57;animation:ptr-tourne .8s linear infinite}
+@keyframes ptr-tourne{to{transform:rotate(360deg)}}
+html,body{overscroll-behavior-y:contain}
+.ptr{white-space:nowrap}

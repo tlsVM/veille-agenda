@@ -1343,7 +1343,40 @@
     b.addEventListener('click', function () { vue = b.getAttribute('data-v'); store('vm-vue', vue); rendre(); window.scrollTo(0, 0); });
   });
 
-  charger();
+  // Après « tirer pour actualiser », on relit la feuille sans attendre le cache du serveur
+  var fraisDemande = false; try { fraisDemande = sessionStorage.getItem('vm-frais') === '1'; sessionStorage.removeItem('vm-frais'); } catch (e) {}
+  charger(fraisDemande);
+
+  // ---------- Tirer vers le bas pour actualiser (téléphone, application installée comprise) ----------
+  (function () {
+    if (!('ontouchstart' in window)) return;
+    var ind = el('div', 'ptr'), rond = el('span', 'ptr-rond', '↻'), txt = el('span', 'ptr-txt', 'Tirer pour actualiser');
+    ind.appendChild(rond); ind.appendChild(txt); document.body.appendChild(ind);
+    var y0 = null, dy = 0, SEUIL = 75, enCours = false;
+    function modaleOuverte() { return [].some.call(document.querySelectorAll('.modale'), function (m) { return !m.hidden && m.offsetParent !== null; }); }
+    document.addEventListener('touchstart', function (e) {
+      if (enCours || window.scrollY > 0 || e.touches.length !== 1 || modaleOuverte()) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (y0 === null) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy <= 0 || window.scrollY > 0) { ind.style.transform = ''; ind.classList.remove('vis'); return; }
+      var d = Math.min(dy * 0.55, 110);
+      ind.classList.add('vis'); ind.style.transform = 'translate(-50%,' + d + 'px)';
+      rond.style.transform = 'rotate(' + (dy * 2) + 'deg)';
+      var pret = dy * 0.55 >= SEUIL; ind.classList.toggle('pret', pret); txt.textContent = pret ? 'Relâcher pour actualiser' : 'Tirer pour actualiser';
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      if (y0 === null) return; y0 = null;
+      if (dy * 0.55 >= SEUIL) {
+        enCours = true; ind.classList.add('charge'); txt.textContent = 'Actualisation…';
+        ind.style.transform = 'translate(-50%,70px)';
+        try { sessionStorage.setItem('vm-frais', '1'); } catch (e) {}
+        setTimeout(function () { location.reload(); }, 150);
+      } else { ind.style.transform = ''; ind.classList.remove('vis', 'pret'); }
+    });
+  })();
   setInterval(rafraichirPresences, 20000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { AUJ = cle(new Date()); rafraichirPresences(); } });
 
