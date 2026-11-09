@@ -1024,7 +1024,7 @@
   }
   function rondStory(slides, titre, depart) {
     var b = el('button', 'story-rond'); b.type = 'button'; b.title = titre; b.setAttribute('aria-label', titre);
-    b.appendChild(el('span', 'story-in', '🏛️'));
+    var si = el('span', 'story-in'); var lg = el('img'); lg.src = 'logo-aimer-toulouse.png'; lg.alt = ''; si.appendChild(lg); b.appendChild(si);
     b.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); ouvrirStory(slides, depart || 0); });
     return b;
   }
@@ -1048,7 +1048,7 @@
     var idx = i0, ov = el('div', 'story'), boite = el('div', 'story-boite');
     var barres = el('div', 'story-barres'), tete = el('div', 'story-tete'), corps = el('div', 'story-corps');
     slides.forEach(function () { var x = el('i'); x.appendChild(el('b')); barres.appendChild(x); });
-    var av = el('span', 'story-av', '🏛️'), tt = el('div', 'story-tt'), x = el('button', 'story-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
+    var av = el('span', 'story-av'), avi = el('img'); avi.src = 'logo-aimer-toulouse.png'; avi.alt = 'Aimer Toulouse'; av.appendChild(avi); var tt = el('div', 'story-tt'), x = el('button', 'story-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
     tete.appendChild(av); tete.appendChild(tt); tete.appendChild(x);
     boite.appendChild(barres); boite.appendChild(tete); boite.appendChild(corps); ov.appendChild(boite); document.body.appendChild(ov);
     document.documentElement.classList.add('story-ouverte');
