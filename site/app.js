@@ -881,12 +881,14 @@
     return z;
   }
 
+  // Bouton : icône + libellé (sur téléphone, il devient un petit rond façon « stories », libellé court dessous)
+  function habiller(b, ic, txt, court) { b.textContent = ''; b.appendChild(el('span', 'ic', ic)); b.appendChild(el('span', 'lb', txt)); b.setAttribute('data-court', court); b.title = txt; }
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
-    var bAj = el('button', 'bt-ajout', '➕ Ajouter un RDV'); bAj.type = 'button'; bAj.title = 'Ajouter un rendez-vous';
+    var bAj = el('button', 'bt-ajout'); habiller(bAj, '➕', 'Ajouter un RDV', 'Ajouter'); bAj.type = 'button'; bAj.title = 'Ajouter un rendez-vous';
     bAj.addEventListener('click', function () { ouvrirAjout(); });
     var outils = el('div', 'outils-ag');
-    var bcal = el('button', 'bt-cal', '📅 Choisir un jour'); bcal.type = 'button';
+    var bcal = el('button', 'bt-cal'); habiller(bcal, '📅', 'Choisir un jour', 'Jour'); bcal.type = 'button';
     var pop = el('div', 'cal-pop'); pop.hidden = true;
     bcal.addEventListener('click', function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) dessinerCal(pop, moisCal); });
     var wrap = el('div', 'cal-wrap'); wrap.appendChild(bcal); wrap.appendChild(bAj); wrap.appendChild(pop); outils.appendChild(wrap);
@@ -894,17 +896,17 @@
     var tl = el('label', 'tri-theme'); var ts = el('select'); ts.setAttribute('aria-label', 'Trier par thème');
     FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Trier par thème' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });
     ts.addEventListener('change', function () { filtre = ts.value; rendre(); });
-    var bps = el('button', 'bt-presences bt-nospres', '👥 Nos présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
+    var bps = el('button', 'bt-presences bt-nospres'); habiller(bps, '👥', 'Nos présences', 'Présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
     bps.addEventListener('click', function () { ouvrirPresencesSemaine(new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()))); });
-    tl.appendChild(ts); outils.appendChild(tl);
+    tl.appendChild(el('span', 'ic', '🎨')); tl.appendChild(ts); tl.setAttribute('data-court', 'Thèmes'); outils.appendChild(tl);
     var pw = el('div', 'pres-wrap'); pw.appendChild(bps); outils.appendChild(pw);
-    var bpa = el('button', 'bt-presences bt-partager', '📤 Partager'); bpa.type = 'button';
+    var bpa = el('button', 'bt-presences bt-partager'); habiller(bpa, '📤', 'Partager', 'Partager'); bpa.type = 'button';
     bpa.addEventListener('click', ouvrirPartage);
     var paw = el('div', 'part-wrap'); paw.appendChild(bpa); outils.appendChild(paw);
     // Agenda personnel (bouton rose) : seulement si un nom est choisi dans « Je coche pour »
     if (moi && D.elus && D.elus.indexOf(moi) >= 0) {
       var prenom = moi.replace(/ \(collaborateur\)$/, '').split(' ')[0];
-      var bma = el('button', 'bt-monag' + (monAgenda ? ' on' : ''), monAgenda ? '✕ Fermer mon agenda' : '📅 Agenda de ' + prenom); bma.type = 'button';
+      var bma = el('button', 'bt-monag' + (monAgenda ? ' on' : '')); if (monAgenda) habiller(bma, '✕', 'Fermer mon agenda', 'Fermer'); else habiller(bma, '🙋', 'Agenda de ' + prenom, prenom); bma.type = 'button';
       bma.setAttribute('aria-pressed', monAgenda ? 'true' : 'false');
       bma.addEventListener('click', function () { monAgenda = !monAgenda; jourChoisi = ''; rendre(); window.scrollTo(0, 0); });
       var mw = el('div', 'monag-wrap'); mw.appendChild(bma); outils.appendChild(mw);

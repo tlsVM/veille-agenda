@@ -645,3 +645,37 @@ a.bt-ps{text-decoration:none;display:inline-flex;align-items:center}
 .outils-ag .tri-theme select{height:32px!important;font-size:12.5px!important}
 @media (min-width:701px){.outils-ag .tri-theme select{width:150px!important}}
 @media (max-width:759px){.barre-nav .onglets button{font-size:14px;padding:5px 11px}}@media (max-width:420px){.barre-nav .onglets{gap:4px}.barre-nav .onglets button{font-size:13.5px;padding:5px 9px}}
+
+/* ===== Boutons de l'agenda : icône + libellé ; sur téléphone, petits ronds façon « stories » ===== */
+.outils-ag button .ic{margin-right:5px}
+.outils-ag .tri-theme>.ic{display:none}
+@media (max-width:700px){
+  .outils-ag{display:grid!important;grid-template-columns:repeat(6,1fr)!important;grid-template-areas:none!important;gap:4px 2px!important;margin:2px 0 0!important;position:relative}
+  .outils-ag .cal-wrap{display:contents}
+  .outils-ag .bt-cal{order:1}.outils-ag .bt-ajout{order:2}.outils-ag .tri-theme{order:3}.outils-ag .monag-wrap{order:4}.outils-ag .pres-wrap{order:5}.outils-ag .part-wrap{order:6}
+  .outils-ag .legende-d{order:7;grid-column:1/-1;justify-self:end;margin:0}
+  .outils-ag .monag-wrap,.outils-ag .pres-wrap,.outils-ag .part-wrap{display:block;width:100%;justify-self:stretch}
+  .outils-ag .bt-cal,.outils-ag .bt-ajout,.outils-ag .bt-monag,.outils-ag .bt-presences,.outils-ag .tri-theme{
+    all:unset;box-sizing:border-box;position:relative;z-index:0;display:flex!important;flex-direction:column;align-items:center;gap:4px;width:100%;cursor:pointer;
+    font:500 10.5px/1.15 var(--texte,'Outfit',sans-serif)!important;color:#123326!important;text-align:center;-webkit-tap-highlight-color:transparent}
+  .outils-ag .lb{display:none}
+  .outils-ag button::after,.outils-ag .tri-theme::after{content:attr(data-court);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .outils-ag .ic,.outils-ag .tri-theme>.ic{display:flex!important;align-items:center;justify-content:center;margin:0!important;position:relative;
+    width:min(48px,12.5vw);height:min(48px,12.5vw);border-radius:50%;font-size:21px;border:2.5px solid #fff;box-sizing:border-box;background:var(--fond-ic,#fff)}
+  .outils-ag .ic::before{content:"";position:absolute;inset:-5px;border-radius:50%;z-index:-1;background:conic-gradient(from 200deg,#f5b5d2,#e8508e,#158c57,#f5b5d2)}
+  .outils-ag .bt-cal{--fond-ic:#7d8782}.outils-ag .bt-ajout{--fond-ic:#158c57}.outils-ag .tri-theme{--fond-ic:#fff}
+  .outils-ag .bt-monag{--fond-ic:#f5b5d2}.outils-ag .bt-monag.on{--fond-ic:#fff}.outils-ag .bt-nospres{--fond-ic:#e0457b}.outils-ag .bt-partager{--fond-ic:#4fb3e8}
+  .outils-ag .tri-theme select{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0;z-index:2;margin:0!important}
+  .outils-ag .cal-pop{left:6px!important;right:6px;top:78px!important;transform:none!important;width:auto!important;max-width:340px}
+}
+@media (max-width:700px){
+  .outils-ag.outils-ag .bt-cal,.outils-ag.outils-ag .bt-ajout,.outils-ag.outils-ag .bt-monag,.outils-ag.outils-ag .bt-presences,.outils-ag.outils-ag .tri-theme{
+    background:none!important;border:0!important;box-shadow:none!important;height:auto!important;min-height:0!important;padding:0!important;margin:0!important;width:100%!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:4px!important;
+    font:500 10.5px/1.15 'Outfit',sans-serif!important;color:#123326!important;border-radius:0!important;filter:none!important;overflow:visible!important}
+  .outils-ag.outils-ag .monag-wrap,.outils-ag.outils-ag .pres-wrap,.outils-ag.outils-ag .part-wrap,.outils-ag.outils-ag .tri-theme{display:flex!important;justify-content:center!important;width:100%!important;min-width:0}
+  .outils-ag.outils-ag .monag-wrap>button,.outils-ag.outils-ag .pres-wrap>button,.outils-ag.outils-ag .part-wrap>button{width:100%!important}
+  .outils-ag.outils-ag button::after,.outils-ag.outils-ag .tri-theme::after{display:block;content:attr(data-court);color:#123326;font-size:10.5px}
+  .outils-ag.outils-ag .ic{flex:none}
+}
+@media (max-width:700px){.outils-ag.outils-ag>*{grid-area:auto!important;justify-self:stretch}.outils-ag.outils-ag>.legende-d{grid-column:1/-1!important;justify-self:end!important}}
