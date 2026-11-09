@@ -487,3 +487,6 @@ details.sem>summary .semaine{border:1.5px solid var(--trait);box-shadow:var(--om
   .tri-theme select{max-width:none;width:100%}
   .outils-ag .bt-cal,.bt-presences{font-size:13px;padding:0 12px}
 }
+
+.ps-qui-sel{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 8px;font-size:12.5px;font-weight:600;color:var(--gris)}
+.ps-qui-sel select{font:600 13.5px var(--texte);color:var(--vert-fonce);background:#fff;border:1.5px solid var(--vert);border-radius:999px;padding:5px 12px;max-width:65%}

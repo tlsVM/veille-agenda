@@ -316,19 +316,19 @@
 
   // ---------- Fenêtre « Présences de la semaine » (vision des déplacements + partage) ----------
   function nomLong(n) { return n.replace(' (collaborateur)', ''); }
-  function evsAvecPresences(lundiK) {
+  function evsAvecPresences(lundiK, qui) {
     var fin = cle(ajout(dDe(lundiK), 6));
-    return D.evenements.filter(function (e) { return e.date >= lundiK && e.date <= fin && aPresence(e); })
+    return D.evenements.filter(function (e) { return e.date >= lundiK && e.date <= fin && (qui ? !!(D.presences[e.id] || {})[qui] : aPresence(e)); })
       .sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
   }
-  function texteSemaine(lundiK, pourMilitants) {
+  function texteSemaine(lundiK, pourMilitants, qui) {
     var lu = dDe(lundiK), di = ajout(lu, 6);
-    var lignes = ['📅 Présences des élu·es Vivre Mieux', 'Semaine du ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MOIS[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MOIS[di.getMonth()] + ' ' + di.getFullYear(), ''];
+    var lignes = [qui ? '📅 Agenda de ' + nomLong(qui) + ' (Vivre Mieux)' : '📅 Présences des élu·es Vivre Mieux', 'Semaine du ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MOIS[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MOIS[di.getMonth()] + ' ' + di.getFullYear(), ''];
     var jourCourant = '', n = 0;
-    evsAvecPresences(lundiK).forEach(function (e) {
+    evsAvecPresences(lundiK, qui).forEach(function (e) {
       if (pourMilitants && e.type === 'Réunion de groupe') return; // réunion interne : pas diffusée
       var p = D.presences[e.id] || {}, pr = [], pe = [];
-      Object.keys(p).forEach(function (x) { if (pourMilitants && /collaborateur/.test(x)) return; if (p[x] === 'present') pr.push(nomLong(x)); else if (p[x] === 'peut') pe.push(nomLong(x)); });
+      Object.keys(p).forEach(function (x) { if (qui && x !== qui) return; if (pourMilitants && !qui && /collaborateur/.test(x)) return; if (p[x] === 'present') pr.push(nomLong(x)); else if (p[x] === 'peut') pe.push(nomLong(x)); });
       if (!pr.length && !pe.length) return;
       if (e.date !== jourCourant) { jourCourant = e.date; var d = dDe(e.date); lignes.push((n ? '\n' : '') + JOURS[d.getDay()].toUpperCase() + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()].toUpperCase()); }
       n++;
@@ -342,6 +342,7 @@
     return lignes.join('\n');
   }
   function ouvrirPresencesSemaine(lundiK) {
+    var qui = '';
     var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion pres-sem'); bx.setAttribute('role', 'dialog');
     m.appendChild(bx); document.body.appendChild(m);
     function fermer() { m.remove(); }
@@ -357,36 +358,42 @@
       sv.addEventListener('click', function () { lundiK = cle(ajout(dDe(lundiK), 7)); peindre(); });
       nav.appendChild(pr); nav.appendChild(el('b', '', 'du ' + lu.getDate() + ' ' + MC[lu.getMonth()] + ' au ' + di.getDate() + ' ' + MC[di.getMonth()])); nav.appendChild(sv);
       bx.appendChild(nav);
-      var evs = evsAvecPresences(lundiK), liste = el('div', 'ps-liste'), jc = '';
-      if (!evs.length) liste.appendChild(el('p', 'vide', 'Aucune présence notée cette semaine.'));
+      // Filtre : tout le monde ou une personne (qui fait quoi)
+      var fq = el('label', 'ps-qui-sel'); fq.appendChild(el('span', '', 'Voir pour'));
+      var sq = el('select'); var o0 = el('option', '', 'Tout le monde'); o0.value = ''; sq.appendChild(o0);
+      (D.elus || []).forEach(function (n) { var o = el('option', '', nomLong(n)); o.value = n; if (n === qui) o.selected = true; sq.appendChild(o); });
+      sq.addEventListener('change', function () { qui = sq.value; peindre(); });
+      fq.appendChild(sq); bx.appendChild(fq);
+      var evs = evsAvecPresences(lundiK, qui), liste = el('div', 'ps-liste'), jc = '';
+      if (!evs.length) liste.appendChild(el('p', 'vide', qui ? 'Rien de noté cette semaine pour ' + nomLong(qui) + '.' : 'Aucune présence notée cette semaine.'));
       evs.forEach(function (e) {
         if (e.date !== jc) { jc = e.date; var d = dDe(e.date); liste.appendChild(el('div', 'ps-jour', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()])); }
         var t = TYPES[typeDe(e)], c = el('div', 'ps-ev'); c.style.setProperty('--c', t.c);
         var l1 = el('div', 'ps-l1'); l1.appendChild(el('span', 'ps-h', e.heure ? hFmt(e.heure) : '—')); l1.appendChild(el('span', 'ps-t', e.titre)); c.appendChild(l1);
         if (e.lieu) c.appendChild(el('div', 'ps-lieu', '→ ' + e.lieu));
         var p = D.presences[e.id] || {}, a = [], b = [];
-        Object.keys(p).forEach(function (x) { if (p[x] === 'present') a.push(COURT(x)); else if (p[x] === 'peut') b.push(COURT(x)); });
+        Object.keys(p).forEach(function (x) { if (qui && x !== qui) return; if (p[x] === 'present') a.push(COURT(x)); else if (p[x] === 'peut') b.push(COURT(x)); });
         if (a.length) c.appendChild(el('div', 'ps-qui', '✓ ' + a.join(', ')));
         if (b.length) c.appendChild(el('div', 'ps-peut', 'Peut-être : ' + b.join(', ')));
         liste.appendChild(c);
       });
       bx.appendChild(liste);
       // Partage (texte pour les militants : sans la réunion de groupe interne ni le collaborateur)
-      var info = el('p', 'ps-info', 'Partage pour les militant·es : liste des élu·es présent·es, sans la réunion de groupe interne.');
+      var info = el('p', 'ps-info', qui ? 'Le partage portera sur l\'agenda de ' + nomLong(qui) + ' (sans la réunion de groupe interne).' : 'Partage pour les militant·es : liste des élu·es présent·es, sans la réunion de groupe interne.');
       var act = el('div', 'ps-actions'), msg = el('p', 'ps-msg');
       function bouton(txt, f) { var b = el('button', 'bt-ps', txt); b.type = 'button'; b.addEventListener('click', f); act.appendChild(b); }
       function copier(t) {
         (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { msg.textContent = '✓ Copié : collez-le dans Telegram, WhatsApp ou un mail.'; })
           .catch(function () { var ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); msg.textContent = '✓ Copié.'; } catch (x) { msg.textContent = 'Copie impossible ici.'; } ta.remove(); });
       }
-      bouton('📋 Copier', function () { copier(texteSemaine(lundiK, true)); });
+      bouton('📋 Copier', function () { copier(texteSemaine(lundiK, true, qui)); });
       bouton('📤 Partager', function () {
-        var t = texteSemaine(lundiK, true);
+        var t = texteSemaine(lundiK, true, qui);
         if (navigator.share) navigator.share({ title: 'Présences des élu·es Vivre Mieux', text: t }).catch(function () {});
         else { copier(t); msg.textContent = 'Partage direct indisponible sur cet appareil : le texte a été copié.'; }
       });
       bouton('⬇️ Télécharger', function () {
-        var t = texteSemaine(lundiK, true), lu2 = dDe(lundiK);
+        var t = texteSemaine(lundiK, true, qui), lu2 = dDe(lundiK);
         var w = window.open('', '_blank');
         if (!w) { msg.textContent = 'Autorisez les fenêtres pour télécharger.'; return; }
         var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
