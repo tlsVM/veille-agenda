@@ -1459,7 +1459,7 @@
   // ---------- Sondage de date (onglet « Sondage ») ----------
   var SONDAGE = {
     id: 'prepa-cm-dec26', titre: 'Réunion de préparation du conseil municipal du 4 décembre',
-    texte: 'Trouvons une date pour nous réunir d\'ici le 2 décembre. Pour chaque créneau, répondez Oui, Si besoin ou Non.',
+    texte: 'Trouvons une date pour nous réunir d\'ici le 2 décembre. Pour chaque créneau, répondez : Oui, « Ça ne m\'arrange pas, mais je me libérerai » ou Non.',
     du: '2026-11-14', au: '2026-12-02', soir: '18:30', samedi: '09:00', samediLib: '9h / 9h30',
     // Dates impossibles : affichées grisées avec la raison, sans réponse possible
     exclus: {
@@ -1497,7 +1497,7 @@
     return r;
   }
   var SONDAGE_OUVERTS = {};
-  var REP = { oui: ['✓ Oui', 'oui'], sib: ['Si besoin', 'sib'], non: ['✗ Non', 'non'] };
+  var REP = { oui: ['✓ Oui', 'oui'], sib: ['Ça ne m\'arrange pas, mais je me libérerai', 'sib'], non: ['✗ Non', 'non'] };
   function voter(cr, rep, apres) {
     fetch('api.php', { method: 'POST', body: new URLSearchParams({ a: 'vote', s: SONDAGE.id, cr: cr, nom: moi, rep: rep }) })
       .then(function (r) { return r.json(); }).then(function (d) { if (d.sondages) D.sondages = d.sondages; apres(); })
@@ -1518,7 +1518,7 @@
     function score(c) { var r = R[c] || {}, o = 0, b = 0, n = 0; elus.forEach(function (e) { if (r[e] === 'oui') o++; else if (r[e] === 'sib') b++; else if (r[e] === 'non') n++; }); return { o: o, b: b, n: n, s: o * 2 + b - n * 3 }; }
     var best = null; [false, true].forEach(function (grise) { if (best) return; crs.forEach(function (c) { if (!!raisonsSondage(c).length !== grise) return; var x = score(c); if ((x.o + x.b) && (!best || x.o + x.b > best.x.o + best.x.b || (x.o + x.b === best.x.o + best.x.b && x.o > best.x.o))) best = { c: c, x: x, grise: grise }; }); });
     function lib(c) { var d = dDe(c.slice(0, 10)); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' · ' + (d.getDay() === 6 ? SONDAGE.samediLib : hFmt(c.slice(11))); }
-    if (best) { var bb = el('div', 'sond-best'); bb.appendChild(el('span', '', '🏆 Meilleure date pour l\'instant')); bb.appendChild(el('b', '', lib(best.c))); if (best.grise) bb.appendChild(el('span', 'sond-imp', 'date en principe indisponible')); bb.appendChild(el('span', '', best.x.o + ' oui · ' + best.x.b + ' si besoin · ' + best.x.n + ' non')); v.appendChild(bb); }
+    if (best) { var bb = el('div', 'sond-best'); bb.appendChild(el('span', '', '🏆 Meilleure date pour l\'instant')); bb.appendChild(el('b', '', lib(best.c))); if (best.grise) bb.appendChild(el('span', 'sond-imp', 'date en principe indisponible')); bb.appendChild(el('span', '', best.x.o + ' oui · ' + best.x.b + ' « je me libérerai » · ' + best.x.n + ' non')); v.appendChild(bb); }
     var peutRep = moi && elus.indexOf(moi) >= 0;
     if (!peutRep) v.appendChild(el('p', 'sond-aide', moi ? '👉 Choisissez le nom d\'un·e élu·e dans « Je coche pour » pour répondre à sa place.' : '👉 Choisissez votre nom en haut (« Je coche pour ») pour répondre.'));
     else v.appendChild(el('p', 'sond-aide', 'Vous répondez pour : ' + nomLong(moi)));
