@@ -1504,14 +1504,14 @@
       .catch(function () { alert('La réponse n\'a pas pu être enregistrée. Vérifiez la connexion.'); });
   }
   function vueSondage(v) {
-    var elus = (D.elus || []).filter(function (n) { return !/collaborateur/.test(n); });
+    var elus = (D.elus || []).slice(); // élu·es + Hugo (collaborateur), qui peut aussi répondre
     var R = ((D.sondages || {})[SONDAGE.id]) || {}, crs = creneauxSondage();
     var tete = el('div', 'sond-tete'); tete.appendChild(el('h2', 'h2', '📊 ' + SONDAGE.titre)); tete.appendChild(el('p', 'sond-txt', SONDAGE.texte)); v.appendChild(tete);
     // Qui a répondu
     var repondu = elus.filter(function (n) { return crs.some(function (c) { return (R[c] || {})[n]; }); });
     var manque = elus.filter(function (n) { return repondu.indexOf(n) < 0; });
     var st = el('div', 'sond-stat');
-    st.appendChild(el('b', '', repondu.length + ' / ' + elus.length + ' élu·es ont répondu'));
+    st.appendChild(el('b', '', repondu.length + ' / ' + elus.length + ' personnes ont répondu'));
     if (manque.length) st.appendChild(el('span', '', ' · en attente : ' + manque.map(COURT).join(', ')));
     v.appendChild(st);
     // Meilleure date
