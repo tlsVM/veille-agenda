@@ -1496,6 +1496,7 @@
     });
     return r;
   }
+  var SONDAGE_OUVERTS = {};
   var REP = { oui: ['✓ Oui', 'oui'], sib: ['Si besoin', 'sib'], non: ['✗ Non', 'non'] };
   function voter(cr, rep, apres) {
     fetch('api.php', { method: 'POST', body: new URLSearchParams({ a: 'vote', s: SONDAGE.id, cr: cr, nom: moi, rep: rep }) })
@@ -1515,21 +1516,27 @@
     v.appendChild(st);
     // Meilleure date
     function score(c) { var r = R[c] || {}, o = 0, b = 0, n = 0; elus.forEach(function (e) { if (r[e] === 'oui') o++; else if (r[e] === 'sib') b++; else if (r[e] === 'non') n++; }); return { o: o, b: b, n: n, s: o * 2 + b - n * 3 }; }
-    var best = null; crs.forEach(function (c) { if (raisonsSondage(c).length) return; var x = score(c); if ((x.o + x.b) && (!best || x.o + x.b > best.x.o + best.x.b || (x.o + x.b === best.x.o + best.x.b && x.o > best.x.o))) best = { c: c, x: x }; });
+    var best = null; [false, true].forEach(function (grise) { if (best) return; crs.forEach(function (c) { if (!!raisonsSondage(c).length !== grise) return; var x = score(c); if ((x.o + x.b) && (!best || x.o + x.b > best.x.o + best.x.b || (x.o + x.b === best.x.o + best.x.b && x.o > best.x.o))) best = { c: c, x: x, grise: grise }; }); });
     function lib(c) { var d = dDe(c.slice(0, 10)); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' · ' + (d.getDay() === 6 ? SONDAGE.samediLib : hFmt(c.slice(11))); }
-    if (best) { var bb = el('div', 'sond-best'); bb.appendChild(el('span', '', '🏆 Meilleure date pour l\'instant')); bb.appendChild(el('b', '', lib(best.c))); bb.appendChild(el('span', '', best.x.o + ' oui · ' + best.x.b + ' si besoin · ' + best.x.n + ' non')); v.appendChild(bb); }
+    if (best) { var bb = el('div', 'sond-best'); bb.appendChild(el('span', '', '🏆 Meilleure date pour l\'instant')); bb.appendChild(el('b', '', lib(best.c))); if (best.grise) bb.appendChild(el('span', 'sond-imp', 'date en principe indisponible')); bb.appendChild(el('span', '', best.x.o + ' oui · ' + best.x.b + ' si besoin · ' + best.x.n + ' non')); v.appendChild(bb); }
     var peutRep = moi && elus.indexOf(moi) >= 0;
     if (!peutRep) v.appendChild(el('p', 'sond-aide', moi ? '👉 Choisissez le nom d\'un·e élu·e dans « Je coche pour » pour répondre à sa place.' : '👉 Choisissez votre nom en haut (« Je coche pour ») pour répondre.'));
     else v.appendChild(el('p', 'sond-aide', 'Vous répondez pour : ' + nomLong(moi)));
     var liste = el('div', 'sond-liste');
     crs.forEach(function (c) {
       var raisons = raisonsSondage(c);
-      if (raisons.length) { var cx = el('div', 'sond-cr exclu'); var hx = el('div', 'sond-cr-h'); hx.appendChild(el('b', '', lib(c))); hx.appendChild(el('span', 'sond-imp', 'Indisponible')); cx.appendChild(hx); raisons.forEach(function (t) { cx.appendChild(el('p', 'sond-raison', t)); }); liste.appendChild(cx); return; }
-      var r = R[c] || {}, x = score(c), carte = el('div', 'sond-cr' + (best && best.c === c ? ' best' : '') + (c.slice(0, 10) <= AUJ ? ' passe' : ''));
+      var r = R[c] || {}, x = score(c), carte = el('div', 'sond-cr' + (raisons.length ? ' exclu' : '') + (best && best.c === c ? ' best' : '') + (c.slice(0, 10) <= AUJ ? ' passe' : ''));
       var h = el('div', 'sond-cr-h'); h.appendChild(el('b', '', lib(c)));
+      if (raisons.length) h.appendChild(el('span', 'sond-imp', 'Indisponible'));
       var jauge = el('span', 'sond-jauge'); jauge.appendChild(el('i', 'o', x.o ? '✓ ' + x.o : '')); jauge.appendChild(el('i', 'b', x.b ? '~ ' + x.b : '')); jauge.appendChild(el('i', 'n', x.n ? '✗ ' + x.n : '')); h.appendChild(jauge);
       carte.appendChild(h);
-      if (peutRep) {
+      raisons.forEach(function (t) { carte.appendChild(el('p', 'sond-raison', t)); });
+      // Date grisée : on peut quand même la remplir, en cas d'urgence
+      if (peutRep && raisons.length && !x.o && !x.b && !x.n && !SONDAGE_OUVERTS[c]) {
+        var rq = el('button', 'sond-quandmeme', '✍️ Remplir quand même'); rq.type = 'button';
+        rq.addEventListener('click', function () { SONDAGE_OUVERTS[c] = true; var y = window.scrollY; rendre(); window.scrollTo(0, y); });
+        carte.appendChild(rq);
+      } else if (peutRep) {
         var bt = el('div', 'sond-bt');
         Object.keys(REP).forEach(function (k) {
           var b = el('button', 'sond-' + k + (r[moi] === k ? ' on' : ''), REP[k][0]); b.type = 'button';

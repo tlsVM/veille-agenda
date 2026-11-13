@@ -822,3 +822,6 @@ details.sem>summary .semaine>.story-rond.sem{width:34px;height:34px}
 .sond-cr.avec-rpq{border-left-color:#e67c73}
 .sond-cr.exclu .sond-rpq{opacity:.8}
 .sond-cr-h b{text-transform:none}.sond-cr-h b::first-letter{text-transform:uppercase}
+.sond-cr.exclu .sond-bt{margin-top:6px}
+.sond-quandmeme{margin-top:8px;border:1.5px dashed #b9b9b9;background:#fff;border-radius:999px;padding:6px 14px;font:600 13px/1 'Outfit',sans-serif;color:#555;cursor:pointer}
+.sond-quandmeme:hover{border-color:var(--vert);color:var(--vert)}
