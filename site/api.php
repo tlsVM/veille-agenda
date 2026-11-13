@@ -171,11 +171,11 @@ function icalTexte($t) {
 function icalType($titre) {
   $t = mb_strtolower($titre);
   $regles = [
-    'Commission' => '/commission/', 'Conseil municipal' => '/conseil municipal/',
-    'Réunion officielle' => '/r[ée]union (publique|de quartier)|r[ée]unions? publiques?/', 'Concertation' => '/concertation|consultation/',
-    'Inauguration' => '/inauguration/', 'Cérémonie' => '/c[ée]r[ée]monie|comm[ée]moration|armistice/', 'Protocole' => '/r[ée]ception|s[ée]ance solennelle|vernissage/',
-    'Militant' => '/manif|rassemblement|gr[èe]ve|d[ée]ambulation|mobilisation/', 'Conférence' => '/conf[ée]rence|d[ée]bat|table ronde|ciné-rencontre|rencontre/',
-    'Culture' => '/concert|festival|spectacle|exposition|th[ée][âa]tre/',
+    'Commission' => '/commission/u', 'Conseil municipal' => '/conseil municipal/u',
+    'Réunion officielle' => '/r[ée]union (publique|de quartier)|r[ée]unions? publiques?/u', 'Concertation' => '/concertation|consultation/u',
+    'Inauguration' => '/inauguration/u', 'Cérémonie' => '/c[ée]r[ée]monie|comm[ée]moration|armistice/u', 'Protocole' => '/r[ée]ception|s[ée]ance solennelle|vernissage|c[ée]l[ée]bration|f[êe]te de l.ind[ée]pendance/u',
+    'Militant' => '/manif|rassemblement|gr[èe]ve|d[ée]ambulation|mobilisation/u', 'Conférence' => '/conf[ée]rence|d[ée]bat|table ronde|ciné-rencontre|rencontre/u',
+    'Culture' => '/concert|festival|spectacle|exposition|th[ée][âa]tre/u',
   ];
   foreach ($regles as $type => $re) { if (preg_match($re, $t)) { return $type; } }
   return 'Autre';
@@ -212,11 +212,11 @@ function icalEvenements() {
     if ($date === '' || $date < $min || $date > $max) { continue; }
     $titre = icalTexte($p['SUMMARY'][1]);
     $titre = trim(preg_replace('/\[cite:[^\]]*\]/i', '', $titre));
-    if (preg_match('/r[ée]union de groupe/i', $titre)) { continue; } // déjà générée par la plateforme le lundi
+    if (preg_match('/r[ée]union de groupe/iu', $titre)) { continue; } // déjà générée par la plateforme le lundi
     $desc = icalTexte($p['DESCRIPTION'][1] ?? '');
     // on retire les liens de visio (Teams, Meet), les codes et les lignes ajoutées par la plateforme
     $lignes = array_filter(explode("\n", $desc), function ($l) {
-      return !preg_match('/teams\.microsoft|meet\.google|zoom\.us|num[ée]ro de r[ée]union|code secret|^\s*rejoindre|r[ée]union microsoft teams|participer avec|pr[ée]sent·es\s*:|peut-[êe]tre\s*:|ajout[ée] depuis la plateforme/i', $l);
+      return !preg_match('/teams\.microsoft|meet\.google|zoom\.us|num[ée]ro de r[ée]union|code secret|^\s*rejoindre|r[ée]union microsoft teams|participer avec|pr[ée]sent·es\s*:|peut-[êe]tre\s*:|ajout[ée] depuis la plateforme/iu', $l);
     });
     $desc = trim(preg_replace('/\[cite:[^\]]*\]/i', '', implode("\n", $lignes)));
     $lien = '';
@@ -254,7 +254,7 @@ function fusionIcal($evs) {
       $prochesH = ($h1 === null || $h2 === null) ? ($h1 === $h2) : abs($h1 - $h2) <= 1800;
       if (!$prochesH) { continue; }
       $communs = array_intersect(motsCles($x['titre'] . ' ' . $x['lieu']), motsCles(($e['titre'] ?? '') . ' ' . ($e['lieu'] ?? '') . ' ' . ($e['quartier'] ?? '')));
-      $generiques = preg_match('/r[ée]union publique|commission/i', $x['titre']) && preg_match('/r[ée]union publique|commission|^qualit|^[ée]cologie|^vie quotidienne|^petite enfance|^solidarit/i', $e['titre'] ?? '');
+      $generiques = preg_match('/r[ée]union publique|commission/iu', $x['titre']) && preg_match('/r[ée]union publique|commission|^qualit|^[ée]cologie|^vie quotidienne|^petite enfance|^solidarit/iu', $e['titre'] ?? '');
       $fort = count($communs) >= 2 || array_filter($communs, function ($w) { return mb_strlen($w) >= 8; });
       if ($fort || $generiques || mb_strtolower($x['titre']) === mb_strtolower($e['titre'] ?? '')) { $double = true; break; }
     }
