@@ -250,7 +250,7 @@ function fusionIcal($evs) {
   foreach ($evs as $i => $e) { $parJour[$e['date'] ?? ''][] = $i; }
   foreach ($g as $x) {
     // on cherche la ligne de la plateforme qui correspond le mieux (heure, mots du titre et du lieu)
-    $double = null; $meilleur = 0;
+    $double = null; $meilleur = 0; $memes = [];
     foreach ($parJour[$x['date']] ?? [] as $i) {
       $e = $evs[$i];
       if (!empty($e['gid']) && $e['gid'] !== ($x['gid'] ?? '')) { continue; } // déjà reliée à un autre événement Gmail
@@ -263,10 +263,11 @@ function fusionIcal($evs) {
       if (!$fort && !$generiques && !$egal) { continue; }
       $score = ($ecart === 0 ? 3 : 1) + 2 * count($communs) + ($egal ? 5 : 0) + ($generiques ? 1 : 0);
       if ($score > $meilleur) { $meilleur = $score; $double = $i; }
+      if (!$generiques || $fort || $egal) { $memes[] = $i; } // doublons certains (même titre ou mêmes mots)
     }
     if ($double !== null) {
-      // même rendez-vous : on garde la ligne de la plateforme, reliée à l'événement Gmail (pour y écrire les présences)
-      if (empty($evs[$double]['gid']) && !empty($x['gid'])) { $evs[$double]['gid'] = $x['gid']; }
+      // même rendez-vous : on garde la ou les lignes de la plateforme, reliées à l'événement Gmail (pour y écrire les présences)
+      foreach (array_unique(array_merge([$double], $memes)) as $i) { if (empty($evs[$i]['gid']) && !empty($x['gid'])) { $evs[$i]['gid'] = $x['gid']; } }
     } else { $evs[] = $x; $parJour[$x['date']][] = count($evs) - 1; }
   }
   return $evs;
@@ -322,8 +323,10 @@ function nomCourt($n) {
   return implode(' ', $out);
 }
 
-function lignesPresence($id) {
-  $p = presences()[$id] ?? []; $pr = []; $pe = [];
+function lignesPresence($ids) {
+  $tout = presences(); $p = [];
+  foreach ((array)$ids as $id) { foreach ($tout[$id] ?? [] as $n => $st) { if (($p[$n] ?? '') !== 'present') { $p[$n] = $st; } } }
+  $pr = []; $pe = [];
   foreach ($p as $n => $s) { if ($s === 'present') { $pr[] = nomCourt($n); } elseif ($s === 'peut') { $pe[] = nomCourt($n); } }
   $l = [];
   if ($pr) { $l[] = '✅ Présent·es : ' . implode(', ', $pr); }
@@ -341,12 +344,32 @@ function sansPresences($desc) {
 const COULEURS_GOOGLE = ['Réunion officielle' => '4', 'Concertation' => '4', 'Protocole' => '9', 'Cérémonie' => '9', 'Inauguration' => '9',
   'Commission' => '7', 'Conseil municipal' => '7', 'Conférence' => '10', 'Café-débat' => '10', 'Militant' => '11', 'Culture' => '6'];
 
+function chercherDansGoogle($e) {
+  $paris = new DateTimeZone('Europe/Paris');
+  $d0 = new DateTime($e['date'] . ' 00:00', $paris); $d1 = (clone $d0)->modify('+1 day');
+  $r = gapi('GET', '?singleEvents=true&maxResults=50&timeMin=' . rawurlencode($d0->format('c')) . '&timeMax=' . rawurlencode($d1->format('c')));
+  foreach ($r['items'] ?? [] as $g) {
+    if (!empty($g['recurringEventId'])) { continue; }
+    $h = isset($g['start']['dateTime']) ? (new DateTime($g['start']['dateTime']))->setTimezone($paris)->format('H:i') : '';
+    if (($h === '') !== empty($e['heure'])) { continue; }
+    if ($h !== '' && abs(strtotime($h) - strtotime($e['heure'])) > 1800) { continue; }
+    $t = trim(preg_replace('/^\s*\[(important|commission|comission)\]\s*/iu', '', $g['summary'] ?? ''));
+    $communs = array_intersect(motsCles($t . ' ' . ($g['location'] ?? '')), motsCles(($e['titre'] ?? '') . ' ' . ($e['lieu'] ?? '') . ' ' . ($e['quartier'] ?? '')));
+    $fort = count($communs) >= 2 || array_filter($communs, function ($w) { return mb_strlen($w) >= 8; });
+    if ($fort || mb_strtolower($t) === mb_strtolower($e['titre'] ?? '')) { return $g['id']; }
+  }
+  return '';
+}
+
 function pousserVersGoogle($id) {
   global $DATA;
   if (!is_file("$DATA/google-cle.json") || !preg_match('/^[a-z0-9]{3,40}$/', $id) || strpos($id, 'rg') === 0) { return; }
-  $e = null; foreach (tousEvenements() as $x) { if ($x['id'] === $id) { $e = $x; break; } }
+  $tous = tousEvenements(); $e = null; foreach ($tous as $x) { if ($x['id'] === $id) { $e = $x; break; } }
   if (!$e || in_array($e['type'] ?? '', ['Majorité', 'Réunion de groupe'], true)) { return; }
-  $lignes = lignesPresence($id); $bloc = $lignes ? "\n\n" . implode("\n", $lignes) : '';
+  // pas encore relié par l'iCal (qui peut avoir du retard) : on cherche directement dans l'agenda Gmail le même jour
+  if (empty($e['gid'])) { $e['gid'] = chercherDansGoogle($e); }
+  $ids = [$id]; if (!empty($e['gid'])) { foreach ($tous as $x) { if (($x['gid'] ?? '') === $e['gid'] && $x['id'] !== $id) { $ids[] = $x['id']; } } }
+  $lignes = lignesPresence($ids); $bloc = $lignes ? "\n\n" . implode("\n", $lignes) : '';
   // 1) événement venu de Gmail : on complète sa description
   if (!empty($e['gid'])) {
     $g = gapi('GET', '/' . rawurlencode($e['gid'])); if ($g === null) { return; }
