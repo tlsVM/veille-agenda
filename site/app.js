@@ -1459,8 +1459,8 @@
   // ---------- Sondage de date (onglet « Sondage ») ----------
   var SONDAGE = {
     id: 'prepa-cm-dec26', titre: 'Réunion de préparation du conseil municipal du 4 décembre',
-    texte: 'Trouvons une date pour nous réunir avant le 2 décembre. Pour chaque créneau, répondez Oui, Si besoin ou Non.',
-    du: '2026-11-14', au: '2026-12-01', soir: '18:30', samedi: '09:00', samediLib: '9h / 9h30',
+    texte: 'Trouvons une date pour nous réunir d\'ici le 2 décembre. Pour chaque créneau, répondez Oui, Si besoin ou Non.',
+    du: '2026-11-14', au: '2026-12-02', soir: '18:30', samedi: '09:00', samediLib: '9h / 9h30',
     // Dates impossibles : affichées grisées avec la raison, sans réponse possible
     exclus: {
       '2026-11-16': 'Vincent : réunion citoyenne du Département à L\'Isle-en-Dodon',
@@ -1469,7 +1469,8 @@
       '2026-11-20': 'Vincent : réunion citoyenne du Département à Montastruc-la-Conseillère',
       '2026-11-23': 'Vincent : réunion citoyenne du Département à Cazères',
       '2026-11-24': 'Vincent : réunion citoyenne du Département à Salies-du-Salat',
-      '2026-11-30': 'Vincent : réunion citoyenne du Département à Villefranche-de-Lauragais'
+      '2026-11-30': 'Vincent : réunion citoyenne du Département à Villefranche-de-Lauragais',
+      '2026-12-02': 'Vincent : réunion citoyenne du Département à Bagnères-de-Luchon'
     }
   };
   function creneauxSondage() {
