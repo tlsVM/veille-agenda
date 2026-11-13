@@ -214,7 +214,6 @@ function icalEvenements() {
     $titre = trim(preg_replace('/\[cite:[^\]]*\]/i', '', $titre));
     if (preg_match('/r[ée]union de groupe/iu', $titre)) { continue; } // déjà générée par la plateforme le lundi
     $desc = icalTexte($p['DESCRIPTION'][1] ?? '');
-    if (strpos($desc, 'ajouté depuis la plateforme') !== false) { continue; } // déjà présent sur la plateforme
     // on retire les liens de visio (Teams, Meet), les codes et les lignes ajoutées par la plateforme
     $lignes = array_filter(explode("\n", $desc), function ($l) {
       return !preg_match('/teams\.microsoft|meet\.google|zoom\.us|num[ée]ro de r[ée]union|code secret|^\s*rejoindre|r[ée]union microsoft teams|participer avec|pr[ée]sent·es\s*:|peut-[êe]tre\s*:|ajout[ée] depuis la plateforme/iu', $l);
