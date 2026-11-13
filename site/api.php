@@ -130,6 +130,139 @@ function donnees() {
   return $d;
 }
 
+
+// ---------- Agenda Gmail Vivre Mieux → plateforme (adresse secrète iCal dans config.php, clé 'ical') ----------
+
+const ICAL_SECONDES = 600; // relu au plus toutes les 10 minutes
+
+function icalBrut($url) {
+  if (function_exists('curl_init')) {
+    $h = curl_init($url);
+    curl_setopt_array($h, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 12, CURLOPT_USERAGENT => 'VeilleAgenda/1.0']);
+    $t = curl_exec($h); $ok = curl_getinfo($h, CURLINFO_HTTP_CODE) === 200; curl_close($h);
+    return ($ok && is_string($t) && strpos($t, 'BEGIN:VCALENDAR') !== false) ? $t : null;
+  }
+  $t = @file_get_contents($url);
+  return ($t !== false && strpos($t, 'BEGIN:VCALENDAR') !== false) ? $t : null;
+}
+
+function icalDate($v, $params) {
+  // renvoie [date AAAA-MM-JJ, heure HH:MM ou ''] à l'heure de Paris
+  $paris = new DateTimeZone('Europe/Paris');
+  if (preg_match('/VALUE=DATE(?!-)/', $params) || preg_match('/^\d{8}$/', $v)) {
+    return [substr($v, 0, 4) . '-' . substr($v, 4, 2) . '-' . substr($v, 6, 2), ''];
+  }
+  try {
+    if (substr($v, -1) === 'Z') { $d = new DateTime($v, new DateTimeZone('UTC')); }
+    elseif (preg_match('/TZID=([^;:]+)/', $params, $m)) { $d = new DateTime($v, new DateTimeZone(trim($m[1], '"'))); }
+    else { $d = new DateTime($v, $paris); }
+  } catch (Exception $e) { return ['', '']; }
+  $d->setTimezone($paris);
+  return [$d->format('Y-m-d'), $d->format('H:i')];
+}
+
+function icalTexte($t) {
+  $t = str_replace(['\\n', '\\N', '\\,', '\;', '\\\\'], ["\n", "\n", ',', ';', '\\'], $t);
+  $t = preg_replace('#<br\s*/?>|</p>#i', "\n", $t);
+  $t = html_entity_decode(strip_tags($t), ENT_QUOTES, 'UTF-8');
+  return trim($t);
+}
+
+function icalType($titre) {
+  $t = mb_strtolower($titre);
+  $regles = [
+    'Commission' => '/commission/', 'Conseil municipal' => '/conseil municipal/',
+    'Réunion officielle' => '/r[ée]union (publique|de quartier)|r[ée]unions? publiques?/', 'Concertation' => '/concertation|consultation/',
+    'Inauguration' => '/inauguration/', 'Cérémonie' => '/c[ée]r[ée]monie|comm[ée]moration|armistice/', 'Protocole' => '/r[ée]ception|s[ée]ance solennelle|vernissage/',
+    'Militant' => '/manif|rassemblement|gr[èe]ve|d[ée]ambulation|mobilisation/', 'Conférence' => '/conf[ée]rence|d[ée]bat|table ronde|ciné-rencontre|rencontre/',
+    'Culture' => '/concert|festival|spectacle|exposition|th[ée][âa]tre/',
+  ];
+  foreach ($regles as $type => $re) { if (preg_match($re, $t)) { return $type; } }
+  return 'Autre';
+}
+
+function icalEvenements() {
+  global $DATA;
+  $c = config(); $url = trim((string)(($c ?? [])['ical'] ?? ''));
+  if ($url === '') { return []; }
+  $cache = "$DATA/cache/ical.json";
+  if (is_file($cache) && time() - filemtime($cache) < ICAL_SECONDES && !isset($_GET['frais'])) {
+    $p = json_decode(file_get_contents($cache), true); if (is_array($p)) { return $p; }
+  }
+  $brut = icalBrut($url);
+  if ($brut === null) { // agenda injoignable : dernière version connue
+    if (is_file($cache)) { touch($cache); $p = json_decode(file_get_contents($cache), true); return is_array($p) ? $p : []; }
+    return [];
+  }
+  $brut = preg_replace("/\r?\n[ \t]/", '', str_replace("\r\n", "\n", $brut)); // lignes repliées
+  $min = date('Y-m-d', strtotime('-90 days')); $max = date('Y-m-d', strtotime('+200 days'));
+  $out = [];
+  foreach (explode('BEGIN:VEVENT', $brut) as $i => $bloc) {
+    if ($i === 0) { continue; }
+    $bloc = explode('END:VEVENT', $bloc)[0];
+    $p = [];
+    foreach (explode("\n", $bloc) as $l) {
+      if (!preg_match('/^([A-Z-]+)((?:;[^:]*)?):(.*)$/', $l, $m)) { continue; }
+      if (!isset($p[$m[1]])) { $p[$m[1]] = [$m[2], $m[3]]; }
+    }
+    if (empty($p['DTSTART']) || empty($p['SUMMARY'])) { continue; }
+    if (isset($p['STATUS']) && strtoupper(trim($p['STATUS'][1])) === 'CANCELLED') { continue; }
+    if (isset($p['RRULE'])) { continue; } // événements répétés (ex. réunion de groupe) : gérés par la plateforme
+    [$date, $heure] = icalDate(trim($p['DTSTART'][1]), $p['DTSTART'][0]);
+    if ($date === '' || $date < $min || $date > $max) { continue; }
+    $titre = icalTexte($p['SUMMARY'][1]);
+    $titre = trim(preg_replace('/\[cite:[^\]]*\]/i', '', $titre));
+    if (preg_match('/r[ée]union de groupe/i', $titre)) { continue; } // déjà générée par la plateforme le lundi
+    $desc = icalTexte($p['DESCRIPTION'][1] ?? '');
+    // on retire les liens de visio (Teams, Meet), les codes et les lignes ajoutées par la plateforme
+    $lignes = array_filter(explode("\n", $desc), function ($l) {
+      return !preg_match('/teams\.microsoft|meet\.google|zoom\.us|num[ée]ro de r[ée]union|code secret|^\s*rejoindre|r[ée]union microsoft teams|participer avec|pr[ée]sent·es\s*:|peut-[êe]tre\s*:|ajout[ée] depuis la plateforme/i', $l);
+    });
+    $desc = trim(preg_replace('/\[cite:[^\]]*\]/i', '', implode("\n", $lignes)));
+    $lien = '';
+    if (preg_match('#https?://[^\s<>"]+#', $desc, $m)) { $lien = rtrim($m[0], '.,;)'); }
+    $fin = isset($p['DTEND']) ? icalDate(trim($p['DTEND'][1]), $p['DTEND'][0]) : ['', ''];
+    $dateFin = ($fin[0] && $fin[0] > $date && !($heure === '' && $fin[0] === date('Y-m-d', strtotime($date . ' +1 day')))) ? ($heure === '' ? date('Y-m-d', strtotime($fin[0] . ' -1 day')) : $fin[0]) : '';
+    $titreAff = trim(preg_replace('/^\s*\[(important|commission|comission)\]\s*/i', '', $titre));
+    $out[] = [
+      'id' => 'g' . substr(md5(trim($p['UID'][1] ?? ($date . $heure . $titre))), 0, 10),
+      'date' => $date, 'date_fin' => $dateFin, 'heure' => $heure,
+      'type' => icalType($titre), 'titre' => $titreAff ?: $titre,
+      'lieu' => trim(preg_replace('/\[cite:[^\]]*\]/i', '', icalTexte($p['LOCATION'][1] ?? ''))),
+      'details' => mb_substr($desc, 0, 1500), 'lien' => $lien,
+      'source' => 'Agenda Gmail Vivre Mieux', 'important' => preg_match('/\[important\]/i', $titre) ? 'oui' : '',
+    ];
+  }
+  file_put_contents($cache, json_encode($out, JSON_UNESCAPED_UNICODE), LOCK_EX);
+  return $out;
+}
+
+// Un événement Gmail déjà présent dans le tableau (même jour, heure proche, titre proche) n'est pas ajouté une seconde fois
+function motsCles($t) {
+  $t = mb_strtolower(preg_replace('/[^\p{L}\p{N} ]+/u', ' ', $t));
+  $vide = ['reunion', 'réunion', 'publique', 'quartier', 'toulouse', 'avec', 'pour', 'dans', 'commission', 'important', 'cérémonie', 'ceremonie', 'salon', 'rencontre', 'soirée', 'soiree', 'assemblée', 'générale', 'association', 'associations', 'inauguration', 'exposition', 'festival', 'conseil', 'municipal', 'novembre', 'décembre', 'l\'armistice', 'armistice'];
+  return array_values(array_filter(explode(' ', $t), function ($w) use ($vide) { return mb_strlen($w) >= 5 && !in_array($w, $vide, true); }));
+}
+function fusionIcal($evs) {
+  $g = icalEvenements(); if (!$g) { return $evs; }
+  $parJour = [];
+  foreach ($evs as $e) { $parJour[$e['date'] ?? ''][] = $e; }
+  foreach ($g as $x) {
+    $double = false;
+    foreach ($parJour[$x['date']] ?? [] as $e) {
+      $h1 = $x['heure'] ? strtotime($x['heure']) : null; $h2 = !empty($e['heure']) ? strtotime($e['heure']) : null;
+      $prochesH = ($h1 === null || $h2 === null) ? ($h1 === $h2) : abs($h1 - $h2) <= 1800;
+      if (!$prochesH) { continue; }
+      $communs = array_intersect(motsCles($x['titre'] . ' ' . $x['lieu']), motsCles(($e['titre'] ?? '') . ' ' . ($e['lieu'] ?? '') . ' ' . ($e['quartier'] ?? '')));
+      $generiques = preg_match('/r[ée]union publique|commission/i', $x['titre']) && preg_match('/r[ée]union publique|commission|^qualit|^[ée]cologie|^vie quotidienne|^petite enfance|^solidarit/i', $e['titre'] ?? '');
+      $fort = count($communs) >= 2 || array_filter($communs, function ($w) { return mb_strlen($w) >= 8; });
+      if ($fort || $generiques || mb_strtolower($x['titre']) === mb_strtolower($e['titre'] ?? '')) { $double = true; break; }
+    }
+    if (!$double) { $evs[] = $x; $parJour[$x['date']][] = $x; }
+  }
+  return $evs;
+}
+
 // ---------- Présences (fichier JSON hors du dossier public) ----------
 
 function presences() {
@@ -326,7 +459,7 @@ function cleIcs($nom) { return substr(hash_hmac('sha256', $nom, secretIcs()), 0,
 
 function tousEvenements() {
   $d = donnees();
-  $evs = array_merge($d['evenements'] ?? [], ajouts());
+  $evs = fusionIcal(array_merge($d['evenements'] ?? [], ajouts()));
   $ids = [];
   foreach ($evs as $e) { $ids[$e['id']] = 1; }
   foreach (array_keys(presences()) as $id) { // réunions de groupe du lundi (créées par l'application)
@@ -474,7 +607,7 @@ if ($a === 'presse' && !empty((config() ?? [])['presse_ia'])) { // désactivé :
 
 if ($a === 'data') {
   $d = donnees();
-  if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = array_merge($d['evenements'] ?? [], ajouts()); }
+  if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = fusionIcal(array_merge($d['evenements'] ?? [], ajouts())); }
   $d['presences'] = presences();
   $d['sondages'] = sondages();
   $d['ajout_actif'] = true; // ajout ouvert à tous ; le code d'accès, s'il est mis en place, protégera toute la plateforme
