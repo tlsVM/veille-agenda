@@ -1456,10 +1456,100 @@
   }
 
   // ---------- Rendu ----------
+  // ---------- Sondage de date (onglet « Sondage ») ----------
+  var SONDAGE = {
+    id: 'prepa-cm-dec26', titre: 'Préparation du conseil municipal',
+    texte: 'Trouvons une date pour nous réunir avant le 2 décembre. Pour chaque créneau, répondez Oui, Si besoin ou Non.',
+    du: '2026-11-14', au: '2026-12-01', soir: '18:30', samedi: '09:00', samediLib: '9h / 9h30',
+    // Dates impossibles : affichées grisées avec la raison, sans réponse possible
+    exclus: {
+      '2026-11-16': 'Vincent : réunion citoyenne du Département à L\'Isle-en-Dodon',
+      '2026-11-18': 'Vincent : réunion citoyenne du Département à Castelnau-d\'Estrétefonds',
+      '2026-11-19': 'Vincent : réunion citoyenne du Département à Toulouse (Hôtel du Département)',
+      '2026-11-20': 'Vincent : réunion citoyenne du Département à Montastruc-la-Conseillère',
+      '2026-11-23': 'Vincent : réunion citoyenne du Département à Cazères',
+      '2026-11-24': 'Vincent : réunion citoyenne du Département à Salies-du-Salat',
+      '2026-11-30': 'Vincent : réunion citoyenne du Département à Villefranche-de-Lauragais'
+    }
+  };
+  function creneauxSondage() {
+    var out = [], d = dDe(SONDAGE.du), fin = dDe(SONDAGE.au);
+    for (; d <= fin; d = ajout(d, 1)) {
+      var k = cle(d), w = d.getDay();
+      if (w === 0) continue;
+      out.push(k + 'T' + (w === 6 ? SONDAGE.samedi : SONDAGE.soir));
+    }
+    return out;
+  }
+  // Raisons d'indisponibilité d'un créneau : dates fixées à la main + réunions publiques de quartier officielles de l'agenda
+  function raisonsSondage(c) {
+    var k = c.slice(0, 10), h = c.slice(11), r = [];
+    if (SONDAGE.exclus[k]) r.push('🚫 ' + SONDAGE.exclus[k]);
+    (D.evenements || []).forEach(function (e) {
+      if (e.date !== k || e.type !== 'Réunion officielle') return;
+      var eh = e.heure || '', soir = h >= '17:00';
+      if (eh && (soir ? eh < '16:00' : eh >= '13:00')) return; // pas de chevauchement avec le créneau
+      var q = e.quartier || e.lieu || '';
+      var t = /^r[ée]union publique de quartier$/i.test((e.titre || '').trim()) ? 'Réunion publique de quartier' + (q ? ' : ' + q : '') : e.titre + (e.quartier ? ' (' + e.quartier + ')' : '');
+      r.push('📣 ' + t + (eh ? ' · ' + hFmt(eh) : ''));
+    });
+    return r;
+  }
+  var REP = { oui: ['✓ Oui', 'oui'], sib: ['Si besoin', 'sib'], non: ['✗ Non', 'non'] };
+  function voter(cr, rep, apres) {
+    fetch('api.php', { method: 'POST', body: new URLSearchParams({ a: 'vote', s: SONDAGE.id, cr: cr, nom: moi, rep: rep }) })
+      .then(function (r) { return r.json(); }).then(function (d) { if (d.sondages) D.sondages = d.sondages; apres(); })
+      .catch(function () { alert('La réponse n\'a pas pu être enregistrée. Vérifiez la connexion.'); });
+  }
+  function vueSondage(v) {
+    var elus = (D.elus || []).filter(function (n) { return !/collaborateur/.test(n); });
+    var R = ((D.sondages || {})[SONDAGE.id]) || {}, crs = creneauxSondage();
+    var tete = el('div', 'sond-tete'); tete.appendChild(el('h2', 'h2', '📊 ' + SONDAGE.titre)); tete.appendChild(el('p', 'sond-txt', SONDAGE.texte)); v.appendChild(tete);
+    // Qui a répondu
+    var repondu = elus.filter(function (n) { return crs.some(function (c) { return (R[c] || {})[n]; }); });
+    var manque = elus.filter(function (n) { return repondu.indexOf(n) < 0; });
+    var st = el('div', 'sond-stat');
+    st.appendChild(el('b', '', repondu.length + ' / ' + elus.length + ' élu·es ont répondu'));
+    if (manque.length) st.appendChild(el('span', '', ' · en attente : ' + manque.map(COURT).join(', ')));
+    v.appendChild(st);
+    // Meilleure date
+    function score(c) { var r = R[c] || {}, o = 0, b = 0, n = 0; elus.forEach(function (e) { if (r[e] === 'oui') o++; else if (r[e] === 'sib') b++; else if (r[e] === 'non') n++; }); return { o: o, b: b, n: n, s: o * 2 + b - n * 3 }; }
+    var best = null; crs.forEach(function (c) { if (raisonsSondage(c).length) return; var x = score(c); if ((x.o + x.b) && (!best || x.o + x.b > best.x.o + best.x.b || (x.o + x.b === best.x.o + best.x.b && x.o > best.x.o))) best = { c: c, x: x }; });
+    function lib(c) { var d = dDe(c.slice(0, 10)); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' · ' + (d.getDay() === 6 ? SONDAGE.samediLib : hFmt(c.slice(11))); }
+    if (best) { var bb = el('div', 'sond-best'); bb.appendChild(el('span', '', '🏆 Meilleure date pour l\'instant')); bb.appendChild(el('b', '', lib(best.c))); bb.appendChild(el('span', '', best.x.o + ' oui · ' + best.x.b + ' si besoin · ' + best.x.n + ' non')); v.appendChild(bb); }
+    var peutRep = moi && elus.indexOf(moi) >= 0;
+    if (!peutRep) v.appendChild(el('p', 'sond-aide', moi ? '👉 Choisissez le nom d\'un·e élu·e dans « Je coche pour » pour répondre à sa place.' : '👉 Choisissez votre nom en haut (« Je coche pour ») pour répondre.'));
+    else v.appendChild(el('p', 'sond-aide', 'Vous répondez pour : ' + nomLong(moi)));
+    var liste = el('div', 'sond-liste');
+    crs.forEach(function (c) {
+      var raisons = raisonsSondage(c);
+      if (raisons.length) { var cx = el('div', 'sond-cr exclu'); var hx = el('div', 'sond-cr-h'); hx.appendChild(el('b', '', lib(c))); hx.appendChild(el('span', 'sond-imp', 'Indisponible')); cx.appendChild(hx); raisons.forEach(function (t) { cx.appendChild(el('p', 'sond-raison', t)); }); liste.appendChild(cx); return; }
+      var r = R[c] || {}, x = score(c), carte = el('div', 'sond-cr' + (best && best.c === c ? ' best' : '') + (c.slice(0, 10) <= AUJ ? ' passe' : ''));
+      var h = el('div', 'sond-cr-h'); h.appendChild(el('b', '', lib(c)));
+      var jauge = el('span', 'sond-jauge'); jauge.appendChild(el('i', 'o', x.o ? '✓ ' + x.o : '')); jauge.appendChild(el('i', 'b', x.b ? '~ ' + x.b : '')); jauge.appendChild(el('i', 'n', x.n ? '✗ ' + x.n : '')); h.appendChild(jauge);
+      carte.appendChild(h);
+      if (peutRep) {
+        var bt = el('div', 'sond-bt');
+        Object.keys(REP).forEach(function (k) {
+          var b = el('button', 'sond-' + k + (r[moi] === k ? ' on' : ''), REP[k][0]); b.type = 'button';
+          b.addEventListener('click', function () { voter(c, r[moi] === k ? '' : k, function () { var y = window.scrollY; rendre(); window.scrollTo(0, y); }); });
+          bt.appendChild(b);
+        });
+        carte.appendChild(bt);
+      }
+      var noms = el('div', 'sond-noms');
+      [['oui', '✓ '], ['sib', '~ '], ['non', '✗ ']].forEach(function (t) {
+        var n = elus.filter(function (e) { return r[e] === t[0]; }).map(COURT); if (n.length) noms.appendChild(el('span', 'n-' + t[0], t[1] + n.join(', ')));
+      });
+      if (noms.children.length) carte.appendChild(noms);
+      liste.appendChild(carte);
+    });
+    v.appendChild(liste);
+  }
   function rendre() {
     var v = document.getElementById('vue'); v.textContent = '';
     document.querySelectorAll('.onglets button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === vue); });
-    ({ jour: vueJour, agenda: vueAgenda, quartiers: vueQuartiers, archives: vueArchives, recherche: vueRecherche }[vue] || vueJour)(v);
+    ({ jour: vueJour, agenda: vueAgenda, quartiers: vueQuartiers, archives: vueArchives, sondage: vueSondage, recherche: vueRecherche }[vue] || vueJour)(v);
     var p = el('p', 'pied', 'Données mises à jour ' + (D.maj ? 'le ' + new Date(D.maj).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '')); v.appendChild(p);
   }
   document.querySelectorAll('.onglets button').forEach(function (b) {

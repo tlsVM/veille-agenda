@@ -446,6 +446,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
 
 if ($a === 'pres') { sortir(['presences' => presences()]); }
 
+// ---------- Sondages de date (réponses des élus) ----------
+function sondages() {
+  global $DATA; $f = "$DATA/sondages.json";
+  if (!is_file($f)) { return []; }
+  $p = json_decode(file_get_contents($f), true); return is_array($p) ? $p : [];
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'vote') {
+  $sid = (string)($_POST['s'] ?? ''); $cr = (string)($_POST['cr'] ?? ''); $nom = (string)($_POST['nom'] ?? ''); $rep = (string)($_POST['rep'] ?? '');
+  if (!preg_match('/^[a-z0-9-]{2,40}$/', $sid) || !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $cr)) { sortir(['erreur' => 'id'], 400); }
+  if (!in_array($nom, ELUS, true)) { sortir(['erreur' => 'nom'], 400); }
+  if (!in_array($rep, ['oui', 'sib', 'non', ''], true)) { sortir(['erreur' => 'rep'], 400); }
+  $h = fopen("$DATA/sondages.json", 'c+'); if (!$h) { sortir(['erreur' => 'ecriture'], 500); }
+  flock($h, LOCK_EX);
+  $p = json_decode(stream_get_contents($h), true); if (!is_array($p)) { $p = []; }
+  if ($rep === '') { unset($p[$sid][$cr][$nom]); } else { $p[$sid][$cr][$nom] = $rep; }
+  ftruncate($h, 0); rewind($h); fwrite($h, json_encode($p, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
+  @file_put_contents("$DATA/journal-sondages.log", date('c') . "\t$sid\t$cr\t$nom\t$rep\n", FILE_APPEND | LOCK_EX);
+  sortir(['ok' => true, 'sondages' => $p]);
+}
+
 if ($a === 'presse' && !empty((config() ?? [])['presse_ia'])) { // désactivé : la recherche Google via Gemini n'est pas gratuite
   $q = trim((string)($_GET['q'] ?? ''));
   if (!preg_match("/^[\\p{L}0-9 '’·.,\\-]{2,80}$/u", $q)) { sortir(['erreur' => 'quartier'], 400); }
@@ -456,6 +476,7 @@ if ($a === 'data') {
   $d = donnees();
   if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = array_merge($d['evenements'] ?? [], ajouts()); }
   $d['presences'] = presences();
+  $d['sondages'] = sondages();
   $d['ajout_actif'] = true; // ajout ouvert à tous ; le code d'accès, s'il est mis en place, protégera toute la plateforme
   $d['elus'] = ELUS;
   $d['cles_agenda'] = array_combine(ELUS, array_map('cleIcs', ELUS));

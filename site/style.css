@@ -788,3 +788,37 @@ details.sem>summary .semaine>.story-rond.sem{width:34px;height:34px}
 .story-hint{background:rgba(15,25,50,.4)}
 .story-boite.page{background:#f4f6fa}.story-boite.page .story-tete{background:#1f3c78;padding-top:12px}.story-boite.page .story-corps{padding-top:0}.story-boite.page .story-jour{margin-top:0}
 .story-boite{padding:0!important;border:0!important}
+
+/* ===== Sondage de date ===== */
+.sond-tete{text-align:center;margin:6px 0 10px}
+.sond-txt{color:var(--gris);margin:4px auto 0;max-width:560px}
+.sond-stat{text-align:center;font-size:14px;margin:0 0 10px}.sond-stat span{color:var(--gris)}
+.sond-best{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid var(--vert);border-radius:14px;padding:10px;margin:0 auto 12px;max-width:520px;box-shadow:3px 3px 0 var(--rose)}
+.sond-best span{font-size:12.5px;color:var(--gris)}.sond-best b{font:400 26px/1.1 var(--titre);color:var(--vert-fonce);text-transform:uppercase}
+.sond-aide{text-align:center;font-size:13.5px;color:#c8437f;margin:0 0 10px;font-weight:600}
+.sond-liste{display:flex;flex-direction:column;gap:8px;max-width:640px;margin:0 auto}
+.sond-cr{background:#fff;border-radius:12px;padding:10px 12px;border-left:4px solid #cfe3d8;box-shadow:0 1px 6px rgba(18,51,38,.06)}
+.sond-cr.best{border-left-color:var(--vert);background:#f3faf6}
+.sond-cr.passe{opacity:.5}
+.sond-cr-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sond-cr-h b{font-size:15px;text-transform:capitalize}
+.sond-jauge{display:flex;gap:6px;font-style:normal;font-size:12.5px;font-weight:700}
+.sond-jauge i{font-style:normal}.sond-jauge .o{color:#158c57}.sond-jauge .b{color:#c88a00}.sond-jauge .n{color:#c62828}
+.sond-bt{display:flex;gap:6px;margin-top:8px}
+.sond-bt button{flex:1;border:1.5px solid #cfd8d3;background:#fff;border-radius:999px;padding:7px 4px;font:600 13.5px/1 'Outfit',sans-serif;cursor:pointer;color:#123326}
+.sond-bt .sond-oui.on{background:#158c57;border-color:#158c57;color:#fff}
+.sond-bt .sond-sib.on{background:#f6c445;border-color:#f6c445;color:#3b2c00}
+.sond-bt .sond-non.on{background:#e53935;border-color:#e53935;color:#fff}
+.sond-noms{display:flex;flex-direction:column;gap:2px;margin-top:6px;font-size:12px}
+.sond-noms .n-oui{color:#158c57}.sond-noms .n-sib{color:#a07000}.sond-noms .n-non{color:#c62828}
+@media (max-width:759px){.barre-nav .onglets{gap:4px;flex-wrap:nowrap}.barre-nav .onglets button{font-size:13px;padding:5px 9px}}@media (max-width:400px){.barre-nav .onglets button{font-size:12.5px;padding:5px 7px}}
+@media (max-width:759px){.barre-nav .onglets{overflow-x:auto;scrollbar-width:none;justify-content:flex-start;max-width:100%}.barre-nav .onglets::-webkit-scrollbar{display:none}.barre-nav .onglets button{flex:none;padding:5px 7px}}@media (min-width:380px) and (max-width:759px){.barre-nav .onglets{justify-content:center}}@media (max-width:360px){.barre-nav .onglets button{font-size:11.5px;padding:4px 6px}}
+.sond-cr.exclu{background:#f3f3f3;border-left-color:#c9c9c9;box-shadow:none}
+.sond-cr.exclu b{color:#8a8a8a}
+.sond-imp{font-size:11.5px;font-weight:700;color:#8a8a8a;border:1px solid #cfcfcf;border-radius:999px;padding:2px 8px;background:#fff}
+.sond-raison{margin:4px 0 0;font-size:12.5px;color:#7a7a7a}
+@media (max-width:400px){.barre-nav .onglets{gap:3px}.barre-nav .onglets button{font-size:12px;padding:5px 6px}.barre-nav .onglets button[data-v=recherche]{padding:5px 5px}}
+.sond-rpq{margin:6px 0 0;padding:5px 9px;border-radius:8px;background:#fdecea;color:#a8392f;font-size:12.5px;font-weight:600;border-left:3px solid #e67c73}
+.sond-cr.avec-rpq{border-left-color:#e67c73}
+.sond-cr.exclu .sond-rpq{opacity:.8}
+.sond-cr-h b{text-transform:none}.sond-cr-h b::first-letter{text-transform:uppercase}
