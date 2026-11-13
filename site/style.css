@@ -826,3 +826,10 @@ details.sem>summary .semaine>.story-rond.sem{width:34px;height:34px}
 .sond-quandmeme{margin-top:8px;border:1.5px dashed #b9b9b9;background:#fff;border-radius:999px;padding:6px 14px;font:600 13px/1 'Outfit',sans-serif;color:#555;cursor:pointer}
 .sond-quandmeme:hover{border-color:var(--vert);color:var(--vert)}
 .sond-bt{align-items:stretch}.sond-bt button{line-height:1.15}.sond-bt .sond-sib{flex:1.6;font-size:12px;padding:5px 6px}
+/* 13/11 : bandeau un peu moins haut sur ordinateur */
+@media (min-width:760px){
+  .bandeau{padding:calc(18px + env(safe-area-inset-top,0px)) 32px 18px}
+  .bandeau .bl{height:96px}
+  .bandeau h1{font-size:78px;text-shadow:3px 3px 0 #e8508e,6px 6px 0 var(--vert-fonce)}
+}
+@media (max-width:1100px) and (min-width:760px){.bandeau .bl{height:80px}.bandeau h1{font-size:62px}}
