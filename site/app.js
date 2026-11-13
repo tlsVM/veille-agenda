@@ -296,7 +296,7 @@
     }
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
     c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
-    if (t.g !== 'majo') {
+    if (false) { // icône « ajouter à mon agenda » par événement retirée : on passe par l'abonnement personnel
       var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
       ba.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="11.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 6.3h12.4M5 1.3v3M11 1.3v3M8 8.3v4M6 10.3h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
       ba.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirAjoutAgenda(e); }); c.appendChild(ba);
