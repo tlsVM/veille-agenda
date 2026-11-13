@@ -248,19 +248,23 @@ function motsCles($t) {
 function fusionIcal($evs) {
   $g = icalEvenements(); if (!$g) { return $evs; }
   $parJour = [];
-  foreach ($evs as $e) { $parJour[$e['date'] ?? ''][] = $e; }
+  foreach ($evs as $i => $e) { $parJour[$e['date'] ?? ''][] = $i; }
   foreach ($g as $x) {
-    $double = false;
-    foreach ($parJour[$x['date']] ?? [] as $e) {
+    $double = null;
+    foreach ($parJour[$x['date']] ?? [] as $i) {
+      $e = $evs[$i];
       $h1 = $x['heure'] ? strtotime($x['heure']) : null; $h2 = !empty($e['heure']) ? strtotime($e['heure']) : null;
       $prochesH = ($h1 === null || $h2 === null) ? ($h1 === $h2) : abs($h1 - $h2) <= 1800;
       if (!$prochesH) { continue; }
       $communs = array_intersect(motsCles($x['titre'] . ' ' . $x['lieu']), motsCles(($e['titre'] ?? '') . ' ' . ($e['lieu'] ?? '') . ' ' . ($e['quartier'] ?? '')));
-      $generiques = preg_match('/r[ée]union publique|commission/iu', $x['titre']) && preg_match('/r[ée]union publique|commission|^qualit|^[ée]cologie|^vie quotidienne|^petite enfance|^solidarit/iu', $e['titre'] ?? '');
       $fort = count($communs) >= 2 || array_filter($communs, function ($w) { return mb_strlen($w) >= 8; });
-      if ($fort || $generiques || mb_strtolower($x['titre']) === mb_strtolower($e['titre'] ?? '')) { $double = true; break; }
+      $generiques = preg_match('/r[ée]union publique|commission/iu', $x['titre']) && preg_match('/r[ée]union publique|commission|^qualit|^[ée]cologie|^vie quotidienne|^petite enfance|^solidarit/iu', $e['titre'] ?? '');
+      if ($fort || $generiques || mb_strtolower($x['titre']) === mb_strtolower($e['titre'] ?? '')) { $double = $i; break; }
     }
-    if (!$double) { $evs[] = $x; $parJour[$x['date']][] = $x; }
+    if ($double !== null) {
+      // même rendez-vous : on garde la ligne de la plateforme, reliée à l'événement Gmail (pour y écrire les présences)
+      if (empty($evs[$double]['gid']) && !empty($x['gid'])) { $evs[$double]['gid'] = $x['gid']; }
+    } else { $evs[] = $x; $parJour[$x['date']][] = count($evs) - 1; }
   }
   return $evs;
 }
