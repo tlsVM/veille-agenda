@@ -249,16 +249,20 @@ function fusionIcal($evs) {
   $parJour = [];
   foreach ($evs as $i => $e) { $parJour[$e['date'] ?? ''][] = $i; }
   foreach ($g as $x) {
-    $double = null;
+    // on cherche la ligne de la plateforme qui correspond le mieux (heure, mots du titre et du lieu)
+    $double = null; $meilleur = 0;
     foreach ($parJour[$x['date']] ?? [] as $i) {
       $e = $evs[$i];
+      if (!empty($e['gid']) && $e['gid'] !== ($x['gid'] ?? '')) { continue; } // déjà reliée à un autre événement Gmail
       $h1 = $x['heure'] ? strtotime($x['heure']) : null; $h2 = !empty($e['heure']) ? strtotime($e['heure']) : null;
-      $prochesH = ($h1 === null || $h2 === null) ? ($h1 === $h2) : abs($h1 - $h2) <= 1800;
-      if (!$prochesH) { continue; }
+      if ($h1 === null || $h2 === null) { if ($h1 !== $h2) { continue; } $ecart = 0; } else { $ecart = abs($h1 - $h2); if ($ecart > 1800) { continue; } }
       $communs = array_intersect(motsCles($x['titre'] . ' ' . $x['lieu']), motsCles(($e['titre'] ?? '') . ' ' . ($e['lieu'] ?? '') . ' ' . ($e['quartier'] ?? '')));
       $fort = count($communs) >= 2 || array_filter($communs, function ($w) { return mb_strlen($w) >= 8; });
       $generiques = preg_match('/r[ée]union publique|commission/iu', $x['titre']) && preg_match('/r[ée]union publique|commission|^qualit|^[ée]cologie|^vie quotidienne|^petite enfance|^solidarit/iu', $e['titre'] ?? '');
-      if ($fort || $generiques || mb_strtolower($x['titre']) === mb_strtolower($e['titre'] ?? '')) { $double = $i; break; }
+      $egal = mb_strtolower($x['titre']) === mb_strtolower($e['titre'] ?? '');
+      if (!$fort && !$generiques && !$egal) { continue; }
+      $score = ($ecart === 0 ? 3 : 1) + 2 * count($communs) + ($egal ? 5 : 0) + ($generiques ? 1 : 0);
+      if ($score > $meilleur) { $meilleur = $score; $double = $i; }
     }
     if ($double !== null) {
       // même rendez-vous : on garde la ligne de la plateforme, reliée à l'événement Gmail (pour y écrire les présences)
