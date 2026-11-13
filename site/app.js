@@ -1458,7 +1458,7 @@
   // ---------- Rendu ----------
   // ---------- Sondage de date (onglet « Sondage ») ----------
   var SONDAGE = {
-    id: 'prepa-cm-dec26', titre: 'Préparation du conseil municipal',
+    id: 'prepa-cm-dec26', titre: 'Réunion de préparation du conseil municipal du 4 décembre',
     texte: 'Trouvons une date pour nous réunir avant le 2 décembre. Pour chaque créneau, répondez Oui, Si besoin ou Non.',
     du: '2026-11-14', au: '2026-12-01', soir: '18:30', samedi: '09:00', samediLib: '9h / 9h30',
     // Dates impossibles : affichées grisées avec la raison, sans réponse possible
