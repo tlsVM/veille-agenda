@@ -341,7 +341,11 @@ function sansPresences($desc) {
   return rtrim($desc);
 }
 
-const COULEURS_GOOGLE = ['Réunion officielle' => '4', 'Concertation' => '4', 'Protocole' => '9', 'Cérémonie' => '9', 'Inauguration' => '9',
+// couleurs proposées dans « Ajouter un RDV » → couleur Google correspondante
+const COULEURS_AJOUT = ['#b39ddb' => '1', '#3f51b5' => '9', '#039be5' => '7', '#e67c73' => '4', '#e08a1e' => '6',
+  '#e00000' => '11', '#a9874f' => '5', '#0b8043' => '10', '#616161' => '8'];
+
+const COULEURS_GOOGLE = ['Réunion de groupe' => '1', 'Association de quartier' => '6', 'Vie associative' => '6', 'Réunion officielle' => '4', 'Concertation' => '4', 'Protocole' => '9', 'Cérémonie' => '9', 'Inauguration' => '9',
   'Commission' => '7', 'Conseil municipal' => '7', 'Conférence' => '10', 'Café-débat' => '10', 'Militant' => '11', 'Culture' => '6'];
 
 function chercherDansGoogle($e) {
@@ -361,11 +365,19 @@ function chercherDansGoogle($e) {
   return '';
 }
 
+function titreGoogle($e) { return (($e['important'] ?? '') === 'oui' ? '[IMPORTANT] ' : '') . $e['titre']; }
+function couleurGoogle($e) {
+  if (!empty($e['couleur']) && isset(COULEURS_AJOUT[$e['couleur']])) { return COULEURS_AJOUT[$e['couleur']]; }
+  return COULEURS_GOOGLE[$e['type'] ?? ''] ?? '';
+}
+
 function pousserVersGoogle($id) {
   global $DATA;
   if (!is_file("$DATA/google-cle.json") || !preg_match('/^[a-z0-9]{3,40}$/', $id) || strpos($id, 'rg') === 0) { return; }
   $tous = tousEvenements(); $e = null; foreach ($tous as $x) { if ($x['id'] === $id) { $e = $x; break; } }
-  if (!$e || in_array($e['type'] ?? '', ['Majorité', 'Réunion de groupe'], true)) { return; }
+  if (!$e || ($e['type'] ?? '') === 'Majorité') { return; }
+  // les réunions de groupe ne partent vers Gmail que si un·e élu·e les a ajoutées depuis la plateforme
+  if (($e['type'] ?? '') === 'Réunion de groupe' && ($e['ajoute'] ?? '') !== 'oui') { return; }
   // pas encore relié par l'iCal (qui peut avoir du retard) : on cherche directement dans l'agenda Gmail le même jour
   if (empty($e['gid'])) { $e['gid'] = chercherDansGoogle($e); }
   $ids = [$id]; if (!empty($e['gid'])) { foreach ($tous as $x) { if (($x['gid'] ?? '') === $e['gid'] && $x['id'] !== $id) { $ids[] = $x['id']; } } }
@@ -383,14 +395,16 @@ function pousserVersGoogle($id) {
   $base = trim(($e['details'] ?? '') . (!empty($e['lien']) ? "\n" . $e['lien'] : ''));
   if (!empty($trouve['items'])) {
     $g = $trouve['items'][0];
-    gapi('PATCH', '/' . rawurlencode($g['id']) . '?sendUpdates=none', ['description' => trim($base . $bloc . "\n\n" . MARQUE_PLATEFORME)]);
+    $maj = ['description' => trim($base . $bloc . "\n\n" . MARQUE_PLATEFORME), 'summary' => titreGoogle($e)];
+    $cid = couleurGoogle($e); if ($cid !== '') { $maj['colorId'] = $cid; }
+    gapi('PATCH', '/' . rawurlencode($g['id']) . '?sendUpdates=none', $maj);
     journalGoogle("maj $id"); return;
   }
   if (!$lignes && ($e['ajoute'] ?? '') !== 'oui') { return; } // personne d'inscrit : on n'encombre pas l'agenda Gmail
-  $ev = ['summary' => $e['titre'], 'description' => trim($base . $bloc . "\n\n" . MARQUE_PLATEFORME),
+  $ev = ['summary' => titreGoogle($e), 'description' => trim($base . $bloc . "\n\n" . MARQUE_PLATEFORME),
     'extendedProperties' => ['private' => ['vmid' => $id]]];
   $lieu = trim(($e['lieu'] ?? '') . (!empty($e['quartier']) ? ' (' . $e['quartier'] . ')' : '')); if ($lieu !== '') { $ev['location'] = $lieu; }
-  if (!empty(COULEURS_GOOGLE[$e['type'] ?? ''])) { $ev['colorId'] = COULEURS_GOOGLE[$e['type']]; }
+  $cid = couleurGoogle($e); if ($cid !== '') { $ev['colorId'] = $cid; }
   if (!empty($e['heure'])) {
     $deb = new DateTime($e['date'] . ' ' . $e['heure'], new DateTimeZone('Europe/Paris')); $fin = (clone $deb)->modify('+90 minutes');
     $ev['start'] = ['dateTime' => $deb->format('Y-m-d\TH:i:s'), 'timeZone' => 'Europe/Paris'];
@@ -403,12 +417,104 @@ function pousserVersGoogle($id) {
 }
 
 // Répond tout de suite à l'élu, puis met l'agenda Gmail à jour (sans le faire attendre)
-function sortirPuisGoogle($donnees, $id) {
+function sortirPuisGoogle($donnees, $id, $envoyeur = '') {
   ignore_user_abort(true);
   echo json_encode($donnees, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); } else { @ob_flush(); flush(); }
+  if ($envoyeur !== '') { try { envoyerAuxMembres($id, $envoyeur); } catch (Throwable $t) { journalMail('erreur ' . $t->getMessage()); } }
   try { pousserVersGoogle($id); } catch (Throwable $t) { journalGoogle('erreur ' . $t->getMessage()); }
   exit;
+}
+
+// ---------- Envoi d'un RDV à tous les membres (mail pro, invitation .ics) ----------
+// Les adresses ne sont JAMAIS dans le dépôt : soit 'emails_pro' => [...] dans config.php,
+// soit, à défaut, les invité·es @mairie-toulouse.fr trouvé·es dans l'agenda Gmail du groupe.
+
+function journalMail($t) { global $DATA; @file_put_contents("$DATA/journal-mail.log", date('c') . "\t$t\n", FILE_APPEND | LOCK_EX); }
+
+function emailsMembres() {
+  global $DATA;
+  $c = config() ?? []; $l = [];
+  if (!empty($c['emails_pro']) && is_array($c['emails_pro'])) { $l = $c['emails_pro']; }
+  else {
+    $f = "$DATA/cache/emails-pro.json";
+    if (is_file($f) && filemtime($f) > time() - 7 * 86400) { $l = json_decode(file_get_contents($f), true) ?: []; }
+    else {
+      // seules les adresses prénom.nom@mairie-toulouse.fr des membres du groupe sont retenues
+      $membres = [];
+      foreach (ELUS as $n) {
+        $n = preg_replace('/\s*\(.*\)$/', '', $n); $n = strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $n));
+        $p = explode(' ', $n, 2); if (count($p) < 2) { continue; }
+        $membres[preg_replace('/[^a-z-]/', '', $p[0]) . '.' . preg_replace('/[^a-z-]/', '', $p[1]) . '@mairie-toulouse.fr'] = 1;
+      }
+      $min = (new DateTime('-120 days'))->format('c');
+      $r = gapi('GET', '?singleEvents=true&maxResults=250&timeMin=' . rawurlencode($min));
+      foreach ($r['items'] ?? [] as $g) { foreach ($g['attendees'] ?? [] as $a) {
+        $m = strtolower(trim($a['email'] ?? '')); if (isset($membres[$m])) { $l[$m] = 1; }
+      } }
+      $l = array_keys($l);
+      if ($l) { if (!is_dir("$DATA/cache")) { @mkdir("$DATA/cache", 0700, true); } file_put_contents($f, json_encode($l), LOCK_EX); }
+    }
+  }
+  $l = array_values(array_unique(array_filter(array_map('strtolower', array_map('trim', $l)), function ($m) { return filter_var($m, FILTER_VALIDATE_EMAIL); })));
+  return $l;
+}
+
+function envoyerAuxMembres($id, $envoyeur) {
+  $e = null; foreach (ajouts() as $x) { if ($x['id'] === $id) { $e = $x; break; } }
+  if (!$e) { return; }
+  $dest = emailsMembres(); if (!$dest) { journalMail("aucun destinataire pour $id"); return; }
+  $c = config() ?? [];
+  $de = trim((string)($c['mail_from'] ?? 'agenda@vivremieuxtoulouse.fr'));
+  $rep = trim((string)($c['mail_reply'] ?? 'toulousevivremieux@gmail.com'));
+  $imp = ($e['important'] ?? '') === 'oui';
+  $quand = dateLongueFr($e);
+  $sujet = ($imp ? '[IMPORTANT] ' : '') . 'Agenda Vivre Mieux : ' . $e['titre'] . ' – ' . $quand;
+  $lieu = trim(($e['lieu'] ?? '') . (!empty($e['quartier']) ? ' (' . $e['quartier'] . ')' : ''));
+  $texte = "Bonjour,\n\n" . COURTNOM($envoyeur) . " a ajouté ce rendez-vous à l'agenda du groupe :\n\n"
+    . ($imp ? "⚠️ IMPORTANT\n" : '') . $e['titre'] . "\n📅 $quand\n" . ($lieu !== '' ? "📍 $lieu\n" : '')
+    . (!empty($e['details']) ? "\n" . $e['details'] . "\n" : '') . (!empty($e['lien']) ? "\n" . $e['lien'] . "\n" : '')
+    . "\nL'invitation jointe s'ajoute à votre agenda en un clic.\nIndiquez votre présence sur https://agenda.vivremieuxtoulouse.fr\n";
+  // invitation iCalendar (METHOD:REQUEST) pour que Outlook / Gmail proposent « Accepter »
+  $uid = $id . '@agenda.vivremieuxtoulouse.fr';
+  $esc = function ($t) { return str_replace(["\\", ';', ',', "\r", "\n"], ["\\\\", '\\;', '\\,', '', '\\n'], (string)$t); };
+  $ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Vivre Mieux//Agenda//FR", "METHOD:REQUEST", "BEGIN:VEVENT", "UID:$uid",
+    "DTSTAMP:" . gmdate('Ymd\THis\Z'), "SEQUENCE:" . time()];
+  if (!empty($e['heure'])) {
+    $deb = new DateTime($e['date'] . ' ' . $e['heure'], new DateTimeZone('Europe/Paris')); $fin = (clone $deb)->modify('+90 minutes');
+    $deb->setTimezone(new DateTimeZone('UTC')); $fin->setTimezone(new DateTimeZone('UTC'));
+    $ics[] = 'DTSTART:' . $deb->format('Ymd\THis\Z'); $ics[] = 'DTEND:' . $fin->format('Ymd\THis\Z');
+  } else {
+    $f = new DateTime($e['date']); $f->modify('+1 day');
+    $ics[] = 'DTSTART;VALUE=DATE:' . str_replace('-', '', $e['date']); $ics[] = 'DTEND;VALUE=DATE:' . $f->format('Ymd');
+  }
+  $ics[] = 'SUMMARY:' . $esc(($imp ? '[IMPORTANT] ' : '') . $e['titre']);
+  if ($lieu !== '') { $ics[] = 'LOCATION:' . $esc($lieu); }
+  $ics[] = 'DESCRIPTION:' . $esc(trim(($e['details'] ?? '') . "\n" . ($e['lien'] ?? '')));
+  $ics[] = "ORGANIZER;CN=Vivre Mieux:mailto:$rep";
+  foreach ($dest as $m) { $ics[] = "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:$m"; }
+  if ($imp) { $ics[] = 'PRIORITY:1'; }
+  $ics[] = "END:VEVENT"; $ics[] = "END:VCALENDAR";
+  $ics = implode("\r\n", array_map(function ($l) { return implode("\r\n ", mb_str_split($l, 60)); }, $ics));
+  $b = 'vm' . bin2hex(random_bytes(8));
+  $corps = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($texte))
+    . "--$b\r\nContent-Type: text/calendar; charset=UTF-8; method=REQUEST\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($ics))
+    . "--$b\r\nContent-Type: application/ics; name=\"invitation.ics\"\r\nContent-Disposition: attachment; filename=\"invitation.ics\"\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($ics))
+    . "--$b--\r\n";
+  $ent = "From: =?UTF-8?B?" . base64_encode('Agenda Vivre Mieux') . "?= <$de>\r\nReply-To: $rep\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"$b\"";
+  $ok = @mail(implode(', ', $dest), '=?UTF-8?B?' . base64_encode($sujet) . '?=', $corps, $ent, '-f' . $de);
+  journalMail(($ok ? 'envoyé' : 'ÉCHEC ' . (error_get_last()['message'] ?? '')) . "\t$id\t$envoyeur\t" . count($dest) . " destinataires\t{$e['titre']}");
+}
+
+function COURTNOM($n) { return trim(preg_replace('/\s*\(.*\)$/', '', (string)$n)); }
+
+function dateLongueFr($e) {
+  $j = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  $m = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  $d = new DateTime($e['date']);
+  $t = $j[(int)$d->format('w')] . ' ' . (int)$d->format('j') . ' ' . $m[(int)$d->format('n')] . ' ' . $d->format('Y');
+  if (!empty($e['heure'])) { $t .= ' à ' . str_replace(':', 'h', $e['heure']); }
+  return $t;
 }
 
 // ---------- Présences (fichier JSON hors du dossier public) ----------
@@ -567,6 +673,9 @@ function enregistrerAjout() {
   if ($e['date'] === '' || $e['titre'] === '') { sortir(['erreur' => 'champs'], 400); }
   if (!in_array($e['type'], TYPES_AJOUT, true)) { $e['type'] = 'Autre'; }
   if ($e['lien'] !== '' && !preg_match('#^https?://#i', $e['lien'])) { $e['lien'] = ''; }
+  $e['important'] = (($d['important'] ?? '') === 'oui') ? 'oui' : '';
+  $coul = strtolower((string)($d['couleur'] ?? '')); $e['couleur'] = isset(COULEURS_AJOUT[$coul]) ? $coul : '';
+  $envoyer = (($d['envoyer'] ?? '') === 'oui');
   $id = (string)($d['id'] ?? '');
   if ($id !== '' && !preg_match('/^u[a-f0-9]{10}$/', $id)) { sortir(['erreur' => 'id'], 400); }
   $nouveau = $id === '';
@@ -592,7 +701,7 @@ function enregistrerAjout() {
     $e['auteur'] = $nom; $e['cree'] = date('c'); $p[] = $e; return $p;
   });
   @file_put_contents("$DATA/journal-ajouts.log", date('c') . "\t" . ($nouveau ? 'ajout' : 'modif') . "\t$id\t$nom\t{$e['date']}\t{$e['titre']}\n", FILE_APPEND | LOCK_EX);
-  sortirPuisGoogle(['ok' => true, 'id' => $id], $id);
+  sortirPuisGoogle(['ok' => true, 'id' => $id, 'envoi' => $envoyer], $id, $envoyer ? $nom : '');
 }
 
 // ---------- Export vers les agendas personnels (Google, Apple, Outlook) ----------

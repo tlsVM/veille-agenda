@@ -106,7 +106,7 @@ details.sem:not([open])>summary .semaine span::before{content:"▾ "}
 .ev .haut{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
 .ev .h{font:400 19px var(--titre);letter-spacing:.03em;color:var(--h,var(--c,#56708a));min-width:46px}
 .ev .tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--k,#fff);background:var(--c,#56708a);border-radius:999px;padding:0 8px}
-.ev .imp{font-size:10px;font-weight:700;letter-spacing:.05em;color:#fff;background:var(--rose-fort);border-radius:999px;padding:0 8px}
+.ev .imp{font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:#e00000;border-radius:999px;padding:0 8px}
 .ev .t{flex-basis:100%;font-weight:700;font-size:15px;line-height:1.35;margin-top:2px}
 .ev .t a{color:inherit;text-decoration-color:var(--c,#56708a);text-underline-offset:2px}
 .ev .qp{display:inline-block;font-size:12px;font-weight:600;color:var(--k,#fff);background:var(--c,#56708a);border-radius:999px;padding:1px 10px;margin-top:3px}
@@ -886,3 +886,11 @@ html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
   .sond-tab th{font-size:10px}
   .sond-res-leg{font-size:11px}
 }
+
+/* Ajout : important, couleur */
+.ev.cle{box-shadow:0 0 0 2px #e00000 !important}
+.imp-mini{font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:#e00000;border-radius:999px;padding:1px 7px}
+.aj-couleurs{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.pastille{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;cursor:pointer;padding:0}
+.pastille.auto{width:auto;border-radius:999px;padding:0 10px;font-size:12px;background:#f3f3f3;color:#444}
+.pastille.choisie{box-shadow:0 0 0 3px #222}

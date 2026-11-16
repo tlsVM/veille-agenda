@@ -270,6 +270,7 @@
   function carteEv(e, avecDate) {
     var t = TYPES[typeDe(e)], c = el('div', 'ev' + (e.important === 'oui' ? ' cle' : '') + (t.tri ? ' tricolore' : ''));
     c.style.setProperty('--c', t.c); c.style.setProperty('--f', t.f); if (t.h) c.style.setProperty('--h', t.h); if (t.k) c.style.setProperty('--k', t.k);
+    if (/^#[0-9a-f]{6}$/i.test(e.couleur || '')) { c.style.setProperty('--c', e.couleur); c.style.setProperty('--f', e.couleur + '14'); c.style.setProperty('--h', e.couleur); c.style.setProperty('--k', '#fff'); }
     var h = el('div', 'haut');
     if (avecDate) h.appendChild(el('span', 'h', courte(e.date)));
     if (e.heure) h.appendChild(el('span', 'h', hFmt(e.heure)));
@@ -761,7 +762,10 @@
       .catch(function (e) { if (wk) wk.terminate(); throw e; });
   }
 
-  var THEMES_AJOUT = [['Réunion publique', 'Réunion publique, concertation'], ['Association de quartier', 'Association, comité de quartier'], ['Militant', 'Militant'], ['Culture', 'Culture'], ['Conférence', 'Conférence, café-débat'], ['Commission', 'Commission'], ['Conseil municipal', 'Conseil municipal'], ['Inauguration', 'Inauguration'], ['Cérémonie', 'Cérémonie, commémoration'], ['Mairie', 'Événement mairie'], ['Autre', 'Autre']];
+  var THEMES_AJOUT = [['Réunion de groupe', 'Réunion de groupe'], ['Réunion publique', 'Réunion publique, concertation'], ['Association de quartier', 'Association, comité de quartier'], ['Militant', 'Militant'], ['Culture', 'Culture'], ['Conférence', 'Conférence, café-débat'], ['Commission', 'Commission'], ['Conseil municipal', 'Conseil municipal'], ['Inauguration', 'Inauguration'], ['Cérémonie', 'Cérémonie, commémoration'], ['Mairie', 'Événement mairie'], ['Autre', 'Autre']];
+
+  // Couleurs proposées à la création (celles des thèmes, reprises dans l'agenda Gmail)
+  var COULEURS_AJOUT = [['#b39ddb', 'Glycine (réunion de groupe)'], ['#3f51b5', 'Myrtille (protocole)'], ['#039be5', 'Paon (commission)'], ['#e67c73', 'Flamant (quartier)'], ['#e08a1e', 'Mandarine (association)'], ['#e00000', 'Rouge (militant)'], ['#a9874f', 'Doré (culture)'], ['#0b8043', 'Basilic (conférence)'], ['#616161', 'Graphite']];
 
   function ouvrirAjout(existant) {
     if (!D.ajout_actif) { alert('L\'ajout de rendez-vous sera disponible dès que Hugo aura mis en place le code d\'accès du groupe.'); return; }
@@ -800,6 +804,22 @@
     fY.value = THEMES_AJOUT.some(function (x) { return x[0] === e0.type; }) ? e0.type : 'Autre'; ls.appendChild(fY); bx.appendChild(ls);
     var fK = champ('Lien (facultatif)', 'url', e0.lien, { placeholder: 'https://…' });
     var fX = champ('Détails (facultatif)', 'textarea', e0.details, { rows: '3', maxlength: '1500' });
+    // Important + couleur + envoi aux membres
+    var li = el('label', 'aj-pres aj-imp'); var fI = el('input'); fI.type = 'checkbox'; fI.checked = e0.important === 'oui';
+    li.appendChild(fI); li.appendChild(document.createTextNode(' ')); li.appendChild(el('span', 'imp-mini', 'IMPORTANT')); li.appendChild(document.createTextNode(' Marquer comme important')); bx.appendChild(li);
+    var couleur = e0.couleur || '';
+    var lc = el('div', 'aj-champ'); lc.appendChild(el('span', '', 'Couleur'));
+    var rg = el('div', 'aj-couleurs');
+    function pastille(v, nom) {
+      var b = el('button', 'pastille' + (v === couleur ? ' choisie' : '')); b.type = 'button'; b.title = nom; b.setAttribute('aria-label', nom);
+      if (v) b.style.background = v; else { b.classList.add('auto'); b.textContent = 'Thème'; }
+      b.addEventListener('click', function () { couleur = v; rg.querySelectorAll('.pastille').forEach(function (x) { x.classList.remove('choisie'); }); b.classList.add('choisie'); });
+      rg.appendChild(b);
+    }
+    pastille('', 'Couleur du thème'); COULEURS_AJOUT.forEach(function (x) { pastille(x[0], x[1]); });
+    lc.appendChild(rg); bx.appendChild(lc);
+    var le = el('label', 'aj-pres'); var fE = el('input'); fE.type = 'checkbox';
+    le.appendChild(fE); le.appendChild(document.createTextNode(existant ? ' 📧 Renvoyer l\'invitation à tous les membres (mail pro)' : ' 📧 Envoyer à tous les membres (mail pro)')); bx.appendChild(le);
     var pres = null;
     if (!existant) {
       var lp = el('label', 'aj-pres'); pres = el('input'); pres.type = 'checkbox';
@@ -842,7 +862,7 @@
       ev.preventDefault(); err.textContent = '';
       if (!fT.value.trim() || !fD.value) { err.textContent = 'Il faut au moins un titre et une date.'; return; }
       ok.disabled = true; ok.textContent = 'Envoi…';
-      var corps = { nom: moi, id: e0.id || '', titre: fT.value, date: fD.value, heure: fH.value, lieu: fL.value, quartier: fQ.value, type: fY.value, lien: fK.value, details: fX.value, photo: photoData };
+      var corps = { nom: moi, id: e0.id || '', titre: fT.value, date: fD.value, heure: fH.value, lieu: fL.value, quartier: fQ.value, type: fY.value, lien: fK.value, details: fX.value, photo: photoData, important: fI.checked ? 'oui' : '', couleur: couleur, envoyer: fE.checked ? 'oui' : '' };
       fetch('api.php?a=ajout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d.ok) throw d;
         m.remove();
