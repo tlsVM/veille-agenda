@@ -428,36 +428,22 @@ function sortirPuisGoogle($donnees, $id, $envoyeur = '') {
 
 // ---------- Envoi d'un RDV à tous les membres (mail pro, invitation .ics) ----------
 // Les adresses ne sont JAMAIS dans le dépôt : soit 'emails_pro' => [...] dans config.php,
-// soit, à défaut, les invité·es @mairie-toulouse.fr trouvé·es dans l'agenda Gmail du groupe.
+// soit, à défaut, prénom.nom@mairie-toulouse.fr déduit du nom de chaque membre.
 
 function journalMail($t) { global $DATA; @file_put_contents("$DATA/journal-mail.log", date('c') . "\t$t\n", FILE_APPEND | LOCK_EX); }
 
 function emailsMembres() {
-  global $DATA;
+  // 'emails_pro' => [...] dans config.php si besoin de corriger ; sinon prénom.nom@mairie-toulouse.fr de chaque membre
   $c = config() ?? []; $l = [];
   if (!empty($c['emails_pro']) && is_array($c['emails_pro'])) { $l = $c['emails_pro']; }
   else {
-    $f = "$DATA/cache/emails-pro.json";
-    if (is_file($f) && filemtime($f) > time() - 7 * 86400) { $l = json_decode(file_get_contents($f), true) ?: []; }
-    else {
-      // seules les adresses prénom.nom@mairie-toulouse.fr des membres du groupe sont retenues
-      $membres = [];
-      foreach (ELUS as $n) {
-        $n = preg_replace('/\s*\(.*\)$/', '', $n); $n = strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $n));
-        $p = explode(' ', $n, 2); if (count($p) < 2) { continue; }
-        $membres[preg_replace('/[^a-z-]/', '', $p[0]) . '.' . preg_replace('/[^a-z-]/', '', $p[1]) . '@mairie-toulouse.fr'] = 1;
-      }
-      $min = (new DateTime('-120 days'))->format('c');
-      $r = gapi('GET', '?singleEvents=true&maxResults=250&timeMin=' . rawurlencode($min));
-      foreach ($r['items'] ?? [] as $g) { foreach ($g['attendees'] ?? [] as $a) {
-        $m = strtolower(trim($a['email'] ?? '')); if (isset($membres[$m])) { $l[$m] = 1; }
-      } }
-      $l = array_keys($l);
-      if ($l) { if (!is_dir("$DATA/cache")) { @mkdir("$DATA/cache", 0700, true); } file_put_contents($f, json_encode($l), LOCK_EX); }
+    foreach (ELUS as $n) {
+      $n = preg_replace('/\s*\(.*\)$/', '', $n); $n = strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $n));
+      $p = explode(' ', $n, 2); if (count($p) < 2) { continue; }
+      $l[] = preg_replace('/[^a-z-]/', '', $p[0]) . '.' . preg_replace('/[^a-z-]/', '', $p[1]) . '@mairie-toulouse.fr';
     }
   }
-  $l = array_values(array_unique(array_filter(array_map('strtolower', array_map('trim', $l)), function ($m) { return filter_var($m, FILTER_VALIDATE_EMAIL); })));
-  return $l;
+  return array_values(array_unique(array_filter(array_map('strtolower', array_map('trim', $l)), function ($m) { return filter_var($m, FILTER_VALIDATE_EMAIL); })));
 }
 
 function envoyerAuxMembres($id, $envoyeur) {
