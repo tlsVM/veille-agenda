@@ -1505,6 +1505,58 @@
       .then(function (r) { return r.json(); }).then(function (d) { if (d.sondages) D.sondages = d.sondages; apres(); })
       .catch(function () { alert('La réponse n\'a pas pu être enregistrée. Vérifiez la connexion.'); });
   }
+  // Tableau de tous les résultats : une ligne par date, une colonne par personne, classement en un coup d'œil
+  function ouvrirResultats(elus, R, crs) {
+    var tri = 'score';
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite sond-res'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', '📊 Résultats du sondage'));
+    var bar = el('div', 'sond-res-tri');
+    var b1 = el('button', 'on', '🏆 Les mieux placées'), b2 = el('button', '', '📅 Par date'); b1.type = b2.type = 'button';
+    bar.appendChild(b1); bar.appendChild(b2); bx.appendChild(bar);
+    var leg = el('p', 'sond-res-leg'); leg.innerHTML = '<i class="c-oui">✓</i> oui · <i class="c-sib">~</i> je me libérerai · <i class="c-non">✗</i> non · <i class="c-vide">·</i> pas répondu';
+    bx.appendChild(leg);
+    var zone = el('div', 'sond-res-zone'); bx.appendChild(zone);
+    function lib(c) { var d = dDe(c.slice(0, 10)); return JC[d.getDay()] + ' ' + d.getDate() + ' ' + MC[d.getMonth()] + ' · ' + (d.getDay() === 6 ? '9h' : hFmt(c.slice(11))); }
+    function dessiner() {
+      zone.textContent = '';
+      var lignes = crs.map(function (c) {
+        var r = R[c] || {}, o = 0, b = 0, n = 0;
+        elus.forEach(function (e) { if (r[e] === 'oui') o++; else if (r[e] === 'sib') b++; else if (r[e] === 'non') n++; });
+        return { c: c, r: r, o: o, b: b, n: n, ok: o + b, indispo: raisonsSondage(c).length > 0 };
+      });
+      if (tri === 'score') lignes.sort(function (x, y) { return (y.ok - x.ok) || (y.o - x.o) || (x.n - y.n) || x.c.localeCompare(y.c); });
+      var max = Math.max.apply(null, lignes.map(function (x) { return x.ok; }).concat([0]));
+      var t = el('table', 'sond-tab'), th = el('tr');
+      th.appendChild(el('th', 'col-date', 'Date'));
+      th.appendChild(el('th', 'col-jauge', 'Présents possibles'));
+      elus.forEach(function (e) { var h = el('th', 'col-nom', initiales(e)); h.title = nomLong(e); th.appendChild(h); });
+      var thead = el('thead'); thead.appendChild(th); t.appendChild(thead);
+      var tb = el('tbody');
+      lignes.forEach(function (x, rang) {
+        var tr = el('tr', (x.indispo ? 'indispo ' : '') + (tri === 'score' && x.ok && x.ok === max ? 'top' : ''));
+        var td = el('td', 'col-date'); td.appendChild(el('b', '', lib(x.c)));
+        if (x.indispo) td.appendChild(el('span', 'mini-indispo', 'indisponible'));
+        tr.appendChild(td);
+        var j = el('td', 'col-jauge'), jb = el('div', 'jauge');
+        [['o', x.o], ['b', x.b], ['n', x.n]].forEach(function (p) { if (p[1]) { var s2 = el('span', 'j-' + p[0]); s2.style.flex = p[1]; jb.appendChild(s2); } });
+        var vide = elus.length - x.o - x.b - x.n; if (vide) { var sv = el('span', 'j-v'); sv.style.flex = vide; jb.appendChild(sv); }
+        j.appendChild(jb); j.appendChild(el('span', 'j-txt', x.ok + ' / ' + elus.length)); tr.appendChild(j);
+        elus.forEach(function (e) { var v = x.r[e] || ''; tr.appendChild(el('td', 'cel c-' + (v || 'vide'), v === 'oui' ? '✓' : v === 'sib' ? '~' : v === 'non' ? '✗' : '·')); });
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb); var wrap = el('div', 'sond-tab-wrap'); wrap.appendChild(t); zone.appendChild(wrap);
+      if (tri === 'score' && max) {
+        var tops = lignes.filter(function (x) { return x.ok === max; });
+        zone.appendChild(el('p', 'sond-res-conclu', '👉 ' + (tops.length > 1 ? tops.length + ' dates à égalité' : 'Meilleure date') + ' : ' + tops.map(function (x) { return lib(x.c); }).join(', ') + ' (' + max + ' personnes possibles)'));
+      }
+    }
+    function initiales(n) { return n.replace(/ \(collaborateur\)$/, '').split(/[ -]/).filter(function (w) { return w && !/^(de|Le|le)$/.test(w); }).map(function (w) { return w[0]; }).join('').toUpperCase().slice(0, 3); }
+    b1.addEventListener('click', function () { tri = 'score'; b1.className = 'on'; b2.className = ''; dessiner(); });
+    b2.addEventListener('click', function () { tri = 'date'; b2.className = 'on'; b1.className = ''; dessiner(); });
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
+    m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
+    m.appendChild(bx); document.body.appendChild(m); dessiner();
+  }
   function vueSondage(v) {
     var elus = (D.elus || []).slice(); // élu·es + Hugo (collaborateur), qui peut aussi répondre
     var R = ((D.sondages || {})[SONDAGE.id]) || {}, crs = creneauxSondage();
@@ -1516,6 +1568,8 @@
     st.appendChild(el('b', '', repondu.length + ' / ' + elus.length + ' personnes ont répondu'));
     if (manque.length) st.appendChild(el('span', '', ' · en attente : ' + manque.map(COURT).join(', ')));
     v.appendChild(st);
+    var bRes = el('button', 'sond-res-bt', '📊 Voir tous les résultats'); bRes.type = 'button';
+    bRes.addEventListener('click', function () { ouvrirResultats(elus, R, crs); }); v.appendChild(bRes);
     // Meilleure date
     function score(c) { var r = R[c] || {}, o = 0, b = 0, n = 0; elus.forEach(function (e) { if (r[e] === 'oui') o++; else if (r[e] === 'sib') b++; else if (r[e] === 'non') n++; }); return { o: o, b: b, n: n, s: o * 2 + b - n * 3 }; }
     var best = null; [false, true].forEach(function (grise) { if (best) return; crs.forEach(function (c) { if (!!raisonsSondage(c).length !== grise) return; var x = score(c); if ((x.o + x.b) && (!best || x.o + x.b > best.x.o + best.x.b || (x.o + x.b === best.x.o + best.x.b && x.o > best.x.o))) best = { c: c, x: x, grise: grise }; }); });

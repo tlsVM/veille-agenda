@@ -852,3 +852,37 @@ html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
 }
 @media (max-width:400px){.barre-nav .onglets button{font-size:12px!important;padding:5px 6px!important}}
 @media (max-width:759px){.barre-nav .onglets{padding:0 2px;gap:3px}}
+/* Sondage : tableau des résultats */
+.sond-res-bt{display:block;margin:0 auto 12px;border:0;background:#123326;color:#fff;border-radius:999px;padding:9px 18px;font:600 14px/1 'Outfit',sans-serif;cursor:pointer;box-shadow:2px 2px 0 var(--rose)}
+.modale-boite.sond-res{max-width:860px;width:96vw;max-height:92vh;overflow:auto}
+.sond-res h2{margin:0 0 8px}
+.sond-res-tri{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
+.sond-res-tri button{border:1.5px solid #cfe3d8;background:#fff;border-radius:999px;padding:6px 12px;font:600 13px/1 'Outfit',sans-serif;color:#0e6b41;cursor:pointer}
+.sond-res-tri button.on{background:#158c57;border-color:#158c57;color:#fff}
+.sond-res-leg{text-align:center;font-size:12px;color:var(--gris);margin:0 0 8px}
+.sond-res-leg i{font-style:normal;display:inline-block;width:18px;height:18px;line-height:18px;border-radius:4px;text-align:center;font-weight:700}
+.sond-tab-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sond-tab{border-collapse:separate;border-spacing:2px;width:100%;font:500 13px/1.2 'Outfit',sans-serif}
+.sond-tab th{font-size:11.5px;color:var(--gris);font-weight:700;padding:4px 2px;position:sticky;top:0;background:#fff}
+.sond-tab .col-date{text-align:left;white-space:nowrap;padding-right:6px}
+.sond-tab td.col-date b{display:block;font-weight:600;text-transform:capitalize}
+.mini-indispo{font-size:10.5px;color:#9a9a9a}
+.sond-tab .col-jauge{min-width:110px}
+.jauge{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#eee}
+.j-o{background:#158c57}.j-b{background:#f6c445}.j-n{background:#e53935}.j-v{background:#e6e9e7}
+.j-txt{font-size:11px;color:var(--gris)}
+.cel{width:30px;height:28px;text-align:center;border-radius:6px;font-weight:700}
+.c-oui{background:#158c57;color:#fff}.c-sib{background:#f6c445;color:#3b2c00}.c-non{background:#e53935;color:#fff}.c-vide{background:#f1f3f2;color:#b5bcb8}
+.sond-tab tr.top td{box-shadow:inset 0 2px 0 #158c57,inset 0 -2px 0 #158c57}
+.sond-tab tr.top td.col-date b::before{content:"🏆 "}
+.sond-tab tr.indispo td.col-date b{color:#8a8a8a}
+.sond-res-conclu{margin:10px 0 0;padding:10px;border-radius:10px;background:#f3faf6;border:1.5px solid #158c57;font-weight:600;text-align:center}
+@media (max-width:600px){
+  .sond-res h2{font-size:26px}
+  .sond-tab{font-size:12px;border-spacing:1px}
+  .sond-tab .col-date{font-size:11.5px;padding-right:3px;white-space:normal;min-width:78px}
+  .sond-tab .col-jauge{min-width:58px;width:58px}
+  .cel{width:22px;height:24px;font-size:11px;border-radius:5px}
+  .sond-tab th{font-size:10px}
+  .sond-res-leg{font-size:11px}
+}
