@@ -839,3 +839,16 @@ details.sem>summary .semaine>.story-rond.sem{width:34px;height:34px}
 .ev.tricolore .h{color:#0055a4!important}
 .mini-laic{--c:#0055a4}
 .mini-laic{background:linear-gradient(90deg,#eef3fb,#fff,#fdeeee);border:1px dashed #9db4d8}.mini-laic>summary{color:#0055a4}
+
+/* 16/11 téléphone : page qui ne tangue plus de gauche à droite, onglets jamais coupés */
+html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
+@supports (overflow:clip){html,body{overflow-x:clip}}
+@media (max-width:759px){
+  .barre-nav .onglets{justify-content:flex-start!important;gap:4px;padding:0 6px;scroll-padding:0 6px}
+  .barre-nav .onglets>button:first-child{margin-left:auto}
+  .barre-nav .onglets>button:last-child{margin-right:auto}
+  .barre-nav .onglets button{font-size:12.5px!important;padding:5px 8px!important;border-width:1.5px}
+  .barre-nav .onglets button[data-v=recherche]{padding:5px 7px!important}
+}
+@media (max-width:400px){.barre-nav .onglets button{font-size:12px!important;padding:5px 6px!important}}
+@media (max-width:759px){.barre-nav .onglets{padding:0 2px;gap:3px}}
