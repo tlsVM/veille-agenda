@@ -833,3 +833,9 @@ details.sem>summary .semaine>.story-rond.sem{width:34px;height:34px}
   .bandeau h1{font-size:78px;text-shadow:3px 3px 0 #e8508e,6px 6px 0 var(--vert-fonce)}
 }
 @media (max-width:1100px) and (min-width:760px){.bandeau .bl{height:80px}.bandeau h1{font-size:62px}}
+/* Semaines de la laïcité : bleu blanc rouge */
+.ev.tricolore{border-left:0!important;position:relative;background:linear-gradient(90deg,rgba(0,85,164,.06),#fff 30%,#fff 70%,rgba(239,65,53,.06))!important;box-shadow:inset 6px 0 0 #0055a4,inset 12px 0 0 #fff,inset 18px 0 0 #ef4135!important;padding-left:30px!important}
+.ev.tricolore .tag{background:linear-gradient(90deg,#0055a4 0 33%,#fff 33% 66%,#ef4135 66%)!important;color:#123326!important;text-shadow:0 0 3px #fff,0 0 3px #fff;border:1px solid #d5dbe8}
+.ev.tricolore .h{color:#0055a4!important}
+.mini-laic{--c:#0055a4}
+.mini-laic{background:linear-gradient(90deg,#eef3fb,#fff,#fdeeee);border:1px dashed #9db4d8}.mini-laic>summary{color:#0055a4}

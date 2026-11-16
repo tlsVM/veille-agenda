@@ -43,7 +43,8 @@
     'Conférence': { c: '#0b8043', f: '#eef7f1', g: 'culture' },
     'Café-débat': { c: '#0b8043', f: '#eef7f1', g: 'culture' },
     'Mairie': { c: '#c9c9c9', f: '#fff', h: '#616161', k: '#333', g: 'mairie' },
-    'Majorité': { c: '#5b4b8a', f: '#f8f6fc', g: 'majo' }
+    'Majorité': { c: '#5b4b8a', f: '#f8f6fc', g: 'majo' },
+    'Laïcité': { c: '#0055a4', f: '#fff', h: '#0055a4', k: '#fff', g: 'proto', tri: true }
   };
   function typeDe(e) { return TYPES[e.type] ? e.type : 'Autre'; }
   var FILTRES = [['tout', 'Tout'], ['proto', 'Protocole et commissions'], ['quartier', 'Réunions de quartier'], ['militant', 'Militant'], ['culture', 'Culture et conférences'], ['mairie', 'Événements mairie']];
@@ -267,12 +268,12 @@
   }
 
   function carteEv(e, avecDate) {
-    var t = TYPES[typeDe(e)], c = el('div', 'ev' + (e.important === 'oui' ? ' cle' : ''));
+    var t = TYPES[typeDe(e)], c = el('div', 'ev' + (e.important === 'oui' ? ' cle' : '') + (t.tri ? ' tricolore' : ''));
     c.style.setProperty('--c', t.c); c.style.setProperty('--f', t.f); if (t.h) c.style.setProperty('--h', t.h); if (t.k) c.style.setProperty('--k', t.k);
     var h = el('div', 'haut');
     if (avecDate) h.appendChild(el('span', 'h', courte(e.date)));
     if (e.heure) h.appendChild(el('span', 'h', hFmt(e.heure)));
-    h.appendChild(el('span', 'tag', e.type || 'Autre'));
+    h.appendChild(el('span', 'tag', e.type === 'Laïcité' ? 'Semaines de la laïcité' : (e.type || 'Autre')));
     if (e.important === 'oui') h.appendChild(el('span', 'imp', 'IMPORTANT'));
     var ti = el('div', 't'); if (e.lien) ti.appendChild(lien(e.lien, e.titre)); else ti.textContent = e.titre;
     h.appendChild(ti); c.appendChild(h);
@@ -993,12 +994,13 @@
   // Le reste est enroulé, plus discret ; les événements mairie (veille du site) tout en bas, en blanc.
   var PRIORITAIRES = { 'Réunion de groupe': 1, 'Protocole': 1, 'Cérémonie': 1, 'Inauguration': 1, 'Commission': 1, 'Conseil municipal': 1, 'Réunion officielle': 1, 'Concertation': 1, 'Réunion publique': 1 };
   function aPresence(e) { var p = D.presences[e.id]; return !!(p && Object.keys(p).length); }
-  function enAvant(e) { return !!PRIORITAIRES[e.type] || aPresence(e); }
+  function enAvant(e) { return !!PRIORITAIRES[e.type] || (e.type === 'Laïcité' && !e.date_fin) || aPresence(e); }
   // Thèmes enroulés, dans cet ordre (les événements mairie tout en bas)
   var THEMES = [
     ['Culture', ['Culture'], 'mini-cult'],
     ['Conférences et débats', ['Conférence', 'Café-débat'], 'mini-conf'],
     ['Associations', ['Association de quartier', 'Vie associative'], 'mini-asso'],
+    ['🇫🇷 Semaines de la laïcité : expositions', ['Laïcité'], 'mini-laic'],
     ['Militant', ['Militant'], 'mini-mili'],
     ['Institutionnel', ['Institutionnel', 'Autre'], 'mini-inst'],
     ['Événements mairie', ['Mairie'], 'mini-mairie']
