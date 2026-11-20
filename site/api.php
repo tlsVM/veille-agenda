@@ -792,6 +792,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'suppr') {
   sortir(['ok' => true]);
 }
 
+// Icône du média (favicon), récupérée une fois puis gardée 30 jours : a=logo&d=ladepeche.fr
+if ($a === 'logo') {
+  $d = strtolower(preg_replace('/^www\./', '', (string)($_GET['d'] ?? '')));
+  if (!preg_match('/^[a-z0-9-]+(\.[a-z0-9-]+)+$/', $d) || strlen($d) > 80) { http_response_code(400); exit; }
+  $dir = "$DATA/cache/logos"; if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
+  $f = "$dir/$d.png";
+  if (!is_file($f) || filemtime($f) < time() - 30 * 86400) {
+    $img = telecharger('https://www.google.com/s2/favicons?sz=64&domain=' . rawurlencode($d));
+    if ($img !== null && strlen($img) > 100) { file_put_contents($f, $img, LOCK_EX); }
+    elseif (!is_file($f)) { http_response_code(404); exit; }
+  }
+  header('Content-Type: image/png'); header('Cache-Control: public, max-age=604800');
+  readfile($f); exit;
+}
+
 if ($a === 'ics') {
   $id = (string)($_GET['id'] ?? '');
   foreach (tousEvenements() as $e) {

@@ -308,7 +308,15 @@
   function carteActu(a) {
     var c = el('div', 'actu');
     if (a.quartier) c.appendChild(el('span', 'q', a.quartier));
-    c.appendChild(el('b', '', a.titre));
+    var t = el('b', 'actu-titre');
+    var dom = ((/^https?:\/\/([^\/?#]+)/i.exec(a.lien || '') || [])[1] || '').toLowerCase().replace(/^www\./, '');
+    if (dom) {
+      var ic = document.createElement('img'); ic.className = 'logo-media'; ic.alt = ''; ic.loading = 'lazy'; ic.width = 20; ic.height = 20;
+      ic.src = 'api.php?a=logo&d=' + encodeURIComponent(dom); ic.title = a.source ? a.source.split(',')[0] : dom;
+      ic.onerror = function () { ic.remove(); };
+      t.appendChild(ic);
+    }
+    t.appendChild(document.createTextNode(a.titre)); c.appendChild(t);
     if (a.texte) c.appendChild(el('p', '', a.texte));
     if (a.source || a.lien) { var s = el('span', 'src'); if (a.lien) s.appendChild(lien(a.lien, a.source || 'Source')); else s.textContent = a.source; c.appendChild(s); }
     return c;

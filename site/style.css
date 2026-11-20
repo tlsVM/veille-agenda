@@ -900,3 +900,7 @@ html,body{overscroll-behavior-x:none}
 body{position:relative;touch-action:pan-y pinch-zoom}
 main,.ev,.actu,.carte,.modal,.boite{overflow-wrap:break-word;word-break:normal}
 img,video,iframe,table{max-width:100%}
+
+/* Icône du média à côté du titre des actualités */
+.actu .actu-titre{display:block}
+.actu .logo-media{width:20px;height:20px;border-radius:5px;vertical-align:-4px;margin-right:7px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.08);object-fit:contain}
