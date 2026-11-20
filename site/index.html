@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>/* iPhone : empêche le zoom automatique quand on touche un champ (cause du « jeu » gauche-droite) ; le zoom à deux doigts reste possible */
+if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) { document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover'); }</script>
 <title>Veille et agenda · Vivre Mieux</title>
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#f5b5d2">
@@ -13,7 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Vivre Mieux">
-<link rel="stylesheet" href="style.css?v=83">
+<link rel="stylesheet" href="style.css?v=84">
 </head>
 <body>
 <header class="bandeau">
@@ -48,6 +50,6 @@
   </div>
 </div>
 
-<script src="app.js?v=83"></script>
+<script src="app.js?v=84"></script>
 </body>
 </html>

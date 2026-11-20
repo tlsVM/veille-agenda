@@ -894,3 +894,9 @@ html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
 .pastille{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;cursor:pointer;padding:0}
 .pastille.auto{width:auto;border-radius:999px;padding:0 10px;font-size:12px;background:#f3f3f3;color:#444}
 .pastille.choisie{box-shadow:0 0 0 3px #222}
+
+/* Anti « jeu » gauche-droite sur téléphone (tous appareils) */
+html,body{overscroll-behavior-x:none}
+body{position:relative;touch-action:pan-y pinch-zoom}
+main,.ev,.actu,.carte,.modal,.boite{overflow-wrap:break-word;word-break:normal}
+img,video,iframe,table{max-width:100%}

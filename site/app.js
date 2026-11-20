@@ -1678,6 +1678,8 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { AUJ = cle(new Date()); rafraichirPresences(); } });
 
   // ---------- Application installable ----------
+  // filet de sécurité : la page ne doit jamais rester décalée sur le côté
+  window.addEventListener('scroll', function () { if (window.scrollX !== 0) window.scrollTo(0, window.scrollY); }, { passive: true });
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
   (function () {
     var installe = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
