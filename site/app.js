@@ -305,11 +305,19 @@
     }
     return c;
   }
+  // Le média se lit d'abord dans la source (« La Dépêche (reprise otoulouse.net) » → ladepeche.fr), sinon dans le lien
+  function mediaDomaine(a) {
+    var s = (a.source || '').toLowerCase();
+    var M = [[/d[ée]p[êe]che/, 'ladepeche.fr'], [/ici occitanie|france bleu|\bici\b/, 'ici.fr'], [/journal toulousain/, 'lejournaltoulousain.fr'],
+      [/france ?3/, 'france3-regions.franceinfo.fr'], [/actu toulouse|actu\.fr|^actu\b/, 'actu.fr'], [/m[ée]diacit[ée]s/, 'mediacites.fr'], [/evous/, 'toulouse.evous.fr']];
+    for (var i = 0; i < M.length; i++) { if (M[i][0].test(s)) return M[i][1]; }
+    return ((/^https?:\/\/([^\/?#]+)/i.exec(a.lien || '') || [])[1] || '').toLowerCase().replace(/^www\./, '');
+  }
   function carteActu(a) {
     var c = el('div', 'actu');
     if (a.quartier) c.appendChild(el('span', 'q', a.quartier));
     var t = el('b', 'actu-titre');
-    var dom = ((/^https?:\/\/([^\/?#]+)/i.exec(a.lien || '') || [])[1] || '').toLowerCase().replace(/^www\./, '');
+    var dom = mediaDomaine(a);
     if (dom) {
       var ic = document.createElement('img'); ic.className = 'logo-media'; ic.alt = ''; ic.loading = 'lazy'; ic.width = 20; ic.height = 20;
       ic.src = 'api.php?a=logo&d=' + encodeURIComponent(dom); ic.title = a.source ? a.source.split(',')[0] : dom;

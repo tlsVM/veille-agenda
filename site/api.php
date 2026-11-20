@@ -796,14 +796,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'suppr') {
 if ($a === 'logo') {
   $d = strtolower(preg_replace('/^www\./', '', (string)($_GET['d'] ?? '')));
   if (!preg_match('/^[a-z0-9-]+(\.[a-z0-9-]+)+$/', $d) || strlen($d) > 80) { http_response_code(400); exit; }
-  $dir = "$DATA/cache/logos"; if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
-  $f = "$dir/$d.png";
+  $dir = "$DATA/cache/logos2"; if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
+  $f = "$dir/$d.img";
   if (!is_file($f) || filemtime($f) < time() - 30 * 86400) {
-    $img = telecharger('https://www.google.com/s2/favicons?sz=64&domain=' . rawurlencode($d));
-    if ($img !== null && strlen($img) > 100) { file_put_contents($f, $img, LOCK_EX); }
+    $img = null;
+    // 1) icône déclarée par le site, 2) DuckDuckGo, 3) Google (qui renvoie parfois un globe générique)
+    $page = telecharger("https://www.$d/") ?? telecharger("https://$d/");
+    $cands = [];
+    if ($page && preg_match_all('/<link[^>]+rel=["\'][^"\']*(?:apple-touch-icon|icon)[^"\']*["\'][^>]*>/i', $page, $m)) {
+      foreach ($m[0] as $tag) { if (preg_match('/href=["\']([^"\']+)["\']/i', $tag, $h)) {
+        $u = html_entity_decode($h[1]);
+        if (strpos($u, '//') === 0) { $u = 'https:' . $u; } elseif (!preg_match('#^https?://#', $u)) { $u = "https://www.$d/" . ltrim($u, '/'); }
+        $cands[] = $u; } }
+      usort($cands, function ($x, $y) { return (stripos($y, 'apple-touch') !== false) <=> (stripos($x, 'apple-touch') !== false); });
+    }
+    $cands[] = "https://www.$d/favicon.ico";
+    $cands[] = 'https://icons.duckduckgo.com/ip3/' . $d . '.ico';
+    $cands[] = 'https://www.google.com/s2/favicons?sz=64&domain=' . rawurlencode($d);
+    foreach ($cands as $u) {
+      $x = telecharger($u);
+      if ($x !== null && strlen($x) > 200 && stripos(substr($x, 0, 200), '<html') === false && stripos(substr($x, 0, 200), '<!doctype') === false) { $img = $x; break; }
+    }
+    if ($img !== null) { file_put_contents($f, $img, LOCK_EX); }
     elseif (!is_file($f)) { http_response_code(404); exit; }
   }
-  header('Content-Type: image/png'); header('Cache-Control: public, max-age=604800');
+  $deb = file_get_contents($f, false, null, 0, 16);
+  $mime = 'image/png';
+  if (strpos($deb, "\xFF\xD8") === 0) { $mime = 'image/jpeg'; }
+  elseif (strpos($deb, "\x00\x00\x01\x00") === 0) { $mime = 'image/x-icon'; }
+  elseif (strpos($deb, 'GIF8') === 0) { $mime = 'image/gif'; }
+  elseif (strpos($deb, 'RIFF') === 0) { $mime = 'image/webp'; }
+  elseif (stripos($deb, '<svg') !== false || stripos($deb, '<?xml') !== false) { $mime = 'image/svg+xml'; }
+  header('Content-Type: ' . $mime); header('Cache-Control: public, max-age=604800');
   readfile($f); exit;
 }
 
