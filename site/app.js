@@ -320,7 +320,9 @@
     var dom = mediaDomaine(a);
     if (dom) {
       var ic = document.createElement('img'); ic.className = 'logo-media'; ic.alt = ''; ic.loading = 'lazy'; ic.width = 20; ic.height = 20;
-      ic.src = 'api.php?a=logo&d=' + encodeURIComponent(dom); ic.title = a.source ? a.source.split(',')[0] : dom;
+      var LOGOS_LOCAUX = { 'ici.fr': 'medias/ici.png' }; // logos fournis par Hugo
+      if (LOGOS_LOCAUX[dom]) { ic.className += ' large'; ic.removeAttribute('width'); }
+      ic.src = LOGOS_LOCAUX[dom] || ('api.php?a=logo&d=' + encodeURIComponent(dom)); ic.title = a.source ? a.source.split(',')[0] : dom;
       ic.onerror = function () { ic.remove(); };
       t.appendChild(ic);
     }
