@@ -1850,7 +1850,14 @@
     m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
     m.appendChild(bx); document.body.appendChild(m); dessiner();
   }
+  var SONDAGE_ACTIF = false; // 24/11 : sondage terminé et retiré (sa définition reste ci-dessus comme modèle pour un prochain)
   function vueSondage(v) {
+    if (!SONDAGE_ACTIF) {
+      var z = el('section', 'bloc sond-vide');
+      z.appendChild(el('h2', 'h2', '📊 Sondage'));
+      z.appendChild(el('p', 'vide', 'Aucun sondage en cours pour le moment.'));
+      v.appendChild(z); return;
+    }
     var elus = (D.elus || []).slice(); // élu·es + Hugo (collaborateur), qui peut aussi répondre
     var R = ((D.sondages || {})[SONDAGE.id]) || {}, crs = creneauxSondage();
     var tete = el('div', 'sond-tete'); tete.appendChild(el('h2', 'h2', '📊 ' + SONDAGE.titre)); tete.appendChild(el('p', 'sond-txt', SONDAGE.texte)); v.appendChild(tete);
