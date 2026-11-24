@@ -70,7 +70,7 @@
       D = d; D.evenements = d.evenements || []; D.actus = d.actus || []; D.quartiers = d.quartiers || []; D.presences = d.presences || {};
       ajouterReunionsGroupe(); appliquerMasques(d.masques); signature = sigPresences();
       D.evenements.sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
-      remplirMoi(); rendre(); suiteNotif(); if (rafraichirListe) rafraichirListe();
+      remplirMoi(); rendre(); suiteNotif(); if (rafraichirListe) rafraichirListe(); rafraichirPresences();
     }).catch(function () { afficherErreur('reseau'); });
   }
   // Réunion de groupe : tous les lundis à 12h30, ajoutée automatiquement.
@@ -84,8 +84,9 @@
     }
   }
   function rafraichirPresences() {
-    fetch('api.php?a=pres', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('api.php?a=pres&nom=' + encodeURIComponent(moi || ''), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       if (!d.presences) return; D.presences = d.presences; majPresences();
+      if (typeof d.chat_nonlus === 'number') majBadgeChat(d.chat_nonlus);
       // événements supprimés par Hugo : visibles par tous en moins de 20 secondes
       if (d.masques && d.masques.slice().sort().join(',') !== Object.keys(MASQUES).sort().join(',')) {
         var nouveaux = d.masques.filter(function (id) { return !MASQUES[id]; }), retablis = Object.keys(MASQUES).filter(function (id) { return d.masques.indexOf(id) < 0; });
@@ -1001,7 +1002,7 @@
   // Toutes les fenêtres : une croix bien visible en haut à droite (remplace le bouton « Fermer » du bas)
   new MutationObserver(function (muts) {
     muts.forEach(function (mu) { mu.addedNodes.forEach(function (n) {
-      if (!n.classList || !n.classList.contains('modale') || n.id === 'choix-nom') return;
+      if (!n.classList || !n.classList.contains('modale') || n.id === 'choix-nom' || n.classList.contains('chat-m')) return;
       var bx = n.querySelector('.modale-boite'); if (!bx || bx.querySelector('.croix')) return;
       var bas = [].filter.call(bx.children, function (c) { return c.classList.contains('gest-fermer'); })[0];
       var x = el('button', 'croix', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer'); x.title = 'Fermer';
@@ -1920,7 +1921,7 @@
   function rendre() {
     var v = document.getElementById('vue'); v.textContent = '';
     document.querySelectorAll('.onglets button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === vue); });
-    document.body.classList.toggle('vue-agenda', vue === 'agenda');
+    document.body.classList.toggle('vue-agenda', vue === 'agenda'); if (window.majBarreBas) window.majBarreBas();
     ({ jour: vueJour, agenda: vueAgenda, quartiers: vueQuartiers, archives: vueArchives, sondage: vueSondage, recherche: vueRecherche }[vue] || vueJour)(v);
     var p = el('p', 'pied', 'Données mises à jour ' + (D.maj ? 'le ' + new Date(D.maj).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '')); v.appendChild(p);
   }
@@ -2127,8 +2128,10 @@
     function placer() {
       var r = cl.getBoundingClientRect(), l = Math.min(380, window.innerWidth - 16);
       var gauche = Math.max(8, Math.min(r.right + 12 - l, window.innerWidth - l - 8));
-      bx.style.width = l + 'px'; bx.style.left = gauche + 'px'; bx.style.top = (r.bottom + 10) + 'px';
-      bx.style.maxHeight = (window.innerHeight - r.bottom - 20) + 'px';
+      bx.style.width = l + 'px'; bx.style.left = gauche + 'px';
+      if (r.top > window.innerHeight / 2) { // cloche dans la barre du bas (téléphone) : la fenêtre s'ouvre au-dessus
+        bx.style.top = 'auto'; bx.style.bottom = (window.innerHeight - r.top + 12) + 'px'; bx.style.maxHeight = (r.top - 24) + 'px'; bx.classList.add('vers-haut');
+      } else { bx.style.bottom = 'auto'; bx.style.top = (r.bottom + 10) + 'px'; bx.style.maxHeight = (window.innerHeight - r.bottom - 20) + 'px'; bx.classList.remove('vers-haut'); }
       fl.style.left = (r.left + r.width / 2 - gauche - 7) + 'px';
     }
     function horsClic(e) { if (!bx.contains(e.target) && !cl.contains(e.target)) fermer(); }
@@ -2170,11 +2173,11 @@
       if (liste.length) mm.appendChild(el('p', 'nt-astuce', 'Glissez une notification vers la gauche ou touchez ✕ pour l\'effacer.'));
       liste.slice(0, 40).forEach(function (x) {
         var ligne = el('div', 'nt-ligne'), fondR = el('div', 'nt-fond', 'Effacer');
-        var c = el('div', 'nt-msg' + (horodatage(x.le) > vuAvant ? ' nouveau' : '') + (x.ev || x.lien ? ' cliquable' : ''));
-        var ic = el('span', 'nt-ic', x.ev ? '📅' : x.lien ? '📰' : '🔔'); c.appendChild(ic);
+        var c = el('div', 'nt-msg' + (horodatage(x.le) > vuAvant ? ' nouveau' : '') + (x.ev || x.lien || x.chat ? ' cliquable' : ''));
+        var ic = el('span', 'nt-ic', x.chat ? '💬' : x.ev ? '📅' : x.lien ? '📰' : '🔔'); c.appendChild(ic);
         var corps = el('div', 'nt-corps');
         corps.appendChild(el('b', '', x.titre)); if (x.texte) corps.appendChild(el('p', '', x.texte));
-        corps.appendChild(el('span', 'nt-date', ilYa(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : '') + (x.ev ? ' · voir dans l\'agenda →' : x.lien ? ' · lire →' : '')));
+        corps.appendChild(el('span', 'nt-date', ilYa(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : '') + (x.chat ? ' · répondre →' : x.ev ? ' · voir dans l\'agenda →' : x.lien ? ' · lire →' : '')));
         c.appendChild(corps);
         var croix = el('button', 'nt-x', '✕'); croix.type = 'button'; croix.setAttribute('aria-label', 'Effacer cette notification'); croix.title = 'Effacer';
         c.appendChild(croix);
@@ -2183,7 +2186,7 @@
           setTimeout(peindreListe, 250);
         }
         croix.addEventListener('click', function (e) { e.stopPropagation(); effacer(); });
-        c.addEventListener('click', function () { if (glisse) return; if (x.ev) { fermer(); allerEvenement(x.ev); } else if (/^https?:\/\//.test(x.lien || '')) { window.open(x.lien, '_blank', 'noopener'); } });
+        c.addEventListener('click', function () { if (glisse) return; if (x.chat) { fermer(); ouvrirChat(estHugo() ? x.chat : ''); return; } if (x.ev) { fermer(); allerEvenement(x.ev); } else if (/^https?:\/\//.test(x.lien || '')) { window.open(x.lien, '_blank', 'noopener'); } });
         // glisser vers la gauche pour effacer
         var x0 = null, y0 = 0, dx = 0, glisse = false;
         c.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; glisse = false; c.style.transition = 'none'; }, { passive: true });
@@ -2357,7 +2360,9 @@
     }
     b.querySelector('.bulle-t').textContent = txt;
     var cl = document.getElementById('cloche').getBoundingClientRect();
-    b.style.top = (cl.bottom + 10) + 'px'; b.style.right = Math.max(8, window.innerWidth - cl.right - 14) + 'px';
+    b.style.right = Math.max(8, window.innerWidth - cl.right - 14) + 'px';
+    if (cl.top > window.innerHeight / 2) { b.style.top = 'auto'; b.style.bottom = (window.innerHeight - cl.top + 12) + 'px'; b.classList.add('vers-haut'); }
+    else { b.style.bottom = 'auto'; b.style.top = (cl.bottom + 10) + 'px'; b.classList.remove('vers-haut'); }
   }
   window.addEventListener('resize', function () { var b = document.getElementById('bulle-notif'); if (b) majBulleInvitation(true); });
   majInvitationCloche();
@@ -2365,14 +2370,128 @@
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'notif') rafraichirPresences(); });
 
   // Ouverture depuis une notification : ./?notif=…&ev=…
-  var paramsNotif = (function () { try { var q = new URLSearchParams(location.search); return q.get('notif') || q.get('ev') ? { n: q.get('notif'), ev: q.get('ev') } : null; } catch (e) { return null; } })();
+  var paramsNotif = (function () { try { var q = new URLSearchParams(location.search); return q.get('notif') || q.get('ev') || q.get('chat') ? { n: q.get('notif'), ev: q.get('ev'), chat: q.get('chat') } : null; } catch (e) { return null; } })();
   function suiteNotif() {
     majCloche();
     if (!paramsNotif) return;
     var p = paramsNotif; paramsNotif = null;
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    if (p.chat) { ouvrirChat(estHugo() ? p.chat : ''); return; }
     if (!(p.ev && allerEvenement(p.ev))) ouvrirNotifs();
   }
+
+
+  // ---------- Messagerie (chat) : chaque élu·e ↔ Hugo ----------
+  var ICO_AVION = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.4 11.1 19.6 4.3c.8-.3 1.6.4 1.3 1.2l-5.6 15.1c-.3.8-1.4.9-1.8.1l-2.7-5.2-5.3-2.6c-.8-.4-.7-1.5.1-1.8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m10.8 15.4 5.6-7.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  function nomHugo() { return (D.elus || []).filter(function (n) { return /collaborateur/.test(n); })[0] || ''; }
+  function majBadgeChat(n) {
+    var b = document.getElementById('chat-nb'); if (!b) return;
+    b.textContent = n > 9 ? '9+' : String(n); b.hidden = !n;
+    document.getElementById('chat-bt').classList.toggle('a-des-msg', n > 0);
+  }
+  function appelChat(action, corps) {
+    corps = corps || {}; corps.nom = moi;
+    if (estHugo()) { var c = codeHugo(); if (!c) return Promise.reject(new Error('code')); corps.code = c; }
+    var req = action === 'chat' ? fetch('api.php?a=chat&' + new URLSearchParams(corps).toString(), { cache: 'no-store' })
+      : fetch('api.php?a=' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
+    return req.then(function (r) { return r.json(); }).then(function (d) {
+      if (d.erreur === 'code') { try { localStorage.removeItem('vm-code-envoi'); } catch (x) {} alert('Code incorrect.'); throw new Error('code'); }
+      if (estHugo() && corps.code) store('vm-code-envoi', corps.code);
+      return d;
+    });
+  }
+  var chatOuvert = null;
+  function heureMsg(iso) { var d = new Date(iso), auj = cle(d) === AUJ; return (auj ? '' : d.getDate() + ' ' + MOIS[d.getMonth()].slice(0, 4) + '. ') + ('0' + d.getHours()).slice(-2) + 'h' + ('0' + d.getMinutes()).slice(-2); }
+  function ouvrirChat(avec) {
+    if (!moi) { ouvrirChoix(); return; }
+    if (chatOuvert) chatOuvert.fermer();
+    var m = el('div', 'modale chat-m'), bx = el('div', 'modale-boite chat'); bx.setAttribute('role', 'dialog'); bx.setAttribute('aria-label', 'Messagerie');
+    var tete = el('div', 'chat-tete'), retour = el('button', 'chat-retour', '←'); retour.type = 'button'; retour.setAttribute('aria-label', 'Retour aux conversations');
+    var titre = el('div', 'chat-titre'); var fermerB = el('button', 'chat-fermer', '✕'); fermerB.type = 'button'; fermerB.setAttribute('aria-label', 'Fermer la messagerie');
+    tete.appendChild(retour); tete.appendChild(titre); tete.appendChild(fermerB); bx.appendChild(tete);
+    var fil = el('div', 'chat-fil'); bx.appendChild(fil);
+    var form = el('form', 'chat-form'); var ta = el('textarea', 'chat-saisie'); ta.rows = 1; ta.maxLength = 1000; ta.placeholder = 'Votre message…'; ta.setAttribute('aria-label', 'Votre message');
+    var env = el('button', 'chat-env'); env.type = 'submit'; env.innerHTML = ICO_AVION; env.setAttribute('aria-label', 'Envoyer');
+    form.appendChild(ta); form.appendChild(env); bx.appendChild(form);
+    m.appendChild(bx); document.body.appendChild(m);
+    var H = nomHugo(), hugo = estHugo(), cible = hugo ? (avec || '') : H, minuterie = null, signature = '';
+    function fermer() { clearInterval(minuterie); m.remove(); chatOuvert = null; rafraichirPresences(); }
+    fermerB.addEventListener('click', fermer); m.addEventListener('click', function (e) { if (e.target === m) fermer(); });
+    retour.addEventListener('click', function () { cible = ''; signature = ''; peindre(); });
+    ta.addEventListener('input', function () { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); form.requestSubmit(); } });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault(); var t = ta.value.trim(); if (!t || !cible) return;
+      env.disabled = true;
+      appelChat('chat_envoi', { avec: cible, texte: t }).then(function (d) {
+        env.disabled = false; if (!d.ok) { alert('Le message n\'est pas parti. Réessayez.'); return; }
+        ta.value = ''; ta.style.height = 'auto'; charger2();
+      }).catch(function () { env.disabled = false; });
+    });
+    function peindre() {
+      var liste = hugo && !cible;
+      retour.hidden = !(hugo && cible); form.hidden = liste;
+      titre.textContent = liste ? 'Messages des élu·es' : (cible ? cible.replace(' (collaborateur)', '') : '');
+      fil.textContent = ''; fil.appendChild(el('p', 'chat-attente', 'Chargement…'));
+      charger2();
+    }
+    function charger2() {
+      var liste = hugo && !cible;
+      appelChat('chat', liste ? {} : { avec: cible }).then(function (d) {
+        var sig = JSON.stringify(d); if (sig === signature) return; signature = sig;
+        fil.textContent = '';
+        if (liste) {
+          (d.conversations || []).forEach(function (c) {
+            var b = el('button', 'chat-conv' + (c.nonlus ? ' nonlu' : '')); b.type = 'button';
+            var p = c.nom.split(' ')[0]; var av = el('span', 'chat-av', p.length <= 5 ? p : p.split('-').map(function (x) { return x.charAt(0); }).join(''));
+            var tx = el('span', 'chat-conv-t'); tx.appendChild(el('b', '', c.nom));
+            tx.appendChild(el('span', '', c.dernier ? (c.dernier.de === H ? 'Vous : ' : '') + c.dernier.texte : 'Aucun message pour l\'instant'));
+            b.appendChild(av); b.appendChild(tx);
+            if (c.nonlus) b.appendChild(el('span', 'chat-pastille', String(c.nonlus)));
+            b.addEventListener('click', function () { cible = c.nom; signature = ''; peindre(); });
+            fil.appendChild(b);
+          });
+          return;
+        }
+        var msgs = d.messages || [];
+        if (!msgs.length) fil.appendChild(el('p', 'chat-attente', hugo ? 'Écrivez le premier message à ' + cible.replace(' (collaborateur)', '') + '.' : 'Écrivez ici à Hugo : lui seul lit vos messages, et il vous répond ici.'));
+        var jourPrec = '';
+        msgs.forEach(function (x) {
+          var j = x.le.slice(0, 10); if (j !== jourPrec) { jourPrec = j; var dj = new Date(x.le); fil.appendChild(el('div', 'chat-jour', cle(dj) === AUJ ? 'Aujourd\'hui' : JOURS[dj.getDay()] + ' ' + dj.getDate() + ' ' + MOIS[dj.getMonth()])); }
+          var mien = x.de === moi, bu = el('div', 'chat-bulle' + (mien ? ' mien' : ''));
+          bu.appendChild(el('span', 'chat-texte', x.texte)); bu.appendChild(el('span', 'chat-h', heureMsg(x.le) + (mien && x.lu ? ' · lu' : '')));
+          fil.appendChild(bu);
+        });
+        fil.scrollTop = fil.scrollHeight;
+        if (msgs.some(function (x) { return x.a === moi && !x.lu; })) appelChat('chat_lu', { avec: cible }).then(function () { rafraichirPresences(); }).catch(function () {});
+      }).catch(function (e) { if (e && e.message === 'code') fermer(); });
+    }
+    peindre();
+    minuterie = setInterval(charger2, 5000);
+    chatOuvert = { fermer: fermer, maj: charger2 };
+    if (!hugo || cible) setTimeout(function () { ta.focus(); }, 100);
+  }
+  document.getElementById('chat-bt').addEventListener('click', function () { ouvrirChat(); });
+  // une notification de message arrive pendant que la messagerie est ouverte : on la met à jour tout de suite
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'notif' && chatOuvert) chatOuvert.maj(); });
+
+  // ---------- Téléphone : barre flottante en bas (façon Instagram) ----------
+  (function () {
+    var barre = document.getElementById('barre-bas'), mq = window.matchMedia('(max-width:759px)'), moiZone = document.querySelector('.moi');
+    var ICO = {
+      jour: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+      agenda: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+    };
+    function bt(v, nom) { var b = el('button', 'bb-bt bb-' + v); b.type = 'button'; b.innerHTML = ICO[v]; b.setAttribute('aria-label', nom); b.title = nom; b.addEventListener('click', function () { vue = v; if (v === 'agenda') formatAg = 'liste'; store('vm-vue', vue); rendre(); window.scrollTo(0, 0); }); return b; }
+    var bJ = bt('jour', 'Actualité'), bA = bt('agenda', 'Agenda');
+    var cl = document.getElementById('cloche'), ch = document.getElementById('chat-bt'), co = document.getElementById('compte');
+    function placer() {
+      if (mq.matches) { barre.hidden = false; barre.appendChild(bJ); barre.appendChild(bA); barre.appendChild(ch); barre.appendChild(cl); barre.appendChild(co); document.body.classList.add('avec-barre-bas'); }
+      else { barre.hidden = true; moiZone.appendChild(ch); moiZone.appendChild(cl); moiZone.appendChild(co); document.body.classList.remove('avec-barre-bas'); }
+    }
+    placer(); (mq.addEventListener ? mq.addEventListener('change', placer) : mq.addListener(placer));
+    window.majBarreBas = function () { bJ.classList.toggle('on', vue === 'jour'); bA.classList.toggle('on', vue === 'agenda'); };
+  })();
 
   // ---------- Application installable ----------
   // filet de sécurité : la page ne doit jamais rester décalée sur le côté

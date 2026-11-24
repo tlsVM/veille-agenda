@@ -853,11 +853,11 @@ function notifsRecentes() { return array_values(array_filter(historiqueNotifs(),
 function notifEtat() { global $DATA; $f = "$DATA/notifs-etat.json"; if (!is_file($f)) { return new stdClass(); } $p = json_decode(file_get_contents($f), true); return is_array($p) && $p ? $p : new stdClass(); }
 
 // Envoie à une liste de noms (ou à tous) ; retire les appareils qui se sont désabonnés
-function envoyerNotification($noms, $titre, $texte, $ev, $lienN = '') {
+function envoyerNotification($noms, $titre, $texte, $ev, $lienN = '', $chat = '') {
   global $DATA;
   $tous = in_array('tous', $noms, true);
   $id = 'n' . bin2hex(random_bytes(5));
-  $url = './?notif=' . $id . ($ev !== '' ? '&ev=' . rawurlencode($ev) : '');
+  $url = $chat !== '' ? './?chat=' . rawurlencode($chat) : './?notif=' . $id . ($ev !== '' ? '&ev=' . rawurlencode($ev) : '');
   $donnees = ['titre' => $titre, 'texte' => $texte, 'url' => $url, 'tag' => $id];
   $recus = []; $morts = [];
   foreach (abonnements() as $k => $ab) {
@@ -871,7 +871,7 @@ function envoyerNotification($noms, $titre, $texte, $ev, $lienN = '') {
   $h = fopen("$DATA/notifications.json", 'c+');
   if ($h) {
     flock($h, LOCK_EX); $p = json_decode(stream_get_contents($h), true); if (!is_array($p)) { $p = []; }
-    array_unshift($p, ['id' => $id, 'le' => date('c'), 'a' => $dest, 'titre' => $titre, 'texte' => $texte, 'ev' => $ev, 'lien' => $lienN]);
+    array_unshift($p, ['id' => $id, 'le' => date('c'), 'a' => $dest, 'titre' => $titre, 'texte' => $texte, 'ev' => $ev, 'lien' => $lienN, 'chat' => $chat]);
     $p = array_slice($p, 0, 200);
     ftruncate($h, 0); rewind($h); fwrite($h, json_encode($p, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
   }
@@ -879,6 +879,21 @@ function envoyerNotification($noms, $titre, $texte, $ev, $lienN = '') {
   $cibles = $tous ? array_values(array_filter(ELUS, function ($n) { return strpos($n, 'collaborateur') === false; })) : $dest;
   return ['ok' => true, 'recus' => $recus, 'sans' => array_values(array_filter($cibles, function ($n) use ($recus) { return empty($recus[$n]); }))];
 }
+
+// ---------- Messagerie : chaque élu·e ↔ Hugo (et Hugo ↔ chaque élu·e) ----------
+// ~/agenda-data/chat.json : [{id, de, a, texte, le, lu}]
+function hugo() { foreach (ELUS as $n) { if (strpos($n, 'collaborateur') !== false) { return $n; } } return ''; }
+function messagesChat() { global $DATA; $f = "$DATA/chat.json"; if (!is_file($f)) { return []; } $m = json_decode(file_get_contents($f), true); return is_array($m) ? $m : []; }
+function modifierChat($fn) {
+  global $DATA;
+  $h = fopen("$DATA/chat.json", 'c+'); if (!$h) { sortir(['erreur' => 'ecriture'], 500); }
+  flock($h, LOCK_EX); $m = json_decode(stream_get_contents($h), true); if (!is_array($m)) { $m = []; }
+  $m = $fn($m); $m = array_slice($m, -3000);
+  ftruncate($h, 0); rewind($h); fwrite($h, json_encode($m, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
+  return $m;
+}
+function codeHugoOk($c) { $att = trim((string)((config() ?? [])['code_envoi'] ?? '')); return $att !== '' && hash_equals($att, (string)$c); }
+function chatNonLus($nom) { $n = 0; foreach (messagesChat() as $x) { if ($x['a'] === $nom && empty($x['lu'])) { $n++; } } return $n; }
 
 // ---------- Aiguillage ----------
 
@@ -1044,7 +1059,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
   sortirPuisGoogle(['ok' => true, 'presences' => enregistrerPresence($id, $nom, $statut)], $id);
 }
 
-if ($a === 'pres') { sortir(['presences' => presences(), 'notifs' => notifsRecentes(), 'notif_etat' => notifEtat(), 'masques' => array_keys(masques())]); }
+if ($a === 'pres') {
+  $qui = (string)($_GET['nom'] ?? '');
+  sortir(['presences' => presences(), 'notifs' => notifsRecentes(), 'notif_etat' => notifEtat(), 'masques' => array_keys(masques()),
+    'chat_nonlus' => in_array($qui, ELUS, true) ? chatNonLus($qui) : 0]);
+}
+
+// Messagerie : lire une conversation, envoyer, marquer comme lu
+if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu') {
+  $d = $_SERVER['REQUEST_METHOD'] === 'POST' ? (json_decode(file_get_contents('php://input'), true) ?: []) : $_GET;
+  $moi = (string)($d['nom'] ?? ''); $H = hugo();
+  if (!in_array($moi, ELUS, true) || $H === '') { sortir(['erreur' => 'nom'], 400); }
+  $estHugo = $moi === $H;
+  if ($estHugo && !codeHugoOk($d['code'] ?? '')) { sleep(1); sortir(['erreur' => 'code'], 403); }
+  $avec = $estHugo ? (string)($d['avec'] ?? '') : $H; // un·e élu·e ne parle qu'avec Hugo
+  if ($avec !== '' && (!in_array($avec, ELUS, true) || $avec === $moi)) { sortir(['erreur' => 'avec'], 400); }
+  if ($a === 'chat_envoi') {
+    $texte = trim(mb_substr(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', (string)($d['texte'] ?? '')), 0, 1000));
+    if ($texte === '' || $avec === '') { sortir(['erreur' => 'texte'], 400); }
+    $msg = ['id' => 'c' . bin2hex(random_bytes(5)), 'de' => $moi, 'a' => $avec, 'texte' => $texte, 'le' => date('c'), 'lu' => false];
+    modifierChat(function ($m) use ($msg) { $m[] = $msg; return $m; });
+    @file_put_contents("$DATA/journal-chat.log", date('c') . "\t$moi → $avec\t" . mb_strlen($texte) . " car.\n", FILE_APPEND | LOCK_EX);
+    // notification (téléphone + cloche) pour la personne qui reçoit, sans faire attendre l'envoi
+    ignore_user_abort(true);
+    echo json_encode(['ok' => true, 'message' => $msg], JSON_UNESCAPED_UNICODE);
+    if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); } else { @ob_flush(); flush(); }
+    $court = trim(preg_replace('/\s*\(.*\)$/', '', $moi));
+    try { envoyerNotification([$avec], '💬 ' . $court, mb_substr($texte, 0, 200), '', '', $estHugo ? $H : $moi); } catch (Throwable $t) { journalPush('chat ' . $t->getMessage()); }
+    exit;
+  }
+  if ($a === 'chat_lu') {
+    modifierChat(function ($m) use ($moi, $avec) { foreach ($m as &$x) { if ($x['a'] === $moi && ($avec === '' || $x['de'] === $avec)) { $x['lu'] = true; } } return $m; });
+    sortir(['ok' => true]);
+  }
+  // lecture
+  $tout = messagesChat();
+  if ($estHugo && $avec === '') { // liste des conversations de Hugo
+    $conv = [];
+    foreach (ELUS as $n) { if ($n !== $H) { $conv[$n] = ['nom' => $n, 'dernier' => null, 'nonlus' => 0]; } }
+    foreach ($tout as $x) {
+      $autre = $x['de'] === $H ? $x['a'] : ($x['a'] === $H ? $x['de'] : ''); if (!isset($conv[$autre])) { continue; }
+      $conv[$autre]['dernier'] = $x; if ($x['a'] === $H && empty($x['lu'])) { $conv[$autre]['nonlus']++; }
+    }
+    $l = array_values($conv);
+    usort($l, function ($p, $q) { return strcmp($q['dernier']['le'] ?? '', $p['dernier']['le'] ?? ''); });
+    sortir(['conversations' => $l]);
+  }
+  sortir(['messages' => array_values(array_filter($tout, function ($x) use ($moi, $avec) {
+    return ($x['de'] === $moi && $x['a'] === $avec) || ($x['de'] === $avec && $x['a'] === $moi); }))]);
+}
 
 // Supprimer (masquer) ou rétablir un événement : réservé à Hugo (code d'envoi)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'masquer') {
