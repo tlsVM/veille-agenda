@@ -1188,3 +1188,5 @@ body .compte.initiales{font-size:12.5px}
 .toast-annuler{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:14px;background:#123326;color:#fff;border-radius:12px;padding:10px 12px 10px 16px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100vw - 32px)}
 .toast-annuler span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toast-annuler button{flex:none;border:0;border-radius:999px;background:var(--rose);color:#123326;font:700 13px var(--texte);padding:6px 14px;cursor:pointer}
+.g3-nav{margin:0 0 6px}
+.g3-auj{padding:3px 12px;font-size:12.5px}

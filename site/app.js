@@ -1109,7 +1109,7 @@
     prec.addEventListener('click', function () { debut3 = cle(ajout(dDe(debut3), -NB_JOURS)); rendre(); });
     suiv.addEventListener('click', function () { debut3 = cle(ajout(dDe(debut3), NB_JOURS)); rendre(); });
     auj.addEventListener('click', function () { debut3 = AUJ; rendre(); });
-    nav.appendChild(auj); nav.appendChild(titre);
+    nav.appendChild(auj); // (titre « 24 – 26 novembre » retiré : les jours sont déjà en tête de colonne)
     z.appendChild(nav);
     var corps = el('div', 'g3-corps');
     // en-têtes des jours + rendez-vous sans heure ; flèches de part et d'autre
