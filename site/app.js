@@ -55,6 +55,8 @@
   var filtre = 'tout';
   var jourChoisi = '';
   var monAgenda = false; // bouton rose « Agenda de … » : seulement mes présences
+  var presElus = false; // bouton « Présences élus » : seulement les rendez-vous où au moins un·e élu·e est présent·e ou peut-être
+  function aDesPresences(e) { var p = D.presences[e.id] || {}; return Object.keys(p).some(function (n) { return p[n]; }); }
   var moisCal = '';
   var moi = store('vm-moi') || '';
   var selQ = { s: store('vm-sec') || '', q: store('vm-q') || '' };
@@ -1026,6 +1028,7 @@
   }
   function filtreTheme(e) {
     if (monAgenda && !(D.presences[e.id] || {})[moi]) return false; // « Agenda de … » : seulement mes présences et « peut-être »
+    if (presElus && !aDesPresences(e)) return false;
     return filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo';
   }
   function surPlusieursJours(e) { return !!(e.date_fin && e.date_fin > e.date); }
@@ -1180,8 +1183,11 @@
     var tl = el('label', 'tri-theme'); var ts = el('select'); ts.setAttribute('aria-label', 'Trier par thème');
     FILTRES.forEach(function (x) { var o = el('option', '', x[0] === 'tout' ? 'Trier par thème' : x[1]); o.value = x[0]; if (x[0] === filtre) o.selected = true; ts.appendChild(o); });
     ts.addEventListener('change', function () { filtre = ts.value; rendre(); });
-    var bps = el('button', 'bt-presences bt-nospres'); habiller(bps, '👥', 'Nos présences', 'Présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
-    bps.addEventListener('click', function () { ouvrirPresencesSemaine(new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()))); });
+    var bps = el('button', 'bt-presences bt-nospres' + (presElus ? ' on' : '')); bps.type = 'button';
+    if (presElus) habiller(bps, '✕', 'Fermer présences élus', 'Fermer'); else habiller(bps, '👥', 'Présences élus', 'Présences');
+    bps.title = presElus ? 'Revenir à tout l\'agenda' : 'Voir seulement les rendez-vous où des élu·es sont présent·es ou peut-être';
+    bps.setAttribute('aria-pressed', presElus ? 'true' : 'false');
+    bps.addEventListener('click', function () { presElus = !presElus; if (presElus) monAgenda = false; jourChoisi = ''; rendre(); window.scrollTo(0, 0); });
     tl.appendChild(el('span', 'ic', '🏷️')); tl.appendChild(ts); tl.setAttribute('data-court', 'Thèmes'); outils.appendChild(tl);
     var pw = el('div', 'pres-wrap'); pw.appendChild(bps); outils.appendChild(pw);
     var bpa = el('button', 'bt-presences bt-partager'); habiller(bpa, '📤', 'Partager', 'Partager'); bpa.type = 'button';
@@ -1192,7 +1198,7 @@
       var prenom = moi.replace(/ \(collaborateur\)$/, '').split(' ')[0];
       var bma = el('button', 'bt-monag' + (monAgenda ? ' on' : '')); if (monAgenda) habiller(bma, '✕', 'Fermer mon agenda', 'Fermer'); else habiller(bma, '🙋', 'Agenda de ' + prenom, prenom); bma.type = 'button';
       bma.setAttribute('aria-pressed', monAgenda ? 'true' : 'false');
-      bma.addEventListener('click', function () { monAgenda = !monAgenda; jourChoisi = ''; rendre(); window.scrollTo(0, 0); });
+      bma.addEventListener('click', function () { monAgenda = !monAgenda; if (monAgenda) presElus = false; jourChoisi = ''; rendre(); window.scrollTo(0, 0); });
       var mw = el('div', 'monag-wrap'); mw.appendChild(bma); outils.appendChild(mw);
     } else monAgenda = false;
     var bmode = el('button', 'car-mode', modeJour ? '☰ Vue liste' : '↔ Jour par jour'); bmode.type = 'button';
@@ -1221,6 +1227,7 @@
     if (grandEcran() && formatAg === 'grille') {
       if (jourChoisi) { debut3 = jourChoisi; jourChoisi = ''; }
       if (monAgenda) v.appendChild(barreMonAgenda(lundi(new Date())));
+      if (presElus) v.appendChild(el('div', 'pres-elus-titre', 'Présences élus · rendez-vous où au moins un·e élu·e est présent·e ou peut-être'));
       v.appendChild(grilleTroisJours()); return;
     }
 
@@ -1233,19 +1240,21 @@
       zc.appendChild(ret); zc.appendChild(blocJour(jourChoisi, evsJ)); v.appendChild(zc);
     }
 
-    var debut = lundi(new Date()), fin = ajout(new Date(), monAgenda ? 180 : 31), finSem1 = ajout(debut, 6);
+    var debut = lundi(new Date()), fin = ajout(new Date(), monAgenda || presElus ? 180 : 31), finSem1 = ajout(debut, 6);
     if (monAgenda) v.appendChild(barreMonAgenda(debut));
+    if (presElus) v.appendChild(el('div', 'pres-elus-titre', 'Présences élus · rendez-vous où au moins un·e élu·e est présent·e ou peut-être'));
     var parJour = {};
-    D.evenements.forEach(function (e) {
+    sansDoublons(D.evenements).forEach(function (e) {
       var g = TYPES[typeDe(e)].g;
       if (monAgenda && !(D.presences[e.id] || {})[moi]) return;
+      if (presElus && !aDesPresences(e)) return;
       if (filtre !== 'tout' && g !== filtre) return;
       var k = e.date; if (k < cle(debut) || k > cle(fin)) { if (!(e.date_fin && e.date < cle(debut) && e.date_fin >= cle(debut))) return; k = cle(debut); }
       (parJour[k] = parJour[k] || []).push(e);
     });
     var dimanche = new Date().getDay() === 0, ouverte = dimanche ? cle(ajout(debut, 7)) : cle(debut);
     var jours = Object.keys(parJour).sort();
-    if (!jours.length) { v.appendChild(el('p', 'vide', monAgenda ? 'Aucune présence cochée pour l\'instant : cochez « Présent·e » ou « Peut-être » sur les événements de l\'agenda.' : 'Aucun rendez-vous dans cette sélection.')); return; }
+    if (!jours.length) { v.appendChild(el('p', 'vide', monAgenda || presElus ? 'Aucune présence cochée pour l\'instant : cochez « Présent·e » ou « Peut-être » sur les événements de l\'agenda.' : 'Aucun rendez-vous dans cette sélection.')); return; }
     var groupes = {};
     jours.forEach(function (k) { var s = cle(lundi(dDe(k))); (groupes[s] = groupes[s] || []).push(k); });
     Object.keys(groupes).sort().forEach(function (s, i) {
@@ -1258,7 +1267,7 @@
         cont.appendChild(sp); groupes[s].forEach(function (k) { cont.appendChild(blocJour(k, parJour[k])); }); v.appendChild(cont); return;
       }
       if (s === ouverte) { cont = el('div', 'sem-1'); } // semaine en cours : directement les jours, sans titre
-      else { cont = el('details', 'sem'); if (monAgenda) cont.open = true; var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); rondSemaine(sd, s); sm.appendChild(sd); cont.appendChild(sm); }
+      else { cont = el('details', 'sem'); if (monAgenda || presElus) cont.open = true; var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); rondSemaine(sd, s); sm.appendChild(sd); cont.appendChild(sm); }
       var prec = null, nPrec = 0, grilleJ = el('div', 'jours-g');
       groupes[s].forEach(function (k) {
         var j = blocJour(k, parJour[k]);
@@ -1320,7 +1329,7 @@
     barre.appendChild(rondStory([{ k: k, evs: majo }], 'Agenda du maire et de la majorité'));
   }
   function rondSemaine(zone, lundiK) {
-    if (monAgenda || filtre !== 'tout') return;
+    if (monAgenda || presElus || filtre !== 'tout') return;
     var fin = cle(ajout(dDe(lundiK), 6)), evs = majoDu(lundiK, fin); if (!evs.length) return;
     var parJ = {}; evs.forEach(function (e) { (parJ[e.date] = parJ[e.date] || []).push(e); });
     var slides = Object.keys(parJ).sort().map(function (k) { return { k: k, evs: parJ[k] }; });
@@ -1475,7 +1484,7 @@
     var c = el('div', 'jour-corps');
     var majo = evs.filter(function (e) { return TYPES[typeDe(e)].g === 'majo'; });
     rangerJour(evs.filter(function (e) { return TYPES[typeDe(e)].g !== 'majo'; }), c, filtre !== 'tout');
-    if (filtre === 'tout' && !monAgenda) blocMajo(majo, t, k);
+    if (filtre === 'tout' && !monAgenda && !presElus) blocMajo(majo, t, k);
     if (!c.childNodes.length) c.appendChild(el('p', 'vide', '—'));
     j.appendChild(c);
     return j;
@@ -2072,7 +2081,7 @@
   function dateNotif(iso) { var d = new Date(iso); return d.getDate() + ' ' + MOIS[d.getMonth()] + ' à ' + ('0' + d.getHours()).slice(-2) + 'h' + ('0' + d.getMinutes()).slice(-2); }
   function allerEvenement(id) {
     var e = D.evenements.filter(function (x) { return x.id === id; })[0]; if (!e) return false;
-    vue = 'agenda'; store('vm-vue', vue); monAgenda = false; filtre = 'tout'; jourChoisi = e.date; rendre(); window.scrollTo(0, 0); return true;
+    vue = 'agenda'; store('vm-vue', vue); monAgenda = false; presElus = false; filtre = 'tout'; jourChoisi = e.date; rendre(); window.scrollTo(0, 0); return true;
   }
 
   var rafraichirListe = null;

@@ -1190,3 +1190,7 @@ body .compte.initiales{font-size:12.5px}
 .toast-annuler button{flex:none;border:0;border-radius:999px;background:var(--rose);color:#123326;font:700 13px var(--texte);padding:6px 14px;cursor:pointer}
 .g3-nav{margin:0 0 6px}
 .g3-auj{padding:3px 12px;font-size:12.5px}
+/* 24/11 : « Présences élus » */
+.outils-ag .bt-nospres.on{background:#fff;color:#c93a6b;border:1.5px solid #e0457b}
+@media (max-width:759px){.outils-ag .bt-nospres.on{--fond-ic:#fff}}
+.pres-elus-titre{margin:4px auto 10px;padding:8px 14px;border:1px solid #f0c4d6;border-radius:12px;background:#fdeef5;color:#a3305f;font-weight:600;font-size:13.5px;text-align:center;max-width:1100px}
