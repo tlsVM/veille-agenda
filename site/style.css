@@ -1021,3 +1021,9 @@ body .compte.initiales{font-size:12.5px}
 .bandeau h1.bandeau-logo{font-size:0!important;text-shadow:none!important;line-height:0;margin:0}
 .bandeau-logo img{display:block;height:72px;width:auto}
 @media (max-width:759px){.bandeau-logo img{height:44px}}
+/* 24/11 : « Jours précédents » et « Semaine précédente » discrets ; légende retirée */
+.prec:not([open]),.sem-prec:not([open]){display:table;margin:6px 0 2px;background:none;border:1px dashed #ddd0d6;border-radius:999px}
+.prec:not([open])>summary,.sem-prec:not([open])>summary{padding:2px 10px;font-size:11px;color:#9a8f94}
+.prec:not([open])>summary b,.sem-prec:not([open])>summary b{font-size:10.5px;font-weight:600}
+.prec:not([open])>summary:hover,.sem-prec:not([open])>summary:hover{color:var(--vert)}
+.legende-d{display:none!important}
