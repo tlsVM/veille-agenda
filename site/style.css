@@ -1059,7 +1059,7 @@ body .compte.initiales{font-size:12.5px}
 .g3-axe{position:relative;border-right:1px solid var(--trait)}
 .g3-hr{position:absolute;right:8px;transform:translateY(-50%);font-size:11.5px;font-weight:600;color:#8a8f8c}
 .g3-hr:first-child{transform:none;top:2px!important}
-.g3-col{position:relative;border-left:1px solid var(--trait);background-image:repeating-linear-gradient(to bottom,transparent 0 79px,#f1e6eb 79px 80px)}
+.g3-col{position:relative;border-left:1px solid var(--trait);background-image:repeating-linear-gradient(to bottom,transparent 0 53px,#d8c6cf 53px 54px)}
 .g3-col.auj{background-color:#fbfdfc}
 .g3-grille>.g3-bord{border-left:1px solid var(--trait)}
 .g3-now{position:absolute;left:0;right:0;height:2px;background:var(--rose-fort);z-index:3}
@@ -1147,3 +1147,31 @@ body .compte.initiales{font-size:12.5px}
 .tres-serre .pres{gap:2px}
 .tres-serre .pb,.tres-serre .pb-autre{width:21px!important;height:21px!important}
 .tres-serre .g-ic .bt-copie{width:18px;height:18px}
+
+/* 24/11 (3) : grille plus compacte, traits plus marqués, longs événements repliés */
+.g3-corps{border-color:#d3bfc9}
+.g3-jt,.g3-col,.g3-grille>.g3-bord{border-left-color:#d3bfc9!important}
+.g3-axe{border-right-color:#c7b2bc}
+.g3-tete{border-bottom-color:#c7b2bc}
+.g3-bande{border-top-color:#d3bfc9}
+.g3-jt{padding:4px 6px 6px}
+.g3-jn{width:36px;height:36px;font-size:28px}
+.g3-js,.g3-jm{font-size:11px}
+.g3-fl{width:38px;height:38px;font-size:26px}
+.g3-coin,.g3-tete .g3-bord{padding-top:8px}
+.g3-hr{font-size:11px}
+.g-ev{padding:3px 7px 4px;gap:0}
+.g-plein .pres{margin-top:2px}
+.g-plein .pb{font-size:11px;padding:1px 8px}
+.g-plein .qui{font-size:10.5px}
+.g-serre{padding:3px 5px}
+.g-rang{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;margin-top:2px;overflow:hidden;max-height:26px}
+.g-rang .pres{margin:0}
+.g-rang .g-ic{position:static;margin:0}
+.g-serre .pb,.g-serre .pb-autre{width:21px!important;height:21px!important}
+.g-serre .g-ic .bt-copie{width:19px;height:19px}
+.g3-longs{grid-row:auto;margin:0 4px 2px;border:1px dashed #d3bfc9;border-radius:8px;background:#fff}
+.g3-longs>summary{cursor:pointer;list-style:none;padding:4px 10px;font-size:12px;font-weight:600;color:#6b5f65}
+.g3-longs>summary::-webkit-details-marker{display:none}
+.g3-longs>summary::after{content:" ▸"}.g3-longs[open]>summary::after{content:" ▾"}
+.g3-longs .g-bande{margin:0 6px 4px;min-height:28px}

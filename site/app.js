@@ -961,8 +961,8 @@
 
   // ---------- Ordinateur : grille 3 jours avec les heures ----------
   var debut3 = '';
-  var formatAg = store('vm-format') === 'liste' ? 'liste' : 'grille';
-  var NB_JOURS = 3, H_DEB = 7, H_FIN = 24, PX_H = 80;
+  var formatAg = store('vm-format') === 'grille' ? 'grille' : 'liste'; // la liste s'ouvre par défaut
+  var NB_JOURS = 3, H_DEB = 8, H_FIN = 23, PX_H = 54;
   function grandEcran() { return window.innerWidth >= 1000; }
   var etaitGrand = grandEcran();
   window.addEventListener('resize', function () { var g = grandEcran(); if (g !== etaitGrand) { etaitGrand = g; if (vue === 'agenda') rendre(); } });
@@ -1039,9 +1039,9 @@
     if (mode === 'plein') b.appendChild(boutonsIcones(e, t));
     b.appendChild(el('span', 'g-h', quand + (mode === 'plein' && e.type ? ' · ' + e.type : '')));
     b.appendChild(ti);
-    if (lieu) b.appendChild(el('span', 'g-l', '📍 ' + lieu));
-    if (t.g !== 'majo') b.appendChild(blocPresence(e.id));
-    if (mode === 'serre') b.appendChild(boutonsIcones(e, t));
+    if (lieu && mode === 'plein') b.appendChild(el('span', 'g-l', '📍 ' + lieu));
+    if (mode === 'serre') { var rg = el('div', 'g-rang'); if (t.g !== 'majo') rg.appendChild(blocPresence(e.id)); rg.appendChild(boutonsIcones(e, t)); b.appendChild(rg); }
+    else if (t.g !== 'majo') b.appendChild(blocPresence(e.id));
     return b;
   }
   function grilleTroisJours() {
@@ -1079,6 +1079,13 @@
     if (bandeEvs.length) {
       bande = el('div', 'g3-bande');
       bande.appendChild(el('div', 'g3-bande-lib', 'Toute la journée'));
+      var longs = bandeEvs.filter(function (e) { return e.date_fin && (dDe(e.date_fin) - dDe(e.date)) / 864e5 >= 7; });
+      bandeEvs = bandeEvs.filter(function (e) { return longs.indexOf(e) < 0; });
+      if (longs.length) {
+        var dl = el('details', 'g3-longs'); var sm = el('summary', '', '📌 ' + longs.length + ' événement' + (longs.length > 1 ? 's' : '') + ' sur plusieurs semaines (expositions, concertations…)');
+        dl.appendChild(sm); longs.forEach(function (e) { dl.appendChild(blocGrille(e, null, 'bande')); });
+        dl.style.gridColumn = '2 / ' + (jours.length + 2); bande.appendChild(dl);
+      }
       bandeEvs.forEach(function (e) {
         var fin = e.date_fin && e.date_fin > e.date ? e.date_fin : e.date;
         var i0 = Math.max(0, jours.indexOf(e.date < kDeb ? kDeb : e.date)), i1 = jours.indexOf(fin > kFin ? kFin : fin);
@@ -1089,6 +1096,9 @@
     corps.appendChild(tete);
     if (bande) corps.appendChild(bande); // hors de l'en-tête collant : ne reste pas affichée en défilant
     // grille horaire
+    // plage horaire : 8h-23h, élargie si un rendez-vous tombe en dehors
+    H_DEB = 8; H_FIN = 23;
+    jours.forEach(function (k) { evsDuJour(k).forEach(function (e) { var h = Math.floor(minutes(e.heure) / 60); if (h < H_DEB) H_DEB = h; if (h + 2 > H_FIN) H_FIN = Math.min(24, h + 2); }); });
     var g = el('div', 'g3-grille'); g.style.height = ((H_FIN - H_DEB) * PX_H) + 'px';
     var axe = el('div', 'g3-axe');
     for (var h = H_DEB; h < H_FIN; h++) { var lh = el('span', 'g3-hr', ('0' + h).slice(-2) + 'h'); lh.style.top = ((h - H_DEB) * PX_H) + 'px'; axe.appendChild(lh); }
