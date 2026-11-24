@@ -2038,7 +2038,7 @@
     b.classList.toggle('a-des-notifs', k > 0); b.setAttribute('aria-label', k ? k + ' notification' + (k > 1 ? 's' : '') + ' non lue' + (k > 1 ? 's' : '') : 'Notifications');
     // pastille sur l'icône de l'appli (écran d'accueil, barre des tâches) quand le système le permet
     try { if (navigator.setAppBadge) { if (k) navigator.setAppBadge(k); else navigator.clearAppBadge(); } } catch (e) {}
-    try { caches.open('vm-badge').then(function (c) { c.put('compte', new Response(String(k))); }); } catch (e) {}
+    try { caches.open('vm-badge').then(function (c) { c.put('compte', new Response(String(k))); }); } catch (e) {}    if (document.getElementById('bulle-notif')) majBulleInvitation(true);
   }
   function envoyerEtat(corps) {
     var n = nomNotif(); if (!n) return Promise.resolve();
@@ -2324,8 +2324,28 @@
       var actif = !!(s && store('vm-push-nom'));
       cl.classList.toggle('a-activer', !actif);
       if (!actif) cl.title = 'Activez les notifications sur cet appareil'; else cl.title = 'Notifications';
+      majBulleInvitation(!actif);
     });
   }
+  // Petite bulle sous la cloche : « Hugo veut vous envoyer des notifications »
+  function majBulleInvitation(montrer) {
+    var b = document.getElementById('bulle-notif');
+    var ferme = false; try { ferme = sessionStorage.getItem('vm-bulle-fermee') === '1'; } catch (x) {}
+    if (!montrer || ferme || /collaborateur/.test(moi || '')) { if (b) b.remove(); return; }
+    var k = nonLues();
+    var txt = k ? '📩 Hugo vous a envoyé ' + k + ' message' + (k > 1 ? 's' : '') + '. Touchez la cloche pour ' + (k > 1 ? 'les' : 'le') + ' lire et activer les notifications.'
+                : '🔔 Hugo Sajhau veut vous envoyer des notifications. Touchez la cloche pour les activer sur cet appareil.';
+    if (!b) {
+      b = el('div', 'bulle-notif'); b.id = 'bulle-notif'; b.setAttribute('role', 'status');
+      var t = el('button', 'bulle-t'); t.type = 'button'; t.addEventListener('click', function () { ouvrirNotifs(); });
+      var x = el('button', 'bulle-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Masquer'); x.addEventListener('click', function () { try { sessionStorage.setItem('vm-bulle-fermee', '1'); } catch (y) {} b.remove(); });
+      b.appendChild(t); b.appendChild(x); document.body.appendChild(b);
+    }
+    b.querySelector('.bulle-t').textContent = txt;
+    var cl = document.getElementById('cloche').getBoundingClientRect();
+    b.style.top = (cl.bottom + 10) + 'px'; b.style.right = Math.max(8, window.innerWidth - cl.right - 14) + 'px';
+  }
+  window.addEventListener('resize', function () { var b = document.getElementById('bulle-notif'); if (b) majBulleInvitation(true); });
   majInvitationCloche();
   // une notification arrive pendant que l'appli est ouverte : la cloche se met à jour tout de suite
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'notif') rafraichirPresences(); });

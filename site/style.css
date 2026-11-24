@@ -1194,3 +1194,8 @@ body .compte.initiales{font-size:12.5px}
 .outils-ag .bt-nospres.on{background:#fff;color:#c93a6b;border:1.5px solid #e0457b}
 @media (max-width:759px){.outils-ag .bt-nospres.on{--fond-ic:#fff}}
 .pres-elus-titre{margin:4px auto 10px;padding:8px 14px;border:1px solid #f0c4d6;border-radius:12px;background:#fdeef5;color:#a3305f;font-weight:600;font-size:13.5px;text-align:center;max-width:1100px}
+/* bulle d'invitation sous la cloche */
+.bulle-notif{position:fixed;z-index:30;max-width:290px;display:flex;align-items:flex-start;gap:4px;background:#c8437f;color:#fff;border-radius:14px;padding:9px 6px 9px 12px;box-shadow:0 8px 24px rgba(200,67,127,.35);animation:nt-entre .2s ease-out}
+.bulle-notif::before{content:"";position:absolute;top:-6px;right:18px;width:12px;height:12px;background:#c8437f;transform:rotate(45deg);border-radius:2px}
+.bulle-t{border:0;background:none;color:#fff;font:600 13px/1.35 var(--texte);text-align:left;cursor:pointer;padding:0}
+.bulle-x{border:0;background:none;color:#fff;opacity:.8;font-size:13px;cursor:pointer;padding:0 4px}
