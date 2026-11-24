@@ -972,7 +972,10 @@
     var vus = {};
     return evs.filter(function (e) { var k = (e.date || '') + '|' + (e.heure || '') + '|' + norm(e.titre).replace(/[^a-z0-9]/g, ''); if (vus[k]) return false; vus[k] = 1; return true; });
   }
-  function filtreTheme(e) { return filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo'; }
+  function filtreTheme(e) {
+    if (monAgenda && !(D.presences[e.id] || {})[moi]) return false; // « Agenda de … » : seulement mes présences et « peut-être »
+    return filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo';
+  }
   function surPlusieursJours(e) { return !!(e.date_fin && e.date_fin > e.date); }
   // rendez-vous à placer dans la grille horaire du jour k (avec une heure, sur un seul jour)
   function evsDuJour(k) {
@@ -1141,8 +1144,8 @@
     lg.appendChild(lgc); // légende retirée de la barre (24/11)
     v.appendChild(outils);
 
-    // Ordinateur : choix du format (grille 3 jours ou liste comme avant)
-    if (grandEcran() && !monAgenda) {
+    // Ordinateur : choix du format (grille 3 jours ou liste comme avant), aussi pour « Agenda de … »
+    if (grandEcran()) {
       var fmt = el('div', 'g3-format'); fmt.setAttribute('role', 'group'); fmt.setAttribute('aria-label', 'Format de l\'agenda');
       [['grille', '▦ Grille 3 jours'], ['liste', '☰ Liste']].forEach(function (f) {
         var bf = el('button', formatAg === f[0] ? 'on' : '', f[1]); bf.type = 'button'; bf.setAttribute('aria-pressed', formatAg === f[0] ? 'true' : 'false');
@@ -1152,8 +1155,9 @@
       v.appendChild(fmt);
     }
     // Ordinateur : vue « 3 jours » avec les heures à gauche (flèches pour avancer ou reculer)
-    if (grandEcran() && !monAgenda && formatAg === 'grille') {
+    if (grandEcran() && formatAg === 'grille') {
       if (jourChoisi) { debut3 = jourChoisi; jourChoisi = ''; }
+      if (monAgenda) v.appendChild(barreMonAgenda(lundi(new Date())));
       v.appendChild(grilleTroisJours()); return;
     }
 
