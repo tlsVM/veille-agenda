@@ -1774,14 +1774,50 @@
     if (s < 2 * 86400) return 'hier à ' + dateNotif(iso).split(' à ')[1];
     return dateNotif(iso);
   }
+  var popNotifs = null;
+  function estHugo() { return /collaborateur/.test(moi || '') || /collaborateur/.test(store('vm-push-nom') || ''); }
+  // Fenêtre qui s'ouvre juste sous la cloche (comme sur un réseau social)
   function ouvrirNotifs() {
-    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion notifs'); bx.setAttribute('role', 'dialog');
-    bx.appendChild(el('h2', '', 'Notifications'));
+    if (popNotifs) { popNotifs.fermer(); return; }
+    var cl = document.getElementById('cloche');
+    var bx = el('div', 'nt-pop'); bx.setAttribute('role', 'dialog'); bx.setAttribute('aria-label', 'Notifications');
+    var fl = el('span', 'nt-fleche'); bx.appendChild(fl);
+    var haut = el('div', 'nt-haut'); bx.appendChild(haut);
+    var retour = el('button', 'nt-icone', '←'); retour.type = 'button'; retour.setAttribute('aria-label', 'Retour aux notifications'); retour.title = 'Retour';
+    var titre = el('span', 'nt-titre', 'Notifications');
+    var outils = el('span', 'nt-outils');
+    var bEnv = el('button', 'nt-icone', '✏️'); bEnv.type = 'button'; bEnv.setAttribute('aria-label', 'Envoyer une notification'); bEnv.title = 'Envoyer une notification';
+    var bReg = el('button', 'nt-icone', '⚙️'); bReg.type = 'button'; bReg.setAttribute('aria-label', 'Réglages des notifications'); bReg.title = 'Réglages';
+    outils.appendChild(bEnv); outils.appendChild(bReg);
+    haut.appendChild(retour); haut.appendChild(titre); haut.appendChild(outils);
     var zone = el('div', 'nt-zone'); bx.appendChild(zone);
-    function fermer() { m.remove(); rafraichirListe = null; }
+    function placer() {
+      var r = cl.getBoundingClientRect(), l = Math.min(380, window.innerWidth - 16);
+      var gauche = Math.max(8, Math.min(r.right + 12 - l, window.innerWidth - l - 8));
+      bx.style.width = l + 'px'; bx.style.left = gauche + 'px'; bx.style.top = (r.bottom + 10) + 'px';
+      bx.style.maxHeight = (window.innerHeight - r.bottom - 20) + 'px';
+      fl.style.left = (r.left + r.width / 2 - gauche - 7) + 'px';
+    }
+    function horsClic(e) { if (!bx.contains(e.target) && !cl.contains(e.target)) fermer(); }
+    function echap(e) { if (e.key === 'Escape') fermer(); }
+    function fermer() {
+      bx.remove(); rafraichirListe = null; popNotifs = null; cl.classList.remove('ouverte');
+      document.removeEventListener('mousedown', horsClic, true); document.removeEventListener('touchstart', horsClic, true);
+      document.removeEventListener('keydown', echap); window.removeEventListener('resize', placer); window.removeEventListener('scroll', placer);
+    }
+    var mode = 'liste';
+    function montrer(md) {
+      mode = md; mm.hidden = md !== 'liste'; ap.hidden = md !== 'reglage'; en.hidden = md !== 'envoi';
+      retour.hidden = md === 'liste'; outils.hidden = md !== 'liste';
+      titre.textContent = md === 'reglage' ? 'Réglages' : md === 'envoi' ? 'Envoyer' : 'Notifications';
+      bEnv.hidden = !estHugo(); zone.scrollTop = 0;
+    }
+    retour.addEventListener('click', function () { montrer('liste'); });
+    bReg.addEventListener('click', function () { montrer('reglage'); });
+    bEnv.addEventListener('click', function () { montrer('envoi'); });
 
     // 1) La liste des messages (comme sur un réseau social)
-    var mm = el('div', 'nt-bloc nt-liste'); zone.appendChild(mm);
+    var mm = el('div', 'nt-liste'); zone.appendChild(mm);
     var vuAvant = Math.max(horodatage(etatNotif().vu), horodatage(store('vm-notif-vu'))); // les « nouveaux » restent en couleur pendant cette ouverture
     function peindreListe() {
       mm.textContent = '';
@@ -1840,11 +1876,10 @@
     peindreListe(); rafraichirListe = peindreListe;
 
     // 2) Cet appareil
-    var ap = el('details', 'nt-bloc nt-reglage'); zone.appendChild(ap);
+    var ap = el('div', 'nt-reglage'); zone.appendChild(ap);
     function peindreAppareil() {
       ap.textContent = '';
-      var sm = el('summary', '', '⚙️ Recevoir les notifications sur cet appareil'); ap.appendChild(sm);
-      ap.open = true;
+      ap.appendChild(el('h3', '', 'Sur cet appareil'));
       if (IOS && !INSTALLEE) {
         ap.appendChild(el('p', '', 'Sur iPhone, les notifications ne marchent que dans l\'appli installée : touchez Partager ⎙ puis « Sur l\'écran d\'accueil », ouvrez Vivre Mieux depuis l\'écran d\'accueil et revenez ici sur la cloche 🔔.'));
         return;
@@ -1857,7 +1892,6 @@
       abonnementActuel().then(function (s) {
         var nom = store('vm-push-nom');
         if (s && nom) {
-          sm.textContent = '⚙️ Notifications activées sur cet appareil ✅'; ap.open = false;
           ap.appendChild(el('p', 'nt-ok', '✅ Activées pour ' + nom.replace(' (collaborateur)', '') + ' sur cet appareil.'));
           var ess = el('button', 'pb', 'Recevoir un essai'); ess.type = 'button';
           var dsc = el('button', 'pb peut', 'Désactiver'); dsc.type = 'button';
@@ -1877,7 +1911,6 @@
           var l = el('div', 'nt-boutons'); l.appendChild(ess); l.appendChild(dsc); ap.appendChild(l); ap.appendChild(msg);
           return;
         }
-        ap.open = true;
         ap.appendChild(el('p', '', 'Recevez sur cet appareil les messages de Hugo (rendez-vous, informations sur vos dossiers), même quand l\'appli est fermée.'));
         var lab = el('label', 'nt-lab', 'Ces notifications sont pour : ');
         var sel = el('select');
@@ -1889,7 +1922,7 @@
         bt.addEventListener('click', function () {
           if (!sel.value) { msg2.textContent = 'Choisissez d\'abord votre nom.'; sel.focus(); return; }
           bt.disabled = true; msg2.textContent = 'Votre appareil va vous demander l\'autorisation : répondez « Autoriser ».';
-          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); peindreListe(); })
+          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); peindreListe(); bEnv.hidden = !estHugo(); })
             .catch(function (e) {
               bt.disabled = false;
               msg2.textContent = e && e.message === 'refus' ? 'Autorisation refusée : rien n\'a été activé.' : 'L\'activation n\'a pas marché. Réessayez dans un instant.';
@@ -1901,12 +1934,10 @@
     peindreAppareil();
 
     // 3) Envoyer (Hugo)
-    var en = el('details', 'nt-bloc nt-envoi'); zone.appendChild(en);
+    var en = el('div', 'nt-envoi'); zone.appendChild(en);
     function peindreEnvoi() {
       en.textContent = '';
-      var hugo = /collaborateur/.test(moi || '') || /collaborateur/.test(store('vm-push-nom') || '') || store('vm-code-envoi');
-      en.hidden = !hugo; if (!hugo) return;
-      en.appendChild(el('summary', '', '✉️ Envoyer une notification'));
+      if (!estHugo()) return;
       if (!D.envoi_actif) { en.appendChild(el('p', 'nb', 'Pour activer l\'envoi, ajoutez une ligne \'code_envoi\' => \'…\' dans ~/agenda-data/config.php sur le serveur.')); return; }
       en.appendChild(el('p', 'nb', 'Destinataires (entre parenthèses : nombre d\'appareils où la personne a activé les notifications)'));
       var cases = el('div', 'nt-dest'); var coches = {};
@@ -1955,9 +1986,15 @@
     }
     peindreEnvoi();
 
-    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', fermer); bx.appendChild(f);
-    m.addEventListener('click', function (e) { if (e.target === m) fermer(); });
-    m.appendChild(bx); document.body.appendChild(m);
+    // pas encore activé sur cet appareil et pas de message : on montre directement les réglages
+    montrer('liste');
+    abonnementActuel().then(function (s) { if (!s && !mesNotifs().length && mode === 'liste') montrer('reglage'); });
+    document.body.appendChild(bx); placer(); cl.classList.add('ouverte');
+    popNotifs = { fermer: fermer };
+    setTimeout(function () {
+      document.addEventListener('mousedown', horsClic, true); document.addEventListener('touchstart', horsClic, true);
+      document.addEventListener('keydown', echap); window.addEventListener('resize', placer); window.addEventListener('scroll', placer, { passive: true });
+    }, 0);
   }
   document.getElementById('cloche').addEventListener('click', ouvrirNotifs);
   // une notification arrive pendant que l'appli est ouverte : la cloche se met à jour tout de suite

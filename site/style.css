@@ -911,7 +911,7 @@ img,video,iframe,table{max-width:100%}
 .cloche.a-des-notifs{animation:cloche-bouge 1.2s ease 2}
 @keyframes cloche-bouge{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(8deg)}60%{transform:rotate(-4deg)}}
 .cloche-nb{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;border-radius:999px;background:var(--rose-fort);color:#fff;font:700 11px/18px var(--texte);text-align:center;padding:0 4px;box-shadow:0 0 0 2px #fff;box-sizing:border-box}
-.notifs h3{margin:14px 0 6px;font-size:14px;color:var(--vert-fonce)}
+.nt-pop h3{margin:14px 0 6px;font-size:14px;color:var(--vert-fonce)}
 .nt-bloc{border-top:1px solid var(--trait);padding-top:4px;margin-top:10px}
 .nt-bloc:first-child{border-top:0;margin-top:0;padding-top:0}
 .nt-tete{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0 4px}
@@ -943,3 +943,17 @@ img,video,iframe,table{max-width:100%}
 .nt-reglage summary,.nt-envoi summary{cursor:pointer;font-weight:600;color:var(--vert-fonce);padding:8px 0;font-size:13.5px}
 .nt-dest{display:grid;grid-template-columns:1fr;gap:3px;font-size:13px;margin:4px 0 6px}
 .nt-case input{vertical-align:middle}
+
+/* Fenêtre sous la cloche */
+.nt-pop{position:fixed;z-index:60;background:#fff;color:var(--encre);border-radius:16px;box-shadow:0 12px 40px rgba(14,50,34,.28),0 0 0 1px var(--trait);display:flex;flex-direction:column;overflow:visible;animation:nt-entre .15s ease-out}
+@keyframes nt-entre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.nt-fleche{position:absolute;top:-7px;width:14px;height:14px;background:#fff;transform:rotate(45deg);box-shadow:-1px -1px 0 0 var(--trait);border-radius:3px 0 0 0}
+.nt-haut{position:relative;display:flex;align-items:center;gap:6px;padding:10px 10px 8px 14px;border-bottom:1px solid var(--trait);background:#fff;border-radius:16px 16px 0 0}
+.nt-titre{flex:1;font:400 24px/1 var(--titre);letter-spacing:.03em;text-transform:uppercase;color:var(--vert)}
+.nt-outils{display:flex;gap:4px}
+.nt-icone{border:0;background:var(--vert-pale);width:34px;height:34px;border-radius:50%;font-size:16px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.nt-icone:hover{background:var(--vert-clair)}
+.nt-icone[hidden],.nt-outils[hidden]{display:none}
+.nt-zone{overflow:auto;padding:8px 12px 12px;overscroll-behavior:contain}
+.nt-zone p{font-size:13px;color:var(--gris);margin:0 0 10px}
+.cloche.ouverte{background:var(--vert-clair)}
