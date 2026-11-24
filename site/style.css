@@ -1373,3 +1373,9 @@ html:has(.modale:not([hidden])),body:has(.modale:not([hidden])){overflow:hidden;
   .bulle-notif.vers-haut::before{top:auto;bottom:-6px}
   .nt-pop.vers-haut .nt-fleche{top:auto;bottom:-7px;box-shadow:1px 1px 0 0 var(--trait)}
 }
+/* la loupe passe dans la barre du bas sur téléphone */
+@media (max-width:759px){
+  body.avec-barre-bas .onglets button[data-v=recherche]{display:none!important}
+  .barre-bas .bb-bt,.barre-bas .chat-bt,.barre-bas .cloche{width:46px}
+  .barre-bas{left:10px!important;right:10px!important}
+}

@@ -2480,17 +2480,18 @@
     var barre = document.getElementById('barre-bas'), mq = window.matchMedia('(max-width:759px)'), moiZone = document.querySelector('.moi');
     var ICO = {
       jour: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
-      agenda: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+      agenda: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      recherche: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
     };
     function bt(v, nom) { var b = el('button', 'bb-bt bb-' + v); b.type = 'button'; b.innerHTML = ICO[v]; b.setAttribute('aria-label', nom); b.title = nom; b.addEventListener('click', function () { vue = v; if (v === 'agenda') formatAg = 'liste'; store('vm-vue', vue); rendre(); window.scrollTo(0, 0); }); return b; }
-    var bJ = bt('jour', 'Actualité'), bA = bt('agenda', 'Agenda');
+    var bJ = bt('jour', 'Actualité'), bA = bt('agenda', 'Agenda'), bR = bt('recherche', 'Rechercher');
     var cl = document.getElementById('cloche'), ch = document.getElementById('chat-bt'), co = document.getElementById('compte');
     function placer() {
-      if (mq.matches) { barre.hidden = false; barre.appendChild(bJ); barre.appendChild(bA); barre.appendChild(ch); barre.appendChild(cl); barre.appendChild(co); document.body.classList.add('avec-barre-bas'); }
+      if (mq.matches) { barre.hidden = false; barre.appendChild(bJ); barre.appendChild(bA); barre.appendChild(ch); barre.appendChild(bR); barre.appendChild(cl); barre.appendChild(co); document.body.classList.add('avec-barre-bas'); }
       else { barre.hidden = true; moiZone.appendChild(ch); moiZone.appendChild(cl); moiZone.appendChild(co); document.body.classList.remove('avec-barre-bas'); }
     }
     placer(); (mq.addEventListener ? mq.addEventListener('change', placer) : mq.addListener(placer));
-    window.majBarreBas = function () { bJ.classList.toggle('on', vue === 'jour'); bA.classList.toggle('on', vue === 'agenda'); };
+    window.majBarreBas = function () { bJ.classList.toggle('on', vue === 'jour'); bA.classList.toggle('on', vue === 'agenda'); bR.classList.toggle('on', vue === 'recherche'); };
   })();
 
   // ---------- Application installable ----------
