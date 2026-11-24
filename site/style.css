@@ -1300,3 +1300,13 @@ body,.page{background:var(--fond)!important}
   .outils-ag.outils-ag .bt-cal:focus-visible,.outils-ag.outils-ag .bt-ajout:focus-visible,.outils-ag.outils-ag .bt-monag:focus-visible,.outils-ag.outils-ag .bt-presences:focus-visible{outline:2px solid var(--rose-fort);outline-offset:2px}
 }
 @media (max-width:759px){.outils-ag.outils-ag .lb{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:100%}}
+
+/* 24/11 : fenêtres stables sur téléphone (plus de « ballade » gauche-droite), pour tous les utilisateurs */
+.modale{overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y}
+.modale-boite{max-width:min(560px,calc(100vw - 24px));box-sizing:border-box;overflow-x:hidden}
+.modale-boite input,.modale-boite select,.modale-boite textarea{max-width:100%;min-width:0;box-sizing:border-box}
+.modale-boite input[type=date],.modale-boite input[type=time]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;min-height:40px;text-align:left}
+.modale-boite img{max-width:100%;height:auto}
+.modale-boite *{overflow-wrap:anywhere}
+html:has(.modale:not([hidden])),body:has(.modale:not([hidden])){overflow:hidden;overscroll-behavior:none}
+.modale-boite>.croix{align-self:flex-end;margin-left:auto}
