@@ -1108,3 +1108,42 @@ body .compte.initiales{font-size:12.5px}
 .cloche.a-activer::after{content:"";position:absolute;inset:-3px;border-radius:999px;box-shadow:0 0 0 0 rgba(200,67,127,.7);animation:cloche-halo 1.2s ease-out infinite;pointer-events:none}
 @keyframes cloche-appel{0%,40%,100%{transform:rotate(0)}5%{transform:rotate(18deg)}10%{transform:rotate(-16deg)}15%{transform:rotate(12deg)}20%{transform:rotate(-8deg)}25%{transform:rotate(4deg)}30%{transform:rotate(0)}}
 @keyframes cloche-halo{0%{box-shadow:0 0 0 0 rgba(200,67,127,.75);background:rgba(245,181,210,.45)}70%{box-shadow:0 0 0 12px rgba(200,67,127,0);background:rgba(245,181,210,0)}100%{box-shadow:0 0 0 0 rgba(200,67,127,0)}}
+/* 24/11 (2) : grille lisible — bande « toute la journée », blocs serrés compacts */
+.g-ev{cursor:default}
+.g-ev .g-t{cursor:pointer}
+/* plein : un seul rendez-vous à cette heure */
+.g-plein .g-h{padding-right:74px}
+.g-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:11.5px;color:#4d5a53}
+/* serré : plusieurs rendez-vous côte à côte → boutons ronds, sans texte */
+.g-serre{overflow:hidden;padding:4px 5px 5px;gap:2px}
+.g-serre .g-h{padding-right:0;font-size:11px}
+.g-serre .g-t{font-size:12px;-webkit-line-clamp:2}
+.g-serre .pres,.g-bande .pres{flex-wrap:nowrap;gap:3px;margin-top:2px}
+.g-serre .pb,.g-bande .pb{font-size:0!important;width:24px;height:24px;padding:0!important;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.g-serre .pb::before,.g-bande .pb::before{font-size:12px;font-weight:700;content:"✓"}
+.g-serre .pb[data-s=peut]::before,.g-bande .pb[data-s=peut]::before{content:"?"}
+.g-serre .pb.on,.g-bande .pb.on{background:var(--vert);color:#fff}
+.g-serre .pb.peut.on,.g-bande .pb.peut.on{background:var(--rose-fort);border-color:var(--rose-fort);color:#fff}
+.g-serre .pb-autre,.g-bande .pb-autre{font-size:0!important;width:24px;height:24px;padding:0!important;text-decoration:none;flex:none}
+.g-serre .pb-autre::before,.g-bande .pb-autre::before{content:"✎";font-size:13px;color:var(--gris)}
+.g-serre .qui,.g-bande .qui{display:none!important}
+.g-serre .g-ic{position:static;margin-top:1px}
+.g-serre .g-ic .bt-copie{width:20px;height:20px}
+/* bande du haut */
+.g3-bande{grid-column:1 / -1;display:grid;grid-auto-flow:row dense;grid-template-columns:56px repeat(3,minmax(0,1fr)) 56px;gap:3px 0;padding:6px 0 8px;border-top:1px solid var(--trait);background:#fcf9fa}
+.g3-bande-lib{grid-column:1;grid-row:1;font-size:10.5px;font-weight:600;color:#8a8f8c;text-align:right;padding:6px 8px 0 0;line-height:1.2}
+.g-bande{position:relative;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;margin:0 4px;padding:3px 6px 3px 8px;min-height:32px}
+.g-bl{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1;overflow:hidden}
+.g-bl .g-h{flex:none;padding:0;font-size:11px}
+.g-bl .g-t{-webkit-line-clamp:1;white-space:nowrap;text-overflow:ellipsis;display:block;overflow:hidden;font-size:12.5px;flex:0 1 auto;min-width:0}
+.g-bl .g-l{flex:0 1 auto;min-width:40px}
+.g-br{display:flex;align-items:center;gap:6px;flex:none}
+.g-br .pres{margin:0}
+.g-br .g-ic{position:static}
+.g-br .g-ic .bt-copie{width:20px;height:20px}
+.g-bl .g-h{text-transform:none}
+.tres-serre .g-l{display:none}
+.tres-serre .g-t{-webkit-line-clamp:3;font-size:11.5px;line-height:1.15;word-break:break-word;hyphens:auto}
+.tres-serre .pres{gap:2px}
+.tres-serre .pb,.tres-serre .pb-autre{width:21px!important;height:21px!important}
+.tres-serre .g-ic .bt-copie{width:18px;height:18px}

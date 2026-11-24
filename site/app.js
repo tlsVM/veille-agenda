@@ -967,10 +967,17 @@
   var etaitGrand = grandEcran();
   window.addEventListener('resize', function () { var g = grandEcran(); if (g !== etaitGrand) { etaitGrand = g; if (vue === 'agenda') rendre(); } });
   function minutes(h) { var p = (h || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
-  function evsDuJour(k) {
-    return D.evenements.filter(function (e) { return enCours(e, k) && (filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo'); });
+  // sans doublon : même jour, même heure, même titre (ex. ligne de la feuille + agenda Gmail)
+  function sansDoublons(evs) {
+    var vus = {};
+    return evs.filter(function (e) { var k = (e.date || '') + '|' + (e.heure || '') + '|' + norm(e.titre).replace(/[^a-z0-9]/g, ''); if (vus[k]) return false; vus[k] = 1; return true; });
   }
-  // place côte à côte les rendez-vous qui se chevauchent (durée affichée : 1h30)
+  function filtreTheme(e) { return filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo'; }
+  function surPlusieursJours(e) { return !!(e.date_fin && e.date_fin > e.date); }
+  // rendez-vous à placer dans la grille horaire du jour k (avec une heure, sur un seul jour)
+  function evsDuJour(k) {
+    return sansDoublons(D.evenements.filter(function (e) { return e.date === k && e.heure && !surPlusieursJours(e) && filtreTheme(e); }));
+  }
   function colonnes(evs) {
     var l = evs.map(function (e) { var d = minutes(e.heure); return { e: e, d: d, f: d + 90 }; }).sort(function (x, y) { return x.d - y.d; });
     var grp = [], cur = [], fin = -1;
@@ -991,15 +998,7 @@
     m.addEventListener('click', function (x) { if (x.target === m) { m.remove(); rendre(); } });
     document.body.appendChild(m); majPresences();
   }
-  function blocGrille(e, x) {
-    var t = TYPES[typeDe(e)], b = el('div', 'g-ev' + (e.important === 'oui' ? ' cle' : ''));
-    b.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur : t.c);
-    b.style.setProperty('--f', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur + '1a' : t.f);
-    if (x) {
-      b.style.top = ((x.d - H_DEB * 60) / 60 * PX_H) + 'px'; b.style.minHeight = (90 / 60 * PX_H - 4) + 'px';
-      b.style.left = 'calc(' + (x.col / x.nb * 100) + '% + 2px)'; b.style.width = 'calc(' + (100 / x.nb) + '% - 4px)';
-    }
-    // boutons en haut à droite : envoyer (Hugo), ajouter à mon agenda, copier
+  function boutonsIcones(e, t) {
     var ic = el('div', 'g-ic');
     if (estHugo()) ic.appendChild(btNotif(function () { return notifDeEv(e); }));
     if (t.g !== 'majo') {
@@ -1008,14 +1007,38 @@
       ba.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirAjoutAgenda(e); }); ic.appendChild(ba);
     }
     ic.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
-    b.appendChild(ic);
-    b.appendChild(el('span', 'g-h', (e.heure ? hFmt(e.heure) + ' · ' : '') + (e.type || '')));
-    var ti = el('button', 'g-t', e.titre); ti.type = 'button'; ti.title = 'Voir le détail';
+    return ic;
+  }
+  function dateCourteFr(k) { var d = dDe(k); return d.getDate() + ' ' + MC[d.getMonth()].toLowerCase(); }
+  // mode : 'plein' (seul à cette heure), 'serre' (plusieurs côte à côte), 'bande' (journée entière ou plusieurs jours)
+  function blocGrille(e, x, mode) {
+    var t = TYPES[typeDe(e)], b = el('div', 'g-ev g-' + mode + (e.important === 'oui' ? ' cle' : ''));
+    var c = /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur : t.c;
+    b.style.setProperty('--c', c); b.style.setProperty('--f', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur + '1a' : t.f);
+    if (x) {
+      b.style.top = ((x.d - H_DEB * 60) / 60 * PX_H) + 'px';
+      if (mode === 'plein') b.style.minHeight = (90 / 60 * PX_H - 4) + 'px'; else b.style.height = (90 / 60 * PX_H - 4) + 'px';
+      b.style.left = 'calc(' + (x.col / x.nb * 100) + '% + 2px)'; b.style.width = 'calc(' + (100 / x.nb) + '% - 4px)';
+    }
+    var quand = (e.heure ? hFmt(e.heure) : '') + (surPlusieursJours(e) ? (e.heure ? ' · ' : '') + 'du ' + dateCourteFr(e.date) + ' au ' + dateCourteFr(e.date_fin) : '');
+    var lieu = [e.quartier, e.lieu].filter(Boolean).join(' · ');
+    var ti = el('button', 'g-t', e.titre); ti.type = 'button'; ti.title = e.titre + ' (voir le détail)';
     ti.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirEvenement(e); });
+    b.title = (quand ? quand + ' · ' : '') + e.titre + (lieu ? ' · ' + lieu : '') + (e.type ? ' · ' + e.type : '');
+    if (mode === 'bande') {
+      var l = el('div', 'g-bl');
+      if (quand) l.appendChild(el('span', 'g-h', quand)); l.appendChild(ti);
+      if (lieu) l.appendChild(el('span', 'g-l', lieu));
+      b.appendChild(l);
+      var r = el('div', 'g-br'); if (t.g !== 'majo') r.appendChild(blocPresence(e.id)); r.appendChild(boutonsIcones(e, t)); b.appendChild(r);
+      return b;
+    }
+    if (mode === 'plein') b.appendChild(boutonsIcones(e, t));
+    b.appendChild(el('span', 'g-h', quand + (mode === 'plein' && e.type ? ' · ' + e.type : '')));
     b.appendChild(ti);
-    if (e.lieu || e.quartier) b.appendChild(el('span', 'g-l', e.quartier || e.lieu));
+    if (lieu) b.appendChild(el('span', 'g-l', '📍 ' + lieu));
     if (t.g !== 'majo') b.appendChild(blocPresence(e.id));
-    b.addEventListener('click', function (ev) { if (ev.target === b || ev.target.classList.contains('g-l') || ev.target.classList.contains('g-h')) ouvrirEvenement(e); });
+    if (mode === 'serre') b.appendChild(boutonsIcones(e, t));
     return b;
   }
   function grilleTroisJours() {
@@ -1039,12 +1062,29 @@
     jours.forEach(function (k) {
       var d = dDe(k), c = el('div', 'g3-jt' + (k === AUJ ? ' auj' : ''));
       c.appendChild(el('span', 'g3-js', JC[d.getDay()])); c.appendChild(el('span', 'g3-jn', String(d.getDate()))); c.appendChild(el('span', 'g3-jm', MOIS[d.getMonth()]));
-      var sansH = evsDuJour(k).filter(function (e) { return !e.heure; });
-      if (sansH.length) { var sh = el('div', 'g3-sansh'); sansH.forEach(function (e) { sh.appendChild(blocGrille(e)); }); c.appendChild(sh); }
       tete.appendChild(c);
     });
     var bord = el('div', 'g3-bord'); bord.appendChild(suiv); tete.appendChild(bord);
+    // bande du haut : rendez-vous sans heure ou sur plusieurs jours, une seule fois, étalés sur leurs jours
+    var kDeb = jours[0], kFin = jours[jours.length - 1];
+    var bandeEvs = sansDoublons(D.evenements.filter(function (e) {
+      if (!filtreTheme(e)) return false;
+      var fin = e.date_fin && e.date_fin > e.date ? e.date_fin : e.date;
+      return (!e.heure || surPlusieursJours(e)) && e.date <= kFin && fin >= kDeb;
+    })).sort(function (p, q) { return (p.date_fin || p.date).localeCompare(q.date_fin || q.date) || p.titre.localeCompare(q.titre); });
+    var bande = null;
+    if (bandeEvs.length) {
+      bande = el('div', 'g3-bande');
+      bande.appendChild(el('div', 'g3-bande-lib', 'Toute la journée'));
+      bandeEvs.forEach(function (e) {
+        var fin = e.date_fin && e.date_fin > e.date ? e.date_fin : e.date;
+        var i0 = Math.max(0, jours.indexOf(e.date < kDeb ? kDeb : e.date)), i1 = jours.indexOf(fin > kFin ? kFin : fin);
+        var bl = blocGrille(e, null, 'bande'); bl.style.gridColumn = (i0 + 2) + ' / ' + (i1 + 3);
+        bande.appendChild(bl);
+      });
+    }
     corps.appendChild(tete);
+    if (bande) corps.appendChild(bande); // hors de l'en-tête collant : ne reste pas affichée en défilant
     // grille horaire
     var g = el('div', 'g3-grille'); g.style.height = ((H_FIN - H_DEB) * PX_H) + 'px';
     var axe = el('div', 'g3-axe');
@@ -1052,7 +1092,7 @@
     g.appendChild(axe);
     jours.forEach(function (k) {
       var col = el('div', 'g3-col' + (k === AUJ ? ' auj' : ''));
-      colonnes(evsDuJour(k).filter(function (e) { return e.heure; })).forEach(function (x) { col.appendChild(blocGrille(x.e, x)); });
+      colonnes(evsDuJour(k)).forEach(function (x) { var bg = blocGrille(x.e, x, x.nb > 1 ? 'serre' : 'plein'); if (x.nb >= 4) bg.classList.add('tres-serre'); col.appendChild(bg); });
       if (k === AUJ) { var n = new Date(), mn = n.getHours() * 60 + n.getMinutes(); if (mn >= H_DEB * 60) { var ln = el('div', 'g3-now'); ln.style.top = ((mn - H_DEB * 60) / 60 * PX_H) + 'px'; col.appendChild(ln); } }
       g.appendChild(col);
     });
