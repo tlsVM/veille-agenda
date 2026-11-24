@@ -1094,3 +1094,12 @@ body .compte.initiales{font-size:12.5px}
 .g3-format button:focus-visible{outline:2px solid var(--rose-fort);outline-offset:-3px}
 /* format liste sur ordinateur : les jours les uns sous les autres, comme avant */
 @media (min-width:1000px){body.vue-agenda:not(:has(.g3)) #vue>:not(.outils-ag):not(.g3-format):not(.pied){max-width:1100px;margin-left:auto;margin-right:auto}}
+/* ordinateur : boutons de l'agenda centrés et alignés sur une ligne */
+@media (min-width:1000px){
+  .outils-ag{display:flex!important;flex-wrap:wrap;justify-content:center!important;align-items:center!important;gap:10px!important;grid-template-areas:none!important}
+  .outils-ag>*{grid-area:auto!important;margin:0!important;align-self:center!important;justify-self:auto!important}
+  .outils-ag .cal-wrap{display:flex;gap:10px;align-items:center}
+  .outils-ag button,.outils-ag .tri-theme select{height:36px!important}
+  .g3-format{display:flex;width:max-content;margin:8px auto 6px}
+  .g3-nav{justify-content:center;margin-left:0}
+}
