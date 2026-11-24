@@ -1405,3 +1405,14 @@ html:has(.modale:not([hidden])),body:has(.modale:not([hidden])){overflow:hidden;
   .monag-opt-corps{position:absolute;z-index:15;right:0;left:0;top:calc(100% + 4px);background:#fff;border:1px solid #f0c4d6;border-radius:10px;box-shadow:0 8px 24px rgba(18,51,38,.15);padding:8px 6px;text-align:center}
   .monag-opt-corps .nb{display:none}
 }
+/* 24/11 : téléphone — jours plus gros pour le doigt (puces qui défilent + petit calendrier) */
+@media (max-width:759px){
+  .car-nav{gap:8px;padding:4px 2px 10px}
+  .car-puce{min-height:44px;padding:8px 16px;font-size:15.5px;border-width:2px}
+  .outils-ag .cal-pop,.cal-pop{width:auto!important;max-width:none!important;left:6px!important;right:6px!important;padding:12px 10px}
+  .cal-grille{gap:4px}
+  .cal-d{width:42px;height:42px;font-size:16px}
+  .cal-d.a::after{width:6px;height:6px;margin-left:-3px;bottom:5px}
+  .cal-j{font-size:12.5px;padding:4px 0}
+  .cal-nav{width:40px;height:40px;font-size:14px}
+}
