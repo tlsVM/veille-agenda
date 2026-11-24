@@ -961,6 +961,7 @@
 
   // ---------- Ordinateur : grille 3 jours avec les heures ----------
   var debut3 = '';
+  var formatAg = store('vm-format') === 'liste' ? 'liste' : 'grille';
   var NB_JOURS = 3, H_DEB = 7, H_FIN = 24, PX_H = 80;
   function grandEcran() { return window.innerWidth >= 1000; }
   var etaitGrand = grandEcran();
@@ -1100,8 +1101,18 @@
     lg.appendChild(lgc); // légende retirée de la barre (24/11)
     v.appendChild(outils);
 
-    // Ordinateur : vue « 3 jours » avec les heures à gauche (flèches pour avancer ou reculer)
+    // Ordinateur : choix du format (grille 3 jours ou liste comme avant)
     if (grandEcran() && !monAgenda) {
+      var fmt = el('div', 'g3-format'); fmt.setAttribute('role', 'group'); fmt.setAttribute('aria-label', 'Format de l\'agenda');
+      [['grille', '▦ Grille 3 jours'], ['liste', '☰ Liste']].forEach(function (f) {
+        var bf = el('button', formatAg === f[0] ? 'on' : '', f[1]); bf.type = 'button'; bf.setAttribute('aria-pressed', formatAg === f[0] ? 'true' : 'false');
+        bf.addEventListener('click', function () { formatAg = f[0]; store('vm-format', f[0]); rendre(); });
+        fmt.appendChild(bf);
+      });
+      v.appendChild(fmt);
+    }
+    // Ordinateur : vue « 3 jours » avec les heures à gauche (flèches pour avancer ou reculer)
+    if (grandEcran() && !monAgenda && formatAg === 'grille') {
       if (jourChoisi) { debut3 = jourChoisi; jourChoisi = ''; }
       v.appendChild(grilleTroisJours()); return;
     }

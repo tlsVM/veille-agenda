@@ -1030,8 +1030,6 @@ body .compte.initiales{font-size:12.5px}
 /* 24/11 : ordinateur — les rubriques prennent toute la largeur de l'écran */
 @media (min-width:1000px){
   .page{max-width:none!important;margin:0!important;padding:20px 40px 48px!important;box-shadow:none!important}
-  .jours-g:not(.carrousel){display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:14px;align-items:start}
-  .jours-g:not(.carrousel)>.jour{margin:0}
   .actu-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;align-items:start}
   .actu-g>.actu{margin:0}
 }
@@ -1090,3 +1088,9 @@ body .compte.initiales{font-size:12.5px}
 .g-ev .pb{font-size:11.5px;padding:2px 9px}
 .g-ev .pb-autre{font-size:11px;padding:2px 2px}
 .g-ev .qui{font-size:11px}
+.g3-format{display:inline-flex;margin:4px 0 6px;border:1.5px solid var(--vert);border-radius:999px;overflow:hidden;background:#fff}
+.g3-format button{border:0;background:#fff;color:var(--vert);font:600 13px var(--texte);padding:5px 14px;cursor:pointer}
+.g3-format button.on{background:var(--vert);color:#fff}
+.g3-format button:focus-visible{outline:2px solid var(--rose-fort);outline-offset:-3px}
+/* format liste sur ordinateur : les jours les uns sous les autres, comme avant */
+@media (min-width:1000px){body.vue-agenda:not(:has(.g3)) #vue>:not(.outils-ag):not(.g3-format):not(.pied){max-width:1100px;margin-left:auto;margin-right:auto}}
