@@ -1211,6 +1211,14 @@
       var s = el('span'); var i = el('i'); i.style.background = x[0]; if (x[0] === '#fff') i.style.boxShadow = 'inset 0 0 0 1px #999'; s.appendChild(i); s.appendChild(document.createTextNode(x[1])); lgc.appendChild(s);
     });
     lg.appendChild(lgc); // légende retirée de la barre (24/11)
+    // Ordinateur : boutons regroupés, « Agenda de … » exactement au centre
+    if (grandEcran()) {
+      var og = el('div', 'og og-g'), oc = el('div', 'og og-c'), od = el('div', 'og og-d');
+      og.appendChild(wrap); og.appendChild(tl);
+      if (mw) oc.appendChild(mw);
+      od.appendChild(pw); od.appendChild(paw);
+      outils.textContent = ''; outils.classList.add('outils-3'); outils.appendChild(og); outils.appendChild(oc); outils.appendChild(od);
+    }
     v.appendChild(outils);
 
     // Ordinateur : choix du format (grille 3 jours ou liste comme avant), aussi pour « Agenda de … »

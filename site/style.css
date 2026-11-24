@@ -1208,3 +1208,39 @@ body,.page{background:var(--fond)!important}
 .bloc,.jour,.ev,.item,.sem,.semaine,.g3-corps,.g3-tete,.g3-col,.g3-grille>.g3-bord,.monag-barre,.outils-ag .tri-theme select,.g3-auj,.g3-format,.g3-format button:not(.on){background-color:var(--carte)!important}
 .g3-col.auj{background-color:#f2f8f4!important}
 .g3-bande{background:#f1f6f2!important}
+
+/* ===== 24/11 : barre d'outils de l'agenda sobre — vert foncé uni, rectangles, texte blanc en majuscules ===== */
+@media (min-width:760px){
+  .outils-ag .bt-cal,.outils-ag .bt-ajout,.outils-ag .bt-monag,.outils-ag .bt-presences,.outils-ag .tri-theme select{
+    height:34px!important;padding:0 16px!important;border:0!important;border-radius:5px!important;background:#0e6b41!important;color:#fff!important;
+    font:600 12px/1 var(--texte)!important;letter-spacing:.07em!important;text-transform:uppercase!important;box-shadow:none!important;white-space:nowrap}
+  .outils-ag .bt-cal:hover,.outils-ag .bt-ajout:hover,.outils-ag .bt-monag:hover,.outils-ag .bt-presences:hover,.outils-ag .tri-theme select:hover{background:#0b5634!important}
+  .outils-ag .bt-monag.on,.outils-ag .bt-nospres.on{background:#158c57!important}
+  .outils-ag .bt-cal:focus-visible,.outils-ag .bt-ajout:focus-visible,.outils-ag .bt-monag:focus-visible,.outils-ag .bt-presences:focus-visible,.outils-ag .tri-theme select:focus-visible{outline:2px solid var(--rose-fort)!important;outline-offset:2px}
+  .outils-ag .ic,.outils-ag .tri-theme>.ic{display:none!important}
+  .outils-ag .tri-theme select{width:auto!important;padding-right:30px!important;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23fff' stroke-width='1.6' fill='none'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 11px center!important;cursor:pointer}
+  .outils-ag .tri-theme select option{color:#123326;background:#fff;text-transform:none;letter-spacing:0}
+  .outils-ag .bt-monag{padding:0 22px!important}
+  /* sélecteur Grille / Liste dans le même esprit */
+  .g3-format{border:1px solid #0e6b41!important;border-radius:5px!important;background:transparent!important}
+  .g3-format button{font:600 11px/1 var(--texte)!important;letter-spacing:.07em;text-transform:uppercase;padding:7px 14px!important;border-radius:0!important;background:transparent!important;color:#0e6b41!important}
+  .g3-format button.on{background:#0e6b41!important;color:#fff!important}
+  .g3-auj{border-radius:5px!important;border-color:#0e6b41!important;color:#0e6b41!important;text-transform:uppercase;letter-spacing:.06em;font-size:11px!important;background:transparent!important}
+}
+/* ordinateur : trois groupes, « Agenda de … » exactement au centre */
+@media (min-width:1000px){
+  .outils-ag.outils-3{display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px!important}
+  .outils-3 .og{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .outils-3 .og-g{justify-content:flex-end}.outils-3 .og-d{justify-content:flex-start}
+  .outils-3 .og-c{justify-content:center}
+  .outils-3 .cal-wrap{display:flex;gap:8px;align-items:center;position:relative}
+  .outils-3 .monag-wrap,.outils-3 .pres-wrap,.outils-3 .part-wrap{display:block;width:auto}
+}
+/* téléphone : les ronds dans le même vert foncé, anneau discret */
+@media (max-width:759px){
+  .outils-ag .bt-cal,.outils-ag .bt-ajout,.outils-ag .tri-theme,.outils-ag .bt-monag,.outils-ag .bt-nospres,.outils-ag .bt-partager{--fond-ic:#0e6b41!important}
+  .outils-ag .bt-monag.on,.outils-ag .bt-nospres.on{--fond-ic:#158c57!important}
+  .outils-ag .ic::before{background:#cfe0d6!important}
+}
+@media (min-width:760px){.outils-ag .tri-theme select{width:172px!important}}
