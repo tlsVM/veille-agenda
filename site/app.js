@@ -2257,7 +2257,7 @@
           setTimeout(peindreListe, 250);
         }
         croix.addEventListener('click', function (e) { e.stopPropagation(); effacer(); });
-        c.addEventListener('click', function () { if (glisse) return; if (x.chat) { fermer(); ouvrirChat(estHugo() ? x.chat : ''); return; } if (x.ev) { fermer(); allerEvenement(x.ev); } else if (/^https?:\/\//.test(x.lien || '')) { window.open(x.lien, '_blank', 'noopener'); } });
+        c.addEventListener('click', function () { if (glisse) return; if (x.chat) { fermer(); ouvrirChat(x.chat); return; } if (x.ev) { fermer(); allerEvenement(x.ev); } else if (/^https?:\/\//.test(x.lien || '')) { window.open(x.lien, '_blank', 'noopener'); } });
         // glisser vers la gauche pour effacer
         var x0 = null, y0 = 0, dx = 0, glisse = false;
         c.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; glisse = false; c.style.transition = 'none'; }, { passive: true });
@@ -2447,7 +2447,7 @@
     if (!paramsNotif) return;
     var p = paramsNotif; paramsNotif = null;
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
-    if (p.chat) { ouvrirChat(estHugo() ? p.chat : ''); return; }
+    if (p.chat) { ouvrirChat(p.chat); return; }
     if (!(p.ev && allerEvenement(p.ev))) ouvrirNotifs();
   }
 
@@ -2520,7 +2520,7 @@
     });
     form.appendChild(bPh); form.appendChild(fPh); form.appendChild(ta); form.appendChild(env); bx.appendChild(apercu); bx.appendChild(form);
     m.appendChild(bx); document.body.appendChild(m);
-    var H = nomHugo(), hugo = estHugo(), cible = hugo ? (avec || '') : H, minuterie = null, signature = '';
+    var H = nomHugo(), hugo = estHugo(), cible = avec || '', minuterie = null, signature = '';
     function fermer() { clearInterval(minuterie); m.remove(); chatOuvert = null; rafraichirPresences(); }
     fermerB.addEventListener('click', fermer); m.addEventListener('click', function (e) { if (e.target === m) fermer(); });
     retour.addEventListener('click', function () { cible = ''; signature = ''; peindre(); });
@@ -2536,14 +2536,14 @@
       }).catch(function () { env.disabled = false; });
     });
     function peindre() {
-      var liste = hugo && !cible;
-      retour.hidden = !(hugo && cible); form.hidden = liste; if (liste) apercu.hidden = true;
-      titre.textContent = liste ? 'Messages des élu·es' : (cible ? cible.replace(' (collaborateur)', '') : '');
+      var liste = !cible;
+      retour.hidden = !cible; form.hidden = liste; if (liste) apercu.hidden = true;
+      titre.textContent = liste ? 'Messages' : cible.replace(' (collaborateur)', '');
       fil.textContent = ''; fil.appendChild(el('p', 'chat-attente', 'Chargement…'));
       charger2();
     }
     function charger2() {
-      var liste = hugo && !cible;
+      var liste = !cible;
       appelChat('chat', liste ? {} : { avec: cible }).then(function (d) {
         var sig = JSON.stringify(d); if (sig === signature) return; signature = sig;
         fil.textContent = '';
@@ -2551,8 +2551,8 @@
           (d.conversations || []).forEach(function (c) {
             var b = el('button', 'chat-conv' + (c.nonlus ? ' nonlu' : '')); b.type = 'button';
             var p = c.nom.split(' ')[0]; var av = el('span', 'chat-av', p.length <= 5 ? p : p.split('-').map(function (x) { return x.charAt(0); }).join(''));
-            var tx = el('span', 'chat-conv-t'); tx.appendChild(el('b', '', c.nom));
-            tx.appendChild(el('span', '', c.dernier ? (c.dernier.de === H ? 'Vous : ' : '') + (c.dernier.texte || '📷 Photo') : 'Aucun message pour l\'instant'));
+            var tx = el('span', 'chat-conv-t'); tx.appendChild(el('b', '', c.nom.replace(' (collaborateur)', /collaborateur/.test(c.nom) ? ' · collaborateur' : '')));
+            tx.appendChild(el('span', '', c.dernier ? (c.dernier.de === moi ? 'Vous : ' : '') + (c.dernier.texte || '📷 Photo') : 'Aucun message pour l\'instant'));
             b.appendChild(av); b.appendChild(tx);
             if (c.nonlus) b.appendChild(el('span', 'chat-pastille', String(c.nonlus)));
             b.addEventListener('click', function () { cible = c.nom; signature = ''; peindre(); });
@@ -2561,7 +2561,7 @@
           return;
         }
         var msgs = d.messages || [];
-        if (!msgs.length) fil.appendChild(el('p', 'chat-attente', hugo ? 'Écrivez le premier message à ' + cible.replace(' (collaborateur)', '') + '.' : 'Écrivez ici à Hugo : lui seul lit vos messages, et il vous répond ici.'));
+        if (!msgs.length) fil.appendChild(el('p', 'chat-attente', 'Écrivez le premier message à ' + cible.replace(' (collaborateur)', '') + '. Vous seul·es, tous les deux, voyez cette conversation.'));
         var jourPrec = '';
         msgs.forEach(function (x) {
           var j = x.le.slice(0, 10); if (j !== jourPrec) { jourPrec = j; var dj = new Date(x.le); fil.appendChild(el('div', 'chat-jour', cle(dj) === AUJ ? 'Aujourd\'hui' : JOURS[dj.getDay()] + ' ' + dj.getDate() + ' ' + MOIS[dj.getMonth()])); }
@@ -2578,7 +2578,7 @@
     peindre();
     minuterie = setInterval(charger2, 5000);
     chatOuvert = { fermer: fermer, maj: charger2 };
-    if (!hugo || cible) setTimeout(function () { ta.focus(); }, 100);
+    if (cible) setTimeout(function () { ta.focus(); }, 100);
   }
   document.getElementById('chat-bt').addEventListener('click', function () { ouvrirChat(); });
   // une notification de message arrive pendant que la messagerie est ouverte : on la met à jour tout de suite

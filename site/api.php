@@ -1072,12 +1072,12 @@ if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu' || $a === 'chat_pho
   if (!in_array($moi, ELUS, true) || $H === '') { sortir(['erreur' => 'nom'], 400); }
   $estHugo = $moi === $H;
   if ($estHugo && !codeHugoOk($d['code'] ?? '')) { sleep(1); sortir(['erreur' => 'code'], 403); }
-  $avec = $estHugo ? (string)($d['avec'] ?? '') : $H; // un·e élu·e ne parle qu'avec Hugo
+  $avec = (string)($d['avec'] ?? ''); // conversations à deux : chacun·e peut écrire à n'importe quel membre du groupe
   if ($avec !== '' && (!in_array($avec, ELUS, true) || $avec === $moi)) { sortir(['erreur' => 'avec'], 400); }
   if ($a === 'chat_photo') { // photo d'un message : seulement pour les deux personnes de la conversation
     $id = (string)($d['id'] ?? ''); if (!preg_match('/^c[a-f0-9]{10}$/', $id)) { http_response_code(400); exit; }
     foreach (messagesChat() as $x) {
-      if ($x['id'] === $id && !empty($x['photo']) && (($x['de'] === $moi && ($estHugo ? $x['a'] === $avec || $avec === '' : true)) || $x['a'] === $moi)) {
+      if ($x['id'] === $id && !empty($x['photo']) && ($x['de'] === $moi || $x['a'] === $moi)) {
         $f = "$DATA/chat-photos/$id.jpg"; if (!is_file($f)) { break; }
         header('Content-Type: image/jpeg'); header('Cache-Control: private, max-age=86400'); readfile($f); exit;
       }
@@ -1105,7 +1105,7 @@ if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu' || $a === 'chat_pho
     echo json_encode(['ok' => true, 'message' => $msg], JSON_UNESCAPED_UNICODE);
     if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); } else { @ob_flush(); flush(); }
     $court = trim(preg_replace('/\s*\(.*\)$/', '', $moi));
-    try { envoyerNotification([$avec], '💬 ' . $court, $texte !== '' ? mb_substr($texte, 0, 200) : '📷 Photo', '', '', $estHugo ? $H : $moi); } catch (Throwable $t) { journalPush('chat ' . $t->getMessage()); }
+    try { envoyerNotification([$avec], '💬 ' . $court, $texte !== '' ? mb_substr($texte, 0, 200) : '📷 Photo', '', '', $moi); } catch (Throwable $t) { journalPush('chat ' . $t->getMessage()); }
     exit;
   }
   if ($a === 'chat_lu') {
@@ -1114,12 +1114,13 @@ if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu' || $a === 'chat_pho
   }
   // lecture
   $tout = messagesChat();
-  if ($estHugo && $avec === '') { // liste des conversations de Hugo
+  if ($avec === '') { // liste de MES conversations (avec chaque membre du groupe)
     $conv = [];
-    foreach (ELUS as $n) { if ($n !== $H) { $conv[$n] = ['nom' => $n, 'dernier' => null, 'nonlus' => 0]; } }
+    $ordre = array_merge($H !== $moi ? [$H] : [], array_values(array_filter(ELUS, function ($n) use ($H) { return $n !== $H; }))); // Hugo en premier
+    foreach ($ordre as $n) { if ($n !== $moi) { $conv[$n] = ['nom' => $n, 'dernier' => null, 'nonlus' => 0]; } }
     foreach ($tout as $x) {
-      $autre = $x['de'] === $H ? $x['a'] : ($x['a'] === $H ? $x['de'] : ''); if (!isset($conv[$autre])) { continue; }
-      $conv[$autre]['dernier'] = $x; if ($x['a'] === $H && empty($x['lu'])) { $conv[$autre]['nonlus']++; }
+      $autre = $x['de'] === $moi ? $x['a'] : ($x['a'] === $moi ? $x['de'] : ''); if (!isset($conv[$autre])) { continue; }
+      $conv[$autre]['dernier'] = $x; if ($x['a'] === $moi && empty($x['lu'])) { $conv[$autre]['nonlus']++; }
     }
     $l = array_values($conv);
     usort($l, function ($p, $q) { return strcmp($q['dernier']['le'] ?? '', $p['dernier']['le'] ?? ''); });
