@@ -960,15 +960,12 @@ img,video,iframe,table{max-width:100%}
 .nt-envoyer{color:#fff;background:var(--vert)}
 .nt-envoyer:hover{background:var(--vert-fonce)}
 
-/* Flèche d'envoi en notification (visible seulement pour Hugo) */
-.bt-notif{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:var(--vert);color:#fff;cursor:pointer;opacity:.85;box-shadow:0 1px 3px rgba(14,50,34,.2)}
-.bt-notif svg{width:13px;height:13px;margin:1px 1px 0 0}
-.bt-notif:hover,.bt-notif:focus-visible{opacity:1;background:var(--vert-fonce)}
-.ev>.bt-notif{position:absolute;top:5px;right:56px}
-.ev.avec-notif .haut{padding-right:72px}
-.actu.avec-notif,.item.avec-notif{position:relative;padding-right:40px}
-.actu>.bt-notif{position:absolute;top:8px;right:8px}
-.item>.bt-notif{position:absolute;top:8px;right:4px}
+/* Flèche d'envoi en notification (visible seulement pour Hugo) : même bouton que copier et agenda */
+.ev>.bt-notif{position:absolute;top:5px;right:55px}
+.ev.avec-notif .haut{padding-right:70px}
+.actu.avec-notif,.item.avec-notif{position:relative;padding-right:34px}
+.actu>.bt-notif{position:absolute;top:7px;right:7px}
+.item>.bt-notif{position:absolute;top:7px;right:2px}
 .envoi-rapide .er-apercu{background:var(--vert-pale);border-radius:12px;padding:9px 11px;margin:0 0 12px}
 .envoi-rapide .er-apercu b{display:block;font-size:14px;color:var(--encre)}
 .envoi-rapide .er-apercu p{margin:3px 0 0;font-size:12.5px;color:var(--gris)}
@@ -978,3 +975,7 @@ img,video,iframe,table{max-width:100%}
 .er-nom.on{background:var(--vert);border-color:var(--vert);color:#fff}
 .er-envoyer{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
 .er-envoyer:disabled{opacity:.45;cursor:default}
+
+/* Boutons des cartes (copier, agenda, envoyer) : en noir, même taille */
+.ev>.bt-copie,.actu>.bt-copie,.item>.bt-copie{color:#1a1a1a;opacity:.85}
+.ev>.bt-copie:hover,.actu>.bt-copie:hover,.item>.bt-copie:hover,.ev>.bt-copie:focus-visible{opacity:1;color:#000;background:rgba(0,0,0,.07)}

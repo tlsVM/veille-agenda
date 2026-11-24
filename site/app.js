@@ -1704,10 +1704,12 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { AUJ = cle(new Date()); rafraichirPresences(); } });
 
   // ---------- Flèche d'envoi sur chaque événement, actu et info de quartier (pour Hugo) ----------
-  var ICO_ENVOI = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3.4 11.1 19.6 4.3c.8-.3 1.6.4 1.3 1.2l-5.6 15.1c-.3.8-1.4.9-1.8.1l-2.7-5.2-5.3-2.6c-.8-.4-.7-1.5.1-1.8Z" fill="currentColor"/><path d="m10.8 15.4 5.6-7.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var ICO_ENVOI = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3.4 11.1 19.6 4.3c.8-.3 1.6.4 1.3 1.2l-5.6 15.1c-.3.8-1.4.9-1.8.1l-2.7-5.2-5.3-2.6c-.8-.4-.7-1.5.1-1.8Z" fill="currentColor"/><path d="m10.8 15.4 5.6-7.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  // même style que les boutons copier et agenda (trait fin)
+  var ICO_ENVOI_FIN = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.2 7.4 13.4 2.6c.5-.2 1 .3.8.8L9.4 14c-.2.5-.9.5-1.1 0L6.6 10 2.4 8.4c-.5-.2-.5-.8-.2-1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6.6 10 10.4 5.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
   function btNotif(contenu) {
-    var b = el('button', 'bt-notif'); b.type = 'button'; b.title = 'Envoyer en notification à un·e élu·e'; b.setAttribute('aria-label', b.title);
-    b.innerHTML = ICO_ENVOI;
+    var b = el('button', 'bt-copie bt-notif'); b.type = 'button'; b.title = 'Envoyer en notification à un·e élu·e'; b.setAttribute('aria-label', b.title);
+    b.innerHTML = ICO_ENVOI_FIN;
     b.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirEnvoiRapide(contenu()); });
     return b;
   }
