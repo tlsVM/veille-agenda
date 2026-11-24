@@ -958,6 +958,98 @@
     }); });
   }).observe(document.body, { childList: true });
   function habiller(b, ic, txt, court) { b.textContent = ''; b.appendChild(el('span', 'ic', ic)); b.appendChild(el('span', 'lb', txt)); b.setAttribute('data-court', court); b.title = txt; }
+
+  // ---------- Ordinateur : grille 3 jours avec les heures ----------
+  var debut3 = '';
+  var NB_JOURS = 3, H_DEB = 7, H_FIN = 24, PX_H = 64;
+  function grandEcran() { return window.innerWidth >= 1000; }
+  var etaitGrand = grandEcran();
+  window.addEventListener('resize', function () { var g = grandEcran(); if (g !== etaitGrand) { etaitGrand = g; if (vue === 'agenda') rendre(); } });
+  function minutes(h) { var p = (h || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+  function evsDuJour(k) {
+    return D.evenements.filter(function (e) { return enCours(e, k) && (filtre === 'tout' || TYPES[typeDe(e)].g === filtre || TYPES[typeDe(e)].g === 'majo'); });
+  }
+  // place côte à côte les rendez-vous qui se chevauchent (durée affichée : 1h30)
+  function colonnes(evs) {
+    var l = evs.map(function (e) { var d = minutes(e.heure); return { e: e, d: d, f: d + 90 }; }).sort(function (x, y) { return x.d - y.d; });
+    var grp = [], cur = [], fin = -1;
+    l.forEach(function (x) { if (cur.length && x.d >= fin) { grp.push(cur); cur = []; fin = -1; } cur.push(x); fin = Math.max(fin, x.f); });
+    if (cur.length) grp.push(cur);
+    grp.forEach(function (g) {
+      var cols = [];
+      g.forEach(function (x) { var c = 0; while (cols[c] !== undefined && cols[c] > x.d) c++; cols[c] = x.f; x.col = c; });
+      g.forEach(function (x) { x.nb = cols.length; });
+    });
+    return l;
+  }
+  function ouvrirEvenement(e) {
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion ev-detail'); bx.setAttribute('role', 'dialog');
+    var d = dDe(e.date); bx.appendChild(el('p', 'ev-detail-jour', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
+    bx.appendChild(carteEv(e)); m.appendChild(bx);
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); rendre(); }); bx.appendChild(f);
+    m.addEventListener('click', function (x) { if (x.target === m) { m.remove(); rendre(); } });
+    document.body.appendChild(m); majPresences();
+  }
+  function blocGrille(e, x) {
+    var t = TYPES[typeDe(e)], b = el('button', 'g-ev' + (e.important === 'oui' ? ' cle' : '')); b.type = 'button';
+    b.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur : t.c);
+    b.style.setProperty('--f', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur + '1a' : t.f);
+    if (x) {
+      b.style.top = ((x.d - H_DEB * 60) / 60 * PX_H) + 'px'; b.style.height = Math.max(34, 90 / 60 * PX_H - 4) + 'px';
+      b.style.left = 'calc(' + (x.col / x.nb * 100) + '% + 2px)'; b.style.width = 'calc(' + (100 / x.nb) + '% - 4px)';
+    }
+    var p = D.presences[e.id] || {}, nbP = Object.keys(p).filter(function (n) { return p[n] === 'present'; }).length;
+    var l1 = el('span', 'g-h', (e.heure ? hFmt(e.heure) + ' · ' : '') + (e.type || ''));
+    if (moi && p[moi]) l1.appendChild(el('b', 'g-moi', p[moi] === 'present' ? ' ✓' : ' ?'));
+    b.appendChild(l1); b.appendChild(el('span', 'g-t', e.titre));
+    if (e.lieu || e.quartier) b.appendChild(el('span', 'g-l', e.quartier || e.lieu));
+    if (nbP) b.appendChild(el('span', 'g-p', nbP + ' présent' + (nbP > 1 ? 's' : '')));
+    b.title = (e.heure ? hFmt(e.heure) + ' · ' : '') + e.titre + (e.lieu ? ' · ' + e.lieu : '');
+    b.addEventListener('click', function () { ouvrirEvenement(e); });
+    return b;
+  }
+  function grilleTroisJours() {
+    if (!debut3) debut3 = AUJ;
+    var z = el('div', 'g3');
+    var nav = el('div', 'g3-nav');
+    var prec = el('button', 'g3-fl', '‹'); prec.type = 'button'; prec.setAttribute('aria-label', 'Jours précédents'); prec.title = 'Jours précédents';
+    var suiv = el('button', 'g3-fl', '›'); suiv.type = 'button'; suiv.setAttribute('aria-label', 'Jours suivants'); suiv.title = 'Jours suivants';
+    var auj = el('button', 'g3-auj', 'Aujourd\'hui'); auj.type = 'button'; auj.disabled = debut3 === AUJ;
+    var d0 = dDe(debut3), d2 = ajout(d0, NB_JOURS - 1);
+    var titre = el('span', 'g3-titre', d0.getDate() + (d0.getMonth() !== d2.getMonth() ? ' ' + MOIS[d0.getMonth()] : '') + ' – ' + d2.getDate() + ' ' + MOIS[d2.getMonth()] + ' ' + d2.getFullYear());
+    prec.addEventListener('click', function () { debut3 = cle(ajout(dDe(debut3), -NB_JOURS)); rendre(); });
+    suiv.addEventListener('click', function () { debut3 = cle(ajout(dDe(debut3), NB_JOURS)); rendre(); });
+    auj.addEventListener('click', function () { debut3 = AUJ; rendre(); });
+    nav.appendChild(auj); nav.appendChild(titre);
+    z.appendChild(nav);
+    var corps = el('div', 'g3-corps');
+    // en-têtes des jours + rendez-vous sans heure ; flèches de part et d'autre
+    var tete = el('div', 'g3-tete'); var coin = el('div', 'g3-coin'); coin.appendChild(prec); tete.appendChild(coin);
+    var jours = []; for (var i = 0; i < NB_JOURS; i++) jours.push(cle(ajout(d0, i)));
+    jours.forEach(function (k) {
+      var d = dDe(k), c = el('div', 'g3-jt' + (k === AUJ ? ' auj' : ''));
+      c.appendChild(el('span', 'g3-js', JC[d.getDay()])); c.appendChild(el('span', 'g3-jn', String(d.getDate()))); c.appendChild(el('span', 'g3-jm', MOIS[d.getMonth()]));
+      var sansH = evsDuJour(k).filter(function (e) { return !e.heure; });
+      if (sansH.length) { var sh = el('div', 'g3-sansh'); sansH.forEach(function (e) { sh.appendChild(blocGrille(e)); }); c.appendChild(sh); }
+      tete.appendChild(c);
+    });
+    var bord = el('div', 'g3-bord'); bord.appendChild(suiv); tete.appendChild(bord);
+    corps.appendChild(tete);
+    // grille horaire
+    var g = el('div', 'g3-grille'); g.style.height = ((H_FIN - H_DEB) * PX_H) + 'px';
+    var axe = el('div', 'g3-axe');
+    for (var h = H_DEB; h < H_FIN; h++) { var lh = el('span', 'g3-hr', ('0' + h).slice(-2) + 'h'); lh.style.top = ((h - H_DEB) * PX_H) + 'px'; axe.appendChild(lh); }
+    g.appendChild(axe);
+    jours.forEach(function (k) {
+      var col = el('div', 'g3-col' + (k === AUJ ? ' auj' : ''));
+      colonnes(evsDuJour(k).filter(function (e) { return e.heure; })).forEach(function (x) { col.appendChild(blocGrille(x.e, x)); });
+      if (k === AUJ) { var n = new Date(), mn = n.getHours() * 60 + n.getMinutes(); if (mn >= H_DEB * 60) { var ln = el('div', 'g3-now'); ln.style.top = ((mn - H_DEB * 60) / 60 * PX_H) + 'px'; col.appendChild(ln); } }
+      g.appendChild(col);
+    });
+    g.appendChild(el('div', 'g3-bord'));
+    corps.appendChild(g); z.appendChild(corps);
+    return z;
+  }
   function vueAgenda(v) {
     // Barre d'outils : calendrier + légende repliée
     var bAj = el('button', 'bt-ajout'); habiller(bAj, '➕', 'Ajouter un RDV', 'Ajouter'); bAj.type = 'button'; bAj.title = 'Ajouter un rendez-vous';
@@ -997,6 +1089,12 @@
     });
     lg.appendChild(lgc); // légende retirée de la barre (24/11)
     v.appendChild(outils);
+
+    // Ordinateur : vue « 3 jours » avec les heures à gauche (flèches pour avancer ou reculer)
+    if (grandEcran() && !monAgenda) {
+      if (jourChoisi) { debut3 = jourChoisi; jourChoisi = ''; }
+      v.appendChild(grilleTroisJours()); return;
+    }
 
     // Un jour choisi dans le calendrier : on l'affiche en premier
     if (jourChoisi) {
