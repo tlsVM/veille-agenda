@@ -1066,7 +1066,7 @@ if ($a === 'pres') {
 }
 
 // Messagerie : lire une conversation, envoyer, marquer comme lu
-if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu') {
+if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu' || $a === 'chat_photo') {
   $d = $_SERVER['REQUEST_METHOD'] === 'POST' ? (json_decode(file_get_contents('php://input'), true) ?: []) : $_GET;
   $moi = (string)($d['nom'] ?? ''); $H = hugo();
   if (!in_array($moi, ELUS, true) || $H === '') { sortir(['erreur' => 'nom'], 400); }
@@ -1074,10 +1074,30 @@ if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu') {
   if ($estHugo && !codeHugoOk($d['code'] ?? '')) { sleep(1); sortir(['erreur' => 'code'], 403); }
   $avec = $estHugo ? (string)($d['avec'] ?? '') : $H; // un·e élu·e ne parle qu'avec Hugo
   if ($avec !== '' && (!in_array($avec, ELUS, true) || $avec === $moi)) { sortir(['erreur' => 'avec'], 400); }
+  if ($a === 'chat_photo') { // photo d'un message : seulement pour les deux personnes de la conversation
+    $id = (string)($d['id'] ?? ''); if (!preg_match('/^c[a-f0-9]{10}$/', $id)) { http_response_code(400); exit; }
+    foreach (messagesChat() as $x) {
+      if ($x['id'] === $id && !empty($x['photo']) && (($x['de'] === $moi && ($estHugo ? $x['a'] === $avec || $avec === '' : true)) || $x['a'] === $moi)) {
+        $f = "$DATA/chat-photos/$id.jpg"; if (!is_file($f)) { break; }
+        header('Content-Type: image/jpeg'); header('Cache-Control: private, max-age=86400'); readfile($f); exit;
+      }
+    }
+    http_response_code(404); exit;
+  }
   if ($a === 'chat_envoi') {
     $texte = trim(mb_substr(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', (string)($d['texte'] ?? '')), 0, 1000));
-    if ($texte === '' || $avec === '') { sortir(['erreur' => 'texte'], 400); }
+    $photo = (string)($d['photo'] ?? ''); $bin = null;
+    if ($photo !== '') {
+      $bin = base64_decode(preg_replace('#^data:image/jpeg;base64,#', '', $photo), true);
+      $info = $bin !== false ? @getimagesizefromstring($bin) : false;
+      if ($bin === false || strlen($bin) > 5000000 || !$info || $info[2] !== IMAGETYPE_JPEG) { sortir(['erreur' => 'photo'], 400); }
+    }
+    if (($texte === '' && $bin === null) || $avec === '') { sortir(['erreur' => 'texte'], 400); }
     $msg = ['id' => 'c' . bin2hex(random_bytes(5)), 'de' => $moi, 'a' => $avec, 'texte' => $texte, 'le' => date('c'), 'lu' => false];
+    if ($bin !== null) {
+      if (!is_dir("$DATA/chat-photos")) { @mkdir("$DATA/chat-photos", 0700, true); }
+      file_put_contents("$DATA/chat-photos/{$msg['id']}.jpg", $bin, LOCK_EX); $msg['photo'] = true;
+    }
     modifierChat(function ($m) use ($msg) { $m[] = $msg; return $m; });
     @file_put_contents("$DATA/journal-chat.log", date('c') . "\t$moi → $avec\t" . mb_strlen($texte) . " car.\n", FILE_APPEND | LOCK_EX);
     // notification (téléphone + cloche) pour la personne qui reçoit, sans faire attendre l'envoi
@@ -1085,7 +1105,7 @@ if ($a === 'chat' || $a === 'chat_envoi' || $a === 'chat_lu') {
     echo json_encode(['ok' => true, 'message' => $msg], JSON_UNESCAPED_UNICODE);
     if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); } else { @ob_flush(); flush(); }
     $court = trim(preg_replace('/\s*\(.*\)$/', '', $moi));
-    try { envoyerNotification([$avec], '💬 ' . $court, mb_substr($texte, 0, 200), '', '', $estHugo ? $H : $moi); } catch (Throwable $t) { journalPush('chat ' . $t->getMessage()); }
+    try { envoyerNotification([$avec], '💬 ' . $court, $texte !== '' ? mb_substr($texte, 0, 200) : '📷 Photo', '', '', $estHugo ? $H : $moi); } catch (Throwable $t) { journalPush('chat ' . $t->getMessage()); }
     exit;
   }
   if ($a === 'chat_lu') {

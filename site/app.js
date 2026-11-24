@@ -2400,7 +2400,27 @@
       return d;
     });
   }
-  var chatOuvert = null;
+  var chatOuvert = null, PHOTOS_CHAT = {};
+  // photo d'un message : chargée en privé (POST) puis gardée en mémoire le temps de la session
+  function photoChat(id, avec) {
+    var b = el('button', 'chat-photo'); b.type = 'button'; b.setAttribute('aria-label', 'Agrandir la photo');
+    var im = el('img'); im.alt = 'Photo envoyée'; b.appendChild(im);
+    function montrer(u) { im.src = u; }
+    if (PHOTOS_CHAT[id]) montrer(PHOTOS_CHAT[id]);
+    else {
+      var corps = { nom: moi, id: id, avec: avec || '' }; if (estHugo()) corps.code = store('vm-code-envoi') || '';
+      fetch('api.php?a=chat_photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) })
+        .then(function (r) { if (!r.ok) throw new Error(); return r.blob(); }).then(function (bl) { PHOTOS_CHAT[id] = URL.createObjectURL(bl); montrer(PHOTOS_CHAT[id]); })
+        .catch(function () { b.textContent = '📷 Photo indisponible'; });
+    }
+    b.addEventListener('click', function () {
+      if (!im.src) return;
+      var v = el('div', 'chat-visionneuse'); var g = el('img'); g.src = im.src; g.alt = 'Photo'; v.appendChild(g);
+      var x = el('button', 'chat-vis-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer'); v.appendChild(x);
+      v.addEventListener('click', function () { v.remove(); }); document.body.appendChild(v);
+    });
+    return b;
+  }
   function heureMsg(iso) { var d = new Date(iso), auj = cle(d) === AUJ; return (auj ? '' : d.getDate() + ' ' + MOIS[d.getMonth()].slice(0, 4) + '. ') + ('0' + d.getHours()).slice(-2) + 'h' + ('0' + d.getMinutes()).slice(-2); }
   function ouvrirChat(avec) {
     if (!moi) { ouvrirChoix(); return; }
@@ -2412,7 +2432,22 @@
     var fil = el('div', 'chat-fil'); bx.appendChild(fil);
     var form = el('form', 'chat-form'); var ta = el('textarea', 'chat-saisie'); ta.rows = 1; ta.maxLength = 1000; ta.placeholder = 'Votre message…'; ta.setAttribute('aria-label', 'Votre message');
     var env = el('button', 'chat-env'); env.type = 'submit'; env.innerHTML = ICO_AVION; env.setAttribute('aria-label', 'Envoyer');
-    form.appendChild(ta); form.appendChild(env); bx.appendChild(form);
+    // photo : bouton appareil photo + aperçu avant envoi
+    var bPh = el('button', 'chat-ph'); bPh.type = 'button'; bPh.setAttribute('aria-label', 'Joindre une photo'); bPh.title = 'Joindre une photo';
+    bPh.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+    var fPh = el('input'); fPh.type = 'file'; fPh.accept = 'image/*'; fPh.hidden = true;
+    var apercu = el('div', 'chat-apercu'); apercu.hidden = true; var photoData = '';
+    bPh.addEventListener('click', function () { fPh.click(); });
+    fPh.addEventListener('change', function () {
+      var f = fPh.files && fPh.files[0]; if (!f) return;
+      reduirePhoto(f).then(function (r) {
+        photoData = r.data; apercu.textContent = ''; var im = el('img'); im.src = r.data; im.alt = 'Photo à envoyer'; apercu.appendChild(im);
+        var x = el('button', 'chat-apercu-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Retirer la photo');
+        x.addEventListener('click', function () { photoData = ''; apercu.hidden = true; apercu.textContent = ''; fPh.value = ''; }); apercu.appendChild(x);
+        apercu.hidden = false;
+      }).catch(function () { alert('Cette image n\'a pas pu être lue.'); });
+    });
+    form.appendChild(bPh); form.appendChild(fPh); form.appendChild(ta); form.appendChild(env); bx.appendChild(apercu); bx.appendChild(form);
     m.appendChild(bx); document.body.appendChild(m);
     var H = nomHugo(), hugo = estHugo(), cible = hugo ? (avec || '') : H, minuterie = null, signature = '';
     function fermer() { clearInterval(minuterie); m.remove(); chatOuvert = null; rafraichirPresences(); }
@@ -2421,16 +2456,17 @@
     ta.addEventListener('input', function () { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; });
     ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); form.requestSubmit(); } });
     form.addEventListener('submit', function (e) {
-      e.preventDefault(); var t = ta.value.trim(); if (!t || !cible) return;
+      e.preventDefault(); var t = ta.value.trim(); if ((!t && !photoData) || !cible) return;
       env.disabled = true;
-      appelChat('chat_envoi', { avec: cible, texte: t }).then(function (d) {
+      var corps = { avec: cible, texte: t }; if (photoData) corps.photo = photoData;
+      appelChat('chat_envoi', corps).then(function (d) {
         env.disabled = false; if (!d.ok) { alert('Le message n\'est pas parti. Réessayez.'); return; }
-        ta.value = ''; ta.style.height = 'auto'; charger2();
+        ta.value = ''; ta.style.height = 'auto'; photoData = ''; apercu.hidden = true; apercu.textContent = ''; fPh.value = ''; charger2();
       }).catch(function () { env.disabled = false; });
     });
     function peindre() {
       var liste = hugo && !cible;
-      retour.hidden = !(hugo && cible); form.hidden = liste;
+      retour.hidden = !(hugo && cible); form.hidden = liste; if (liste) apercu.hidden = true;
       titre.textContent = liste ? 'Messages des élu·es' : (cible ? cible.replace(' (collaborateur)', '') : '');
       fil.textContent = ''; fil.appendChild(el('p', 'chat-attente', 'Chargement…'));
       charger2();
@@ -2445,7 +2481,7 @@
             var b = el('button', 'chat-conv' + (c.nonlus ? ' nonlu' : '')); b.type = 'button';
             var p = c.nom.split(' ')[0]; var av = el('span', 'chat-av', p.length <= 5 ? p : p.split('-').map(function (x) { return x.charAt(0); }).join(''));
             var tx = el('span', 'chat-conv-t'); tx.appendChild(el('b', '', c.nom));
-            tx.appendChild(el('span', '', c.dernier ? (c.dernier.de === H ? 'Vous : ' : '') + c.dernier.texte : 'Aucun message pour l\'instant'));
+            tx.appendChild(el('span', '', c.dernier ? (c.dernier.de === H ? 'Vous : ' : '') + (c.dernier.texte || '📷 Photo') : 'Aucun message pour l\'instant'));
             b.appendChild(av); b.appendChild(tx);
             if (c.nonlus) b.appendChild(el('span', 'chat-pastille', String(c.nonlus)));
             b.addEventListener('click', function () { cible = c.nom; signature = ''; peindre(); });
@@ -2459,7 +2495,9 @@
         msgs.forEach(function (x) {
           var j = x.le.slice(0, 10); if (j !== jourPrec) { jourPrec = j; var dj = new Date(x.le); fil.appendChild(el('div', 'chat-jour', cle(dj) === AUJ ? 'Aujourd\'hui' : JOURS[dj.getDay()] + ' ' + dj.getDate() + ' ' + MOIS[dj.getMonth()])); }
           var mien = x.de === moi, bu = el('div', 'chat-bulle' + (mien ? ' mien' : ''));
-          bu.appendChild(el('span', 'chat-texte', x.texte)); bu.appendChild(el('span', 'chat-h', heureMsg(x.le) + (mien && x.lu ? ' · lu' : '')));
+          if (x.photo) bu.appendChild(photoChat(x.id, cible));
+          if (x.texte) bu.appendChild(el('span', 'chat-texte', x.texte));
+          bu.appendChild(el('span', 'chat-h', heureMsg(x.le) + (mien && x.lu ? ' · lu' : '')));
           fil.appendChild(bu);
         });
         fil.scrollTop = fil.scrollHeight;
