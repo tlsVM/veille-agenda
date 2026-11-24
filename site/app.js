@@ -70,7 +70,7 @@
       D = d; D.evenements = d.evenements || []; D.actus = d.actus || []; D.quartiers = d.quartiers || []; D.presences = d.presences || {};
       ajouterReunionsGroupe(); appliquerMasques(d.masques); signature = sigPresences();
       D.evenements.sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
-      remplirMoi(); rendre(); suiteNotif();
+      remplirMoi(); rendre(); suiteNotif(); if (rafraichirListe) rafraichirListe();
     }).catch(function () { afficherErreur('reseau'); });
   }
   // Réunion de groupe : tous les lundis à 12h30, ajoutée automatiquement.
@@ -2126,7 +2126,7 @@
     }
     var mode = 'liste';
     function montrer(md) {
-      mode = md; mm.hidden = md !== 'liste'; ap.hidden = md !== 'reglage'; en.hidden = md !== 'envoi';
+      mode = md; if (md === 'liste') peindreListe(); mm.hidden = md !== 'liste'; ap.hidden = md !== 'reglage'; en.hidden = md !== 'envoi';
       retour.hidden = md === 'liste'; outils.hidden = md !== 'liste';
       titre.textContent = md === 'reglage' ? 'Réglages' : md === 'envoi' ? 'Envoyer' : 'Notifications';
       bEnv.hidden = !estHugo(); zone.scrollTop = 0;
