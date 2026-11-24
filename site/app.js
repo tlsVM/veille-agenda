@@ -1214,7 +1214,7 @@
     // Ordinateur : boutons regroupés, « Agenda de … » exactement au centre
     if (grandEcran()) {
       var og = el('div', 'og og-g'), oc = el('div', 'og og-c'), od = el('div', 'og og-d');
-      og.appendChild(wrap); og.appendChild(tl);
+      og.appendChild(wrap); // « Trier par thème » descend sur la 2e ligne, à côté de Grille / Liste
       if (mw) oc.appendChild(mw);
       od.appendChild(pw); od.appendChild(paw);
       outils.textContent = ''; outils.classList.add('outils-3'); outils.appendChild(og); outils.appendChild(oc); outils.appendChild(od);
@@ -1229,7 +1229,7 @@
         bf.addEventListener('click', function () { formatAg = f[0]; rendre(); });
         fmt.appendChild(bf);
       });
-      v.appendChild(fmt);
+      var l2 = el('div', 'ag-ligne2'); l2.appendChild(tl); l2.appendChild(fmt); v.appendChild(l2);
     }
     // Ordinateur : vue « 3 jours » avec les heures à gauche (flèches pour avancer ou reculer)
     if (grandEcran() && formatAg === 'grille') {

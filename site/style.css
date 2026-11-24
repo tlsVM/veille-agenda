@@ -1244,3 +1244,20 @@ body,.page{background:var(--fond)!important}
   .outils-ag .ic::before{background:#cfe0d6!important}
 }
 @media (min-width:760px){.outils-ag .tri-theme select{width:172px!important}}
+/* centrage parfait : 2 boutons de chaque côté, même largeur ; tri et format sur la 2e ligne */
+@media (min-width:1000px){
+  .outils-3 .og-g .bt-cal,.outils-3 .og-g .bt-ajout,.outils-3 .og-d .bt-presences{width:178px!important;justify-content:center}
+  .ag-ligne2{display:flex;justify-content:center;align-items:center;gap:10px;margin:8px 0 6px}
+  .ag-ligne2 .g3-format{margin:0!important}
+  .ag-ligne2 .tri-theme{margin:0}
+  .ag-ligne2 .tri-theme select{height:30px!important;background-color:transparent!important;color:#0e6b41!important;border:1px solid #0e6b41!important;font-size:11px!important;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%230e6b41' stroke-width='1.6' fill='none'/%3E%3C/svg%3E")!important}
+  .ag-ligne2 .tri-theme .ic{display:none!important}
+}
+@media (min-width:1000px){
+  .ag-ligne2 .tri-theme{display:inline-flex;border:0!important;background:none!important;padding:0!important;box-shadow:none!important;height:auto!important}
+  .ag-ligne2 .tri-theme select{appearance:none;-webkit-appearance:none;width:auto!important;min-width:170px;height:30px!important;padding:0 30px 0 12px!important;border-radius:5px!important;
+    font:600 11px/1 var(--texte)!important;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;box-shadow:none!important;
+    background-repeat:no-repeat!important;background-position:right 10px center!important;background-size:10px 6px!important}
+  .ag-ligne2 .tri-theme select option{color:#123326;background:#fff;text-transform:none;letter-spacing:0}
+}
