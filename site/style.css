@@ -957,3 +957,5 @@ img,video,iframe,table{max-width:100%}
 .nt-zone{overflow:auto;padding:8px 12px 12px;overscroll-behavior:contain}
 .nt-zone p{font-size:13px;color:var(--gris);margin:0 0 10px}
 .cloche.ouverte{background:var(--vert-clair)}
+.nt-envoyer{color:#fff;background:var(--vert)}
+.nt-envoyer:hover{background:var(--vert-fonce)}

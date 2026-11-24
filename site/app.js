@@ -1786,7 +1786,8 @@
     var retour = el('button', 'nt-icone', '←'); retour.type = 'button'; retour.setAttribute('aria-label', 'Retour aux notifications'); retour.title = 'Retour';
     var titre = el('span', 'nt-titre', 'Notifications');
     var outils = el('span', 'nt-outils');
-    var bEnv = el('button', 'nt-icone', '✏️'); bEnv.type = 'button'; bEnv.setAttribute('aria-label', 'Envoyer une notification'); bEnv.title = 'Envoyer une notification';
+    var bEnv = el('button', 'nt-icone nt-envoyer'); bEnv.type = 'button';
+    bEnv.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3.4 11.1 19.6 4.3c.8-.3 1.6.4 1.3 1.2l-5.6 15.1c-.3.8-1.4.9-1.8.1l-2.7-5.2-5.3-2.6c-.8-.4-.7-1.5.1-1.8Z" fill="currentColor"/><path d="m10.8 15.4 5.6-7.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>'; bEnv.setAttribute('aria-label', 'Envoyer une notification'); bEnv.title = 'Envoyer une notification';
     var bReg = el('button', 'nt-icone', '⚙️'); bReg.type = 'button'; bReg.setAttribute('aria-label', 'Réglages des notifications'); bReg.title = 'Réglages';
     outils.appendChild(bEnv); outils.appendChild(bReg);
     haut.appendChild(retour); haut.appendChild(titre); haut.appendChild(outils);
