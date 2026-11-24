@@ -1,7 +1,7 @@
 Options -Indexes
 DirectoryIndex index.html
 <IfModule mod_headers.c>
-  <FilesMatch "\.(js|css)$">
+  <FilesMatch "\.(js|css|html|json)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>

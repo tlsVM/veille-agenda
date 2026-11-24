@@ -1,6 +1,6 @@
 /* Vivre Mieux · application installable : garde une copie de la page et des dernières données
    pour qu'elle s'ouvre même avec un mauvais réseau. Les données sont toujours prises en ligne d'abord. */
-const CACHE = 'vm-v4';
+const CACHE = 'vm-v5';
 const COQUILLE = ['./', 'index.html', 'manifest.json', 'logo-vm-blanc.svg', 'icone-192.png',
   'polices/outfit-400.woff2', 'polices/outfit-500.woff2', 'polices/outfit-600.woff2', 'polices/outfit-700.woff2', 'polices/bebas-neue.woff2'];
 
@@ -15,7 +15,7 @@ self.addEventListener('fetch', e => {
   if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
   // Réseau d'abord (données, page, scripts) ; en cas d'échec, la dernière copie gardée
   e.respondWith(
-    fetch(r).then(rep => {
+    fetch(r.mode === 'navigate' ? new Request(r, { cache: 'no-cache' }) : r).then(rep => {
       if (rep.ok) { const copie = rep.clone(); caches.open(CACHE).then(c => c.put(r, copie)); }
       return rep;
     }).catch(() => caches.match(r).then(m => m || (r.mode === 'navigate' ? caches.match('index.html') : undefined)))
