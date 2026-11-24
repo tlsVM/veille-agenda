@@ -84,6 +84,11 @@
   function rafraichirPresences() {
     fetch('api.php?a=pres', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       if (!d.presences) return; D.presences = d.presences; majPresences();
+      if (d.notifs) {
+        var avant = JSON.stringify(mesNotifs().map(function (x) { return x.id; }));
+        D.notifs = d.notifs; D.notif_etat = d.notif_etat; majCloche();
+        if (rafraichirListe && JSON.stringify(mesNotifs().map(function (x) { return x.id; })) !== avant) rafraichirListe();
+      }
     }).catch(function () {});
   }
   function afficherErreur(code) {
@@ -1700,14 +1705,33 @@
   var IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var INSTALLEE = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   function nomNotif() { return store('vm-push-nom') || moi; }
+  // Lu / effacé : gardé sur le serveur pour chaque personne (même état sur son téléphone et son ordinateur)
+  function etatNotif() { var e = (D.notif_etat || {})[nomNotif()] || {}; return { vu: e.vu || '', effaces: e.effaces || [] }; }
+  function horodatage(iso) { var t = Date.parse(iso || ''); return isNaN(t) ? 0 : t; }
   function mesNotifs() {
-    var n = nomNotif();
-    return (D.notifs || []).filter(function (x) { return (x.a || []).indexOf('tous') >= 0 || (n && (x.a || []).indexOf(n) >= 0); });
+    var n = nomNotif(), eff = etatNotif().effaces;
+    return (D.notifs || []).filter(function (x) { return ((x.a || []).indexOf('tous') >= 0 || (n && (x.a || []).indexOf(n) >= 0)) && eff.indexOf(x.id) < 0; });
   }
-  function nonLues() { var vu = store('vm-notif-vu') || ''; return mesNotifs().filter(function (x) { return x.le > vu; }).length; }
+  function estNouvelle(x) { return horodatage(x.le) > Math.max(horodatage(etatNotif().vu), horodatage(store('vm-notif-vu'))); }
+  function nonLues() { return mesNotifs().filter(estNouvelle).length; }
   function majCloche() {
     var b = document.getElementById('cloche'), nb = document.getElementById('cloche-nb'); if (!b) return;
     var k = nonLues(); nb.textContent = k > 9 ? '9+' : String(k); nb.hidden = !k;
+    b.classList.toggle('a-des-notifs', k > 0); b.setAttribute('aria-label', k ? k + ' notification' + (k > 1 ? 's' : '') + ' non lue' + (k > 1 ? 's' : '') : 'Notifications');
+    // pastille sur l'icône de l'appli (écran d'accueil, barre des tâches) quand le système le permet
+    try { if (navigator.setAppBadge) { if (k) navigator.setAppBadge(k); else navigator.clearAppBadge(); } } catch (e) {}
+    try { caches.open('vm-badge').then(function (c) { c.put('compte', new Response(String(k))); }); } catch (e) {}
+  }
+  function envoyerEtat(corps) {
+    var n = nomNotif(); if (!n) return Promise.resolve();
+    corps.nom = n;
+    return postJson('notif_etat', corps).then(function (d) { if (d && d.notif_etat) { D.notif_etat = d.notif_etat; majCloche(); } }).catch(function () {});
+  }
+  function effacerLocalement(ids) {
+    var n = nomNotif(); if (!n) return;
+    D.notif_etat = D.notif_etat && !Array.isArray(D.notif_etat) ? D.notif_etat : {};
+    var e = D.notif_etat[n] = D.notif_etat[n] || { vu: '', effaces: [] }; e.effaces = (e.effaces || []).concat(ids);
+    majCloche();
   }
   function appareil() {
     var u = navigator.userAgent, o = /iphone/i.test(u) ? 'iPhone' : /ipad/i.test(u) ? 'iPad' : /android/i.test(u) ? 'Android' : /windows/i.test(u) ? 'PC Windows' : /mac/i.test(u) ? 'Mac' : 'Ordinateur';
@@ -1742,17 +1766,85 @@
     vue = 'agenda'; store('vm-vue', vue); monAgenda = false; filtre = 'tout'; jourChoisi = e.date; rendre(); window.scrollTo(0, 0); return true;
   }
 
+  var rafraichirListe = null;
+  function ilYa(iso) {
+    var t = horodatage(iso), s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return 'à l\'instant'; if (s < 3600) return 'il y a ' + Math.floor(s / 60) + ' min';
+    if (s < 86400) return 'il y a ' + Math.floor(s / 3600) + ' h';
+    if (s < 2 * 86400) return 'hier à ' + dateNotif(iso).split(' à ')[1];
+    return dateNotif(iso);
+  }
   function ouvrirNotifs() {
     var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion notifs'); bx.setAttribute('role', 'dialog');
     bx.appendChild(el('h2', '', 'Notifications'));
     var zone = el('div', 'nt-zone'); bx.appendChild(zone);
-    function fermer() { m.remove(); }
+    function fermer() { m.remove(); rafraichirListe = null; }
 
-    // 1) Cet appareil
-    var ap = el('div', 'nt-bloc'); zone.appendChild(ap);
+    // 1) La liste des messages (comme sur un réseau social)
+    var mm = el('div', 'nt-bloc nt-liste'); zone.appendChild(mm);
+    var vuAvant = Math.max(horodatage(etatNotif().vu), horodatage(store('vm-notif-vu'))); // les « nouveaux » restent en couleur pendant cette ouverture
+    function peindreListe() {
+      mm.textContent = '';
+      var liste = mesNotifs();
+      var tete = el('div', 'nt-tete');
+      tete.appendChild(el('span', 'nt-pour', nomNotif() ? 'Pour ' + nomNotif().replace(' (collaborateur)', '') : 'Choisissez votre nom dans « Je coche pour »'));
+      if (liste.length > 1) {
+        var tout = el('button', 'nt-tout', 'Tout effacer'); tout.type = 'button';
+        tout.addEventListener('click', function () {
+          if (!confirm('Effacer toutes les notifications de la liste ?')) return;
+          var ids = liste.map(function (x) { return x.id; }); effacerLocalement(ids); peindreListe(); envoyerEtat({ effacer: ids });
+        });
+        tete.appendChild(tout);
+      }
+      mm.appendChild(tete);
+      if (!liste.length) { mm.appendChild(el('p', 'nt-vide', '🔔 Aucune notification pour le moment.')); return; }
+      if (liste.length) mm.appendChild(el('p', 'nt-astuce', 'Glissez une notification vers la gauche ou touchez ✕ pour l\'effacer.'));
+      liste.slice(0, 40).forEach(function (x) {
+        var ligne = el('div', 'nt-ligne'), fondR = el('div', 'nt-fond', 'Effacer');
+        var c = el('div', 'nt-msg' + (horodatage(x.le) > vuAvant ? ' nouveau' : '') + (x.ev ? ' cliquable' : ''));
+        var ic = el('span', 'nt-ic', x.ev ? '📅' : '🔔'); c.appendChild(ic);
+        var corps = el('div', 'nt-corps');
+        corps.appendChild(el('b', '', x.titre)); if (x.texte) corps.appendChild(el('p', '', x.texte));
+        corps.appendChild(el('span', 'nt-date', ilYa(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : '') + (x.ev ? ' · voir dans l\'agenda →' : '')));
+        c.appendChild(corps);
+        var croix = el('button', 'nt-x', '✕'); croix.type = 'button'; croix.setAttribute('aria-label', 'Effacer cette notification'); croix.title = 'Effacer';
+        c.appendChild(croix);
+        function effacer() {
+          ligne.classList.add('part'); effacerLocalement([x.id]); envoyerEtat({ effacer: [x.id] });
+          setTimeout(peindreListe, 250);
+        }
+        croix.addEventListener('click', function (e) { e.stopPropagation(); effacer(); });
+        c.addEventListener('click', function () { if (glisse) return; if (x.ev) { fermer(); allerEvenement(x.ev); } });
+        // glisser vers la gauche pour effacer
+        var x0 = null, y0 = 0, dx = 0, glisse = false;
+        c.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; glisse = false; c.style.transition = 'none'; }, { passive: true });
+        c.addEventListener('touchmove', function (e) {
+          if (x0 === null) return;
+          var mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+          if (!glisse && Math.abs(my) > Math.abs(mx)) { x0 = null; return; } // on fait défiler la liste
+          if (Math.abs(mx) > 8) glisse = true;
+          dx = Math.min(0, mx); c.style.transform = 'translateX(' + dx + 'px)';
+        }, { passive: true });
+        c.addEventListener('touchend', function () {
+          if (x0 === null) return; x0 = null; c.style.transition = '';
+          if (dx < -90) { c.style.transform = 'translateX(-110%)'; effacer(); } else { c.style.transform = ''; }
+          setTimeout(function () { glisse = false; }, 50);
+        });
+        ligne.appendChild(fondR); ligne.appendChild(c); mm.appendChild(ligne);
+      });
+      // ouvrir la liste = tout est lu (sur tous les appareils de la personne)
+      var dernier = liste[0].le;
+      if (horodatage(dernier) > horodatage(etatNotif().vu)) { store('vm-notif-vu', dernier); envoyerEtat({ vu: dernier }); }
+      majCloche();
+    }
+    peindreListe(); rafraichirListe = peindreListe;
+
+    // 2) Cet appareil
+    var ap = el('details', 'nt-bloc nt-reglage'); zone.appendChild(ap);
     function peindreAppareil() {
       ap.textContent = '';
-      ap.appendChild(el('h3', '', 'Sur cet appareil'));
+      var sm = el('summary', '', '⚙️ Recevoir les notifications sur cet appareil'); ap.appendChild(sm);
+      ap.open = true;
       if (IOS && !INSTALLEE) {
         ap.appendChild(el('p', '', 'Sur iPhone, les notifications ne marchent que dans l\'appli installée : touchez Partager ⎙ puis « Sur l\'écran d\'accueil », ouvrez Vivre Mieux depuis l\'écran d\'accueil et revenez ici sur la cloche 🔔.'));
         return;
@@ -1765,6 +1857,7 @@
       abonnementActuel().then(function (s) {
         var nom = store('vm-push-nom');
         if (s && nom) {
+          sm.textContent = '⚙️ Notifications activées sur cet appareil ✅'; ap.open = false;
           ap.appendChild(el('p', 'nt-ok', '✅ Activées pour ' + nom.replace(' (collaborateur)', '') + ' sur cet appareil.'));
           var ess = el('button', 'pb', 'Recevoir un essai'); ess.type = 'button';
           var dsc = el('button', 'pb peut', 'Désactiver'); dsc.type = 'button';
@@ -1784,6 +1877,7 @@
           var l = el('div', 'nt-boutons'); l.appendChild(ess); l.appendChild(dsc); ap.appendChild(l); ap.appendChild(msg);
           return;
         }
+        ap.open = true;
         ap.appendChild(el('p', '', 'Recevez sur cet appareil les messages de Hugo (rendez-vous, informations sur vos dossiers), même quand l\'appli est fermée.'));
         var lab = el('label', 'nt-lab', 'Ces notifications sont pour : ');
         var sel = el('select');
@@ -1795,7 +1889,7 @@
         bt.addEventListener('click', function () {
           if (!sel.value) { msg2.textContent = 'Choisissez d\'abord votre nom.'; sel.focus(); return; }
           bt.disabled = true; msg2.textContent = 'Votre appareil va vous demander l\'autorisation : répondez « Autoriser ».';
-          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); })
+          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); peindreListe(); })
             .catch(function (e) {
               bt.disabled = false;
               msg2.textContent = e && e.message === 'refus' ? 'Autorisation refusée : rien n\'a été activé.' : 'L\'activation n\'a pas marché. Réessayez dans un instant.';
@@ -1805,22 +1899,6 @@
       });
     }
     peindreAppareil();
-
-    // 2) Mes messages
-    var mm = el('div', 'nt-bloc'); zone.appendChild(mm);
-    var liste = mesNotifs();
-    mm.appendChild(el('h3', '', 'Messages reçus' + (nomNotif() ? ' · ' + nomNotif().replace(' (collaborateur)', '') : '')));
-    if (!liste.length) mm.appendChild(el('p', 'nb', 'Aucun message ces deux derniers mois.'));
-    var vu = store('vm-notif-vu') || '';
-    liste.slice(0, 30).forEach(function (x) {
-      var c = el('div', 'nt-msg' + (x.le > vu ? ' nouveau' : ''));
-      c.appendChild(el('b', '', x.titre)); if (x.texte) c.appendChild(el('p', '', x.texte));
-      var pied = el('span', 'nb', dateNotif(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : ''));
-      c.appendChild(pied);
-      if (x.ev) { var go = el('button', 'pb', 'Voir dans l\'agenda'); go.type = 'button'; go.addEventListener('click', function () { fermer(); allerEvenement(x.ev); }); c.appendChild(go); }
-      mm.appendChild(c);
-    });
-    if (liste.length) { store('vm-notif-vu', liste[0].le); majCloche(); }
 
     // 3) Envoyer (Hugo)
     var en = el('details', 'nt-bloc nt-envoi'); zone.appendChild(en);
@@ -1882,6 +1960,8 @@
     m.appendChild(bx); document.body.appendChild(m);
   }
   document.getElementById('cloche').addEventListener('click', ouvrirNotifs);
+  // une notification arrive pendant que l'appli est ouverte : la cloche se met à jour tout de suite
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'notif') rafraichirPresences(); });
 
   // Ouverture depuis une notification : ./?notif=…&ev=…
   var paramsNotif = (function () { try { var q = new URLSearchParams(location.search); return q.get('notif') || q.get('ev') ? { n: q.get('notif'), ev: q.get('ev') } : null; } catch (e) { return null; } })();

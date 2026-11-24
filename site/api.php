@@ -843,6 +843,11 @@ function cleAbo($endpoint) { return substr(hash('sha256', (string)$endpoint), 0,
 
 function historiqueNotifs() { global $DATA; $f = "$DATA/notifications.json"; if (!is_file($f)) { return []; } $p = json_decode(file_get_contents($f), true); return is_array($p) ? $p : []; }
 
+
+function notifsRecentes() { return array_values(array_filter(historiqueNotifs(), function ($n) { return strtotime($n['le']) > time() - 60 * 86400; })); }
+// Lu / effacé, par personne (même état sur tous ses appareils)
+function notifEtat() { global $DATA; $f = "$DATA/notifs-etat.json"; if (!is_file($f)) { return new stdClass(); } $p = json_decode(file_get_contents($f), true); return is_array($p) && $p ? $p : new stdClass(); }
+
 // Envoie à une liste de noms (ou à tous) ; retire les appareils qui se sont désabonnés
 function envoyerNotification($noms, $titre, $texte, $ev) {
   global $DATA;
@@ -904,7 +909,7 @@ if (!codeOk()) { sortir(['erreur' => 'code'], 401); }
 // ---------- Notifications : activation par l'élu, essai, envoi par Hugo ----------
 if ($a === 'push_cle') { $v = vapid(); sortir($v ? ['cle' => $v['pub']] : ['erreur' => 'cle'], $v ? 200 : 500); }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a, ['push_abo', 'push_desabo', 'push_essai', 'push_envoi'], true)) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a, ['push_abo', 'push_desabo', 'push_essai', 'push_envoi', 'notif_etat'], true)) {
   $d = json_decode(file_get_contents('php://input'), true); if (!is_array($d)) { sortir(['erreur' => 'format'], 400); }
   $ep = (string)($d['endpoint'] ?? '');
   if ($a === 'push_abo') {
@@ -927,6 +932,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a, ['push_abo', 'push_des
     $code = envoyerUnPush($ab, ['titre' => 'Vivre Mieux', 'texte' => 'Les notifications fonctionnent sur cet appareil 👍', 'url' => './', 'tag' => 'essai']);
     if ($code === 404 || $code === 410) { modifierAbonnements(function ($p) use ($ep) { unset($p[cleAbo($ep)]); return $p; }); }
     sortir(['ok' => $code >= 200 && $code < 300, 'code' => $code]);
+  }
+  if ($a === 'notif_etat') { // marquer comme lu, effacer un message ou tout effacer
+    $nom = (string)($d['nom'] ?? ''); if (!in_array($nom, ELUS, true)) { sortir(['erreur' => 'nom'], 400); }
+    $vu = (string)($d['vu'] ?? ''); $eff = array_filter((array)($d['effacer'] ?? []), function ($i) { return is_string($i) && preg_match('/^n[a-f0-9]{10}$/', $i); });
+    $h = fopen("$DATA/notifs-etat.json", 'c+'); if (!$h) { sortir(['erreur' => 'ecriture'], 500); }
+    flock($h, LOCK_EX); $p = json_decode(stream_get_contents($h), true); if (!is_array($p)) { $p = []; }
+    $e = $p[$nom] ?? ['vu' => '', 'effaces' => []];
+    if ($vu !== '' && preg_match('/^\d{4}-\d{2}-\d{2}T[\d:+-]+$/', $vu) && strtotime($vu) > strtotime($e['vu'] ?: '2000-01-01')) { $e['vu'] = $vu; }
+    $garder = array_column(notifsRecentes(), 'id'); // on oublie les messages de plus de 60 jours
+    $e['effaces'] = array_values(array_intersect(array_unique(array_merge($e['effaces'], $eff)), $garder));
+    $p[$nom] = $e;
+    ftruncate($h, 0); rewind($h); fwrite($h, json_encode($p, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
+    sortir(['ok' => true, 'notif_etat' => $p]);
   }
   if ($a === 'push_envoi') {
     $att = trim((string)((config() ?? [])['code_envoi'] ?? ''));
@@ -1020,7 +1038,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
   sortirPuisGoogle(['ok' => true, 'presences' => enregistrerPresence($id, $nom, $statut)], $id);
 }
 
-if ($a === 'pres') { sortir(['presences' => presences()]); }
+if ($a === 'pres') { sortir(['presences' => presences(), 'notifs' => notifsRecentes(), 'notif_etat' => notifEtat()]); }
 
 // ---------- Sondages de date (réponses des élus) ----------
 function sondages() {
@@ -1057,7 +1075,7 @@ if ($a === 'data') {
   $d['elus'] = ELUS;
   $d['cles_agenda'] = array_combine(ELUS, array_map('cleIcs', ELUS));
   // notifications : historique des 60 derniers jours et nombre d'appareils abonnés par personne
-  $d['notifs'] = array_values(array_filter(historiqueNotifs(), function ($n) { return strtotime($n['le']) > time() - 60 * 86400; }));
+  $d['notifs'] = notifsRecentes(); $d['notif_etat'] = notifEtat();
   $abos = []; foreach (abonnements() as $ab) { $abos[$ab['nom']] = ($abos[$ab['nom']] ?? 0) + 1; }
   $d['abonnes'] = $abos;
   $d['envoi_actif'] = trim((string)((config() ?? [])['code_envoi'] ?? '')) !== '';

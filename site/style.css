@@ -907,22 +907,39 @@ img,video,iframe,table{max-width:100%}
 .actu .logo-media.large{width:auto;border-radius:3px;box-shadow:none;background:none}
 
 /* Notifications : cloche et fenêtre */
-.cloche{position:relative;border:0;background:none;cursor:pointer;font-size:17px;line-height:1;padding:3px 6px;margin-left:2px}
-.cloche-nb{position:absolute;top:-4px;right:-3px;min-width:16px;height:16px;border-radius:999px;background:#e00000;color:#fff;font:700 10px/16px var(--texte);text-align:center;padding:0 3px}
+.cloche{position:relative;border:0;background:none;cursor:pointer;font-size:18px;line-height:1;padding:4px 7px;margin-left:2px;border-radius:999px}
+.cloche.a-des-notifs{animation:cloche-bouge 1.2s ease 2}
+@keyframes cloche-bouge{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(8deg)}60%{transform:rotate(-4deg)}}
+.cloche-nb{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;border-radius:999px;background:var(--rose-fort);color:#fff;font:700 11px/18px var(--texte);text-align:center;padding:0 4px;box-shadow:0 0 0 2px #fff;box-sizing:border-box}
 .notifs h3{margin:14px 0 6px;font-size:14px;color:var(--vert-fonce)}
-.nt-bloc{border-top:1px solid var(--trait);padding-top:4px;margin-top:8px}
-.nt-bloc:first-child{border-top:0;margin-top:0}
+.nt-bloc{border-top:1px solid var(--trait);padding-top:4px;margin-top:10px}
+.nt-bloc:first-child{border-top:0;margin-top:0;padding-top:0}
+.nt-tete{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0 4px}
+.nt-pour{font-size:12.5px;color:var(--gris)}
+.nt-tout{border:0;background:none;color:var(--rose-fort);font:600 12.5px var(--texte);cursor:pointer;padding:4px 2px}
+.nt-astuce{font-size:11.5px!important;margin:0 0 6px!important}
+.nt-vide{text-align:center;padding:18px 0;margin:0!important}
+.nt-ligne{position:relative;overflow:hidden;border-radius:14px;margin:6px 0;transition:max-height .25s ease,opacity .25s ease,margin .25s ease;max-height:300px}
+.nt-ligne.part{max-height:0;opacity:0;margin:0}
+.nt-fond{position:absolute;inset:0;background:var(--rose-fort);color:#fff;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:flex-end;padding-right:18px}
+.nt-msg{position:relative;display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--trait);border-radius:14px;padding:10px 34px 10px 10px;transition:transform .2s ease}
+.nt-msg.nouveau{background:var(--rose-pale);border-color:var(--rose)}
+.nt-msg.nouveau::after{content:"";position:absolute;top:14px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--rose-fort)}
+.nt-msg.nouveau .nt-x{top:26px}
+.nt-msg.cliquable{cursor:pointer}
+.nt-ic{flex:0 0 34px;height:34px;border-radius:50%;background:var(--vert-clair);display:flex;align-items:center;justify-content:center;font-size:16px}
+.nt-corps{flex:1;min-width:0}
+.nt-corps b{display:block;font-size:14px;color:var(--encre)}
+.nt-corps p{margin:2px 0 3px!important;font-size:13px;color:var(--encre)!important;white-space:pre-line}
+.nt-date{font-size:11.5px;color:var(--vert-fonce)}
+.nt-x{position:absolute;top:6px;right:6px;border:0;background:none;color:#9a8a92;font-size:13px;cursor:pointer;width:26px;height:26px;border-radius:50%}
+.nt-x:hover{background:var(--rose-pale);color:var(--rose-fort)}
 .nt-ok{color:var(--vert-fonce)!important;font-weight:600}
 .nt-boutons{display:flex;gap:8px;flex-wrap:wrap}
 .nt-lab{display:block;font-size:13px;margin:4px 0 10px}
 .nt-lab select,.nt-champ{font:inherit;font-size:14px;border:1px solid var(--trait);border-radius:10px;padding:7px 9px;max-width:100%}
 .nt-champ{display:block;width:100%;box-sizing:border-box;margin:6px 0}
 .nt-activer{width:100%}
-.nt-msg{background:#f6faf7;border-radius:12px;padding:9px 11px;margin:6px 0}
-.nt-msg.nouveau{box-shadow:inset 3px 0 0 var(--rose)}
-.nt-msg b{display:block;font-size:14px}
-.nt-msg p{margin:3px 0!important;font-size:13px;color:var(--encre)!important;white-space:pre-line}
-.nt-msg .pb{margin-top:6px}
-.nt-envoi summary{cursor:pointer;font-weight:600;color:var(--vert-fonce);padding:8px 0}
+.nt-reglage summary,.nt-envoi summary{cursor:pointer;font-weight:600;color:var(--vert-fonce);padding:8px 0;font-size:13.5px}
 .nt-dest{display:grid;grid-template-columns:1fr;gap:3px;font-size:13px;margin:4px 0 6px}
 .nt-case input{vertical-align:middle}

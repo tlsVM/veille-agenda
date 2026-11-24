@@ -1,6 +1,6 @@
 /* Vivre Mieux · application installable : garde une copie de la page et des dernières données
    pour qu'elle s'ouvre même avec un mauvais réseau. Les données sont toujours prises en ligne d'abord. */
-const CACHE = 'vm-v2';
+const CACHE = 'vm-v3';
 const COQUILLE = ['./', 'index.html', 'manifest.json', 'logo-vm-rose.svg', 'logo-vm-vert.svg', 'icone-192.png',
   'polices/outfit-400.woff2', 'polices/outfit-500.woff2', 'polices/outfit-600.woff2', 'polices/outfit-700.woff2', 'polices/bebas-neue.woff2'];
 
@@ -8,7 +8,7 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(COQUILLE)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== 'vm-badge').map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const r = e.request;
@@ -26,10 +26,18 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (x) { d = { texte: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.titre || 'Vivre Mieux', {
-    body: d.texte || '', icon: 'icone-192.png', badge: 'icone-192.png', tag: d.tag || undefined,
-    data: { url: d.url || './' }
-  }));
+  e.waitUntil(Promise.all([
+    self.registration.showNotification(d.titre || 'Vivre Mieux', {
+      body: d.texte || '', icon: 'icone-192.png', badge: 'icone-192.png', tag: d.tag || undefined,
+      data: { url: d.url || './' }
+    }),
+    // chiffre sur l'icône de l'appli (+1), et la cloche se met à jour si l'appli est ouverte
+    d.tag === 'essai' ? null : caches.open('vm-badge').then(c => c.match('compte').then(r => r ? r.text() : '0').then(t => {
+      const n = (parseInt(t, 10) || 0) + 1;
+      return c.put('compte', new Response(String(n))).then(() => { if (self.navigator.setAppBadge) return self.navigator.setAppBadge(n).catch(() => {}); });
+    })).catch(() => {}),
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => cs.forEach(c => c.postMessage({ type: 'notif' })))
+  ]));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
