@@ -750,6 +750,127 @@ function sortirIcs($nomCal, $evsIcs, $fichier) {
   exit;
 }
 
+// ---------- Notifications sur téléphone et ordinateur (Web Push, sans service payant) ----------
+// Les clés VAPID sont créées automatiquement dans ~/agenda-data/vapid.json au premier usage.
+// Les abonnements (un par appareil) sont dans ~/agenda-data/push-abonnements.json, l'historique dans notifications.json.
+// Envoi réservé à Hugo : 'code_envoi' => '…' dans config.php.
+
+function b64u($s) { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); }
+function b64uDec($s) { return base64_decode(strtr((string)$s, '-_', '+/') . str_repeat('=', (4 - strlen((string)$s) % 4) % 4), true); }
+function journalPush($t) { global $DATA; @file_put_contents("$DATA/journal-push.log", date('c') . "\t$t\n", FILE_APPEND | LOCK_EX); }
+
+function pointBrut($cle) { // clé EC P-256 → point public non compressé (65 octets)
+  $d = openssl_pkey_get_details($cle);
+  return "\x04" . str_pad($d['ec']['x'], 32, "\0", STR_PAD_LEFT) . str_pad($d['ec']['y'], 32, "\0", STR_PAD_LEFT);
+}
+function clePubliqueDepuisPoint($p) { // point non compressé → clé OpenSSL (format SPKI)
+  $der = hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200') . $p;
+  return openssl_pkey_get_public("-----BEGIN PUBLIC KEY-----\n" . chunk_split(base64_encode($der), 64, "\n") . "-----END PUBLIC KEY-----\n");
+}
+function nouvelleCleEC() { return openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]); }
+
+function vapid() {
+  global $DATA;
+  $f = "$DATA/vapid.json";
+  if (is_file($f)) { $v = json_decode(file_get_contents($f), true); if (!empty($v['pem']) && !empty($v['pub'])) { return $v; } }
+  $k = nouvelleCleEC(); if (!$k) { return null; }
+  openssl_pkey_export($k, $pem);
+  $v = ['pem' => $pem, 'pub' => b64u(pointBrut($k)), 'cree' => date('c')];
+  file_put_contents($f, json_encode($v), LOCK_EX); @chmod($f, 0600);
+  return $v;
+}
+
+function signatureBrute($der) { // signature ECDSA DER → r||s (64 octets) pour le JWT
+  $pos = 3; if (ord($der[1]) & 0x80) { $pos++; }
+  $lr = ord($der[$pos]); $r = substr($der, $pos + 1, $lr); $pos += 1 + $lr + 1;
+  $ls = ord($der[$pos]); $s = substr($der, $pos + 1, $ls);
+  return str_pad(ltrim($r, "\0"), 32, "\0", STR_PAD_LEFT) . str_pad(ltrim($s, "\0"), 32, "\0", STR_PAD_LEFT);
+}
+
+function jwtVapid($endpoint, $v) {
+  $u = parse_url($endpoint); $aud = $u['scheme'] . '://' . $u['host'];
+  $c = config() ?? []; $sub = 'mailto:' . trim((string)($c['mail_reply'] ?? 'toulousevivremieux@gmail.com'));
+  $t = b64u(json_encode(['typ' => 'JWT', 'alg' => 'ES256'])) . '.' . b64u(json_encode(['aud' => $aud, 'exp' => time() + 12 * 3600, 'sub' => $sub], JSON_UNESCAPED_SLASHES));
+  if (!openssl_sign($t, $der, openssl_pkey_get_private($v['pem']), OPENSSL_ALGO_SHA256)) { return null; }
+  return $t . '.' . b64u(signatureBrute($der));
+}
+
+// Chiffrement du message (RFC 8291, aes128gcm) : seul l'appareil destinataire peut le lire
+function chiffrerPush($texte, $p256dh, $auth) {
+  $ua = b64uDec($p256dh); $secret = b64uDec($auth);
+  if (strlen((string)$ua) !== 65 || strlen((string)$secret) !== 16) { return null; }
+  $eph = nouvelleCleEC(); $as = pointBrut($eph);
+  $partage = openssl_pkey_derive(clePubliqueDepuisPoint($ua), $eph, 32);
+  if ($partage === false) { return null; }
+  $ikm = hash_hkdf('sha256', $partage, 32, "WebPush: info\0" . $ua . $as, $secret);
+  $sel = random_bytes(16);
+  $cek = hash_hkdf('sha256', $ikm, 16, "Content-Encoding: aes128gcm\0", $sel);
+  $nonce = hash_hkdf('sha256', $ikm, 12, "Content-Encoding: nonce\0", $sel);
+  $chiffre = openssl_encrypt($texte . "\x02", 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
+  return $sel . pack('N', 4096) . chr(65) . $as . $chiffre . $tag;
+}
+
+function endpointAutorise($e) { // seuls les services de notification des navigateurs (pas d'appel vers n'importe quelle adresse)
+  $h = strtolower((string)parse_url((string)$e, PHP_URL_HOST));
+  return strpos((string)$e, 'https://') === 0 && strlen($e) < 1000 &&
+    preg_match('/(^|\.)(fcm\.googleapis\.com|android\.googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/', $h);
+}
+
+function envoyerUnPush($ab, $donnees) {
+  $v = vapid(); if (!$v) { return 0; }
+  $corps = chiffrerPush(json_encode($donnees, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $ab['p256dh'], $ab['auth']);
+  $jwt = jwtVapid($ab['endpoint'], $v);
+  if ($corps === null || $jwt === null) { journalPush('chiffrement impossible ' . substr($ab['endpoint'], 0, 60)); return 0; }
+  $h = curl_init($ab['endpoint']);
+  curl_setopt_array($h, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_POST => true, CURLOPT_POSTFIELDS => $corps,
+    CURLOPT_HTTPHEADER => ['Authorization: vapid t=' . $jwt . ', k=' . $v['pub'], 'Content-Encoding: aes128gcm',
+      'Content-Type: application/octet-stream', 'TTL: 172800', 'Urgency: high']]);
+  $r = curl_exec($h); $code = curl_getinfo($h, CURLINFO_HTTP_CODE); curl_close($h);
+  if ($code >= 300) { journalPush("$code " . ($ab['nom'] ?? '') . ' ' . substr((string)$r, 0, 200)); }
+  return $code;
+}
+
+function abonnements() { global $DATA; $f = "$DATA/push-abonnements.json"; if (!is_file($f)) { return []; } $p = json_decode(file_get_contents($f), true); return is_array($p) ? $p : []; }
+function modifierAbonnements($fn) {
+  global $DATA;
+  $h = fopen("$DATA/push-abonnements.json", 'c+'); if (!$h) { sortir(['erreur' => 'ecriture'], 500); }
+  flock($h, LOCK_EX); $p = json_decode(stream_get_contents($h), true); if (!is_array($p)) { $p = []; }
+  $p = $fn($p);
+  ftruncate($h, 0); rewind($h); fwrite($h, json_encode($p, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); fflush($h); flock($h, LOCK_UN); fclose($h);
+  return $p;
+}
+function cleAbo($endpoint) { return substr(hash('sha256', (string)$endpoint), 0, 24); }
+
+function historiqueNotifs() { global $DATA; $f = "$DATA/notifications.json"; if (!is_file($f)) { return []; } $p = json_decode(file_get_contents($f), true); return is_array($p) ? $p : []; }
+
+// Envoie à une liste de noms (ou à tous) ; retire les appareils qui se sont désabonnés
+function envoyerNotification($noms, $titre, $texte, $ev) {
+  global $DATA;
+  $tous = in_array('tous', $noms, true);
+  $id = 'n' . bin2hex(random_bytes(5));
+  $url = './?notif=' . $id . ($ev !== '' ? '&ev=' . rawurlencode($ev) : '');
+  $donnees = ['titre' => $titre, 'texte' => $texte, 'url' => $url, 'tag' => $id];
+  $recus = []; $morts = [];
+  foreach (abonnements() as $k => $ab) {
+    if (!$tous && !in_array($ab['nom'], $noms, true)) { continue; }
+    $code = envoyerUnPush($ab, $donnees);
+    if ($code >= 200 && $code < 300) { $recus[$ab['nom']] = ($recus[$ab['nom']] ?? 0) + 1; }
+    elseif ($code === 404 || $code === 410) { $morts[] = $k; }
+  }
+  if ($morts) { modifierAbonnements(function ($p) use ($morts) { foreach ($morts as $k) { unset($p[$k]); } return $p; }); }
+  $dest = $tous ? ['tous'] : array_values($noms);
+  $h = fopen("$DATA/notifications.json", 'c+');
+  if ($h) {
+    flock($h, LOCK_EX); $p = json_decode(stream_get_contents($h), true); if (!is_array($p)) { $p = []; }
+    array_unshift($p, ['id' => $id, 'le' => date('c'), 'a' => $dest, 'titre' => $titre, 'texte' => $texte, 'ev' => $ev]);
+    $p = array_slice($p, 0, 200);
+    ftruncate($h, 0); rewind($h); fwrite($h, json_encode($p, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
+  }
+  journalPush("envoi $id → " . implode(', ', $dest) . " : " . array_sum($recus) . " appareil(s) · $titre");
+  $cibles = $tous ? array_values(array_filter(ELUS, function ($n) { return strpos($n, 'collaborateur') === false; })) : $dest;
+  return ['ok' => true, 'recus' => $recus, 'sans' => array_values(array_filter($cibles, function ($n) use ($recus) { return empty($recus[$n]); }))];
+}
+
 // ---------- Aiguillage ----------
 
 $a = $_REQUEST['a'] ?? 'data';
@@ -778,6 +899,46 @@ if ($a === 'agenda') {
 }
 
 if (!codeOk()) { sortir(['erreur' => 'code'], 401); }
+
+
+// ---------- Notifications : activation par l'élu, essai, envoi par Hugo ----------
+if ($a === 'push_cle') { $v = vapid(); sortir($v ? ['cle' => $v['pub']] : ['erreur' => 'cle'], $v ? 200 : 500); }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a, ['push_abo', 'push_desabo', 'push_essai', 'push_envoi'], true)) {
+  $d = json_decode(file_get_contents('php://input'), true); if (!is_array($d)) { sortir(['erreur' => 'format'], 400); }
+  $ep = (string)($d['endpoint'] ?? '');
+  if ($a === 'push_abo') {
+    $nom = (string)($d['nom'] ?? ''); $p256 = (string)($d['p256dh'] ?? ''); $auth = (string)($d['auth'] ?? '');
+    if (!in_array($nom, ELUS, true)) { sortir(['erreur' => 'nom'], 400); }
+    if (!endpointAutorise($ep) || strlen((string)b64uDec($p256)) !== 65 || strlen((string)b64uDec($auth)) !== 16) { sortir(['erreur' => 'abonnement'], 400); }
+    $app = mb_substr(preg_replace('/[^\p{L}\p{N} ._\/()·-]/u', '', (string)($d['appareil'] ?? '')), 0, 40);
+    modifierAbonnements(function ($p) use ($ep, $nom, $p256, $auth, $app) {
+      $p[cleAbo($ep)] = ['nom' => $nom, 'endpoint' => $ep, 'p256dh' => $p256, 'auth' => $auth, 'appareil' => $app, 'cree' => date('c')]; return $p;
+    });
+    journalPush("abonnement $nom ($app)");
+    sortir(['ok' => true]);
+  }
+  if ($a === 'push_desabo') {
+    modifierAbonnements(function ($p) use ($ep) { unset($p[cleAbo($ep)]); return $p; });
+    sortir(['ok' => true]);
+  }
+  if ($a === 'push_essai') { // essai sur cet appareil seulement
+    $ab = abonnements()[cleAbo($ep)] ?? null; if (!$ab) { sortir(['erreur' => 'inconnu'], 404); }
+    $code = envoyerUnPush($ab, ['titre' => 'Vivre Mieux', 'texte' => 'Les notifications fonctionnent sur cet appareil 👍', 'url' => './', 'tag' => 'essai']);
+    if ($code === 404 || $code === 410) { modifierAbonnements(function ($p) use ($ep) { unset($p[cleAbo($ep)]); return $p; }); }
+    sortir(['ok' => $code >= 200 && $code < 300, 'code' => $code]);
+  }
+  if ($a === 'push_envoi') {
+    $att = trim((string)((config() ?? [])['code_envoi'] ?? ''));
+    if ($att === '' || !hash_equals($att, (string)($d['code'] ?? ''))) { sleep(1); sortir(['erreur' => 'code_envoi'], 403); }
+    $noms = array_values(array_filter((array)($d['a'] ?? []), function ($n) { return $n === 'tous' || in_array($n, ELUS, true); }));
+    $titre = champ($d, 'titre', 80); $texte = champ($d, 'texte', 300); $ev = (string)($d['ev'] ?? '');
+    if (!preg_match('/^[a-z0-9]{0,40}$/', $ev)) { $ev = ''; }
+    if (!$noms || $titre === '') { sortir(['erreur' => 'champs'], 400); }
+    @set_time_limit(120);
+    sortir(envoyerNotification($noms, $titre, $texte, $ev));
+  }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'ajout') {
   enregistrerAjout();
@@ -895,6 +1056,11 @@ if ($a === 'data') {
   $d['ajout_actif'] = true; // ajout ouvert à tous ; le code d'accès, s'il est mis en place, protégera toute la plateforme
   $d['elus'] = ELUS;
   $d['cles_agenda'] = array_combine(ELUS, array_map('cleIcs', ELUS));
+  // notifications : historique des 60 derniers jours et nombre d'appareils abonnés par personne
+  $d['notifs'] = array_values(array_filter(historiqueNotifs(), function ($n) { return strtotime($n['le']) > time() - 60 * 86400; }));
+  $abos = []; foreach (abonnements() as $ab) { $abos[$ab['nom']] = ($abos[$ab['nom']] ?? 0) + 1; }
+  $d['abonnes'] = $abos;
+  $d['envoi_actif'] = trim((string)((config() ?? [])['code_envoi'] ?? '')) !== '';
   sortir($d);
 }
 

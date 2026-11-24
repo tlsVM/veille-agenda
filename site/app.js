@@ -68,7 +68,7 @@
       D = d; D.evenements = d.evenements || []; D.actus = d.actus || []; D.quartiers = d.quartiers || []; D.presences = d.presences || {};
       ajouterReunionsGroupe(); signature = sigPresences();
       D.evenements.sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
-      remplirMoi(); rendre();
+      remplirMoi(); rendre(); suiteNotif();
     }).catch(function () { afficherErreur('reseau'); });
   }
   // Réunion de groupe : tous les lundis à 12h30, ajoutée automatiquement.
@@ -1694,6 +1694,204 @@
   })();
   setInterval(rafraichirPresences, 20000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { AUJ = cle(new Date()); rafraichirPresences(); } });
+
+  // ---------- Notifications (cloche) : activer sur cet appareil, mes messages, envoi par Hugo ----------
+  var PUSH_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  var IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var INSTALLEE = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  function nomNotif() { return store('vm-push-nom') || moi; }
+  function mesNotifs() {
+    var n = nomNotif();
+    return (D.notifs || []).filter(function (x) { return (x.a || []).indexOf('tous') >= 0 || (n && (x.a || []).indexOf(n) >= 0); });
+  }
+  function nonLues() { var vu = store('vm-notif-vu') || ''; return mesNotifs().filter(function (x) { return x.le > vu; }).length; }
+  function majCloche() {
+    var b = document.getElementById('cloche'), nb = document.getElementById('cloche-nb'); if (!b) return;
+    var k = nonLues(); nb.textContent = k > 9 ? '9+' : String(k); nb.hidden = !k;
+  }
+  function appareil() {
+    var u = navigator.userAgent, o = /iphone/i.test(u) ? 'iPhone' : /ipad/i.test(u) ? 'iPad' : /android/i.test(u) ? 'Android' : /windows/i.test(u) ? 'PC Windows' : /mac/i.test(u) ? 'Mac' : 'Ordinateur';
+    var n = /edg\//i.test(u) ? 'Edge' : /firefox|fxios/i.test(u) ? 'Firefox' : /chrome|crios/i.test(u) ? 'Chrome' : /safari/i.test(u) ? 'Safari' : '';
+    return o + (n ? ' · ' + n : '') + (INSTALLEE ? ' (appli)' : '');
+  }
+  function octetsDe(b64) { var s = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4)); var a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  function abonnementActuel() {
+    if (!PUSH_OK) return Promise.resolve(null);
+    return navigator.serviceWorker.ready.then(function (r) { return r.pushManager.getSubscription(); }).catch(function () { return null; });
+  }
+  function postJson(a, corps) {
+    return fetch('api.php?a=' + a, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) }).then(function (r) { return r.json(); });
+  }
+  function activerNotifs(nom) {
+    return Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error('refus');
+      return Promise.all([navigator.serviceWorker.ready, fetch('api.php?a=push_cle', { cache: 'no-store' }).then(function (r) { return r.json(); })]);
+    }).then(function (x) {
+      var reg = x[0], cle = x[1].cle; if (!cle) throw new Error('serveur');
+      return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: octetsDe(cle) }); });
+    }).then(function (s) {
+      var j = s.toJSON();
+      return postJson('push_abo', { nom: nom, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, appareil: appareil() }).then(function (d) {
+        if (!d.ok) throw new Error('serveur'); store('vm-push-nom', nom); D.abonnes = D.abonnes || {}; D.abonnes[nom] = (D.abonnes[nom] || 0) + 1; return s;
+      });
+    });
+  }
+  function dateNotif(iso) { var d = new Date(iso); return d.getDate() + ' ' + MOIS[d.getMonth()] + ' à ' + ('0' + d.getHours()).slice(-2) + 'h' + ('0' + d.getMinutes()).slice(-2); }
+  function allerEvenement(id) {
+    var e = D.evenements.filter(function (x) { return x.id === id; })[0]; if (!e) return false;
+    vue = 'agenda'; store('vm-vue', vue); monAgenda = false; filtre = 'tout'; jourChoisi = e.date; rendre(); window.scrollTo(0, 0); return true;
+  }
+
+  function ouvrirNotifs() {
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion notifs'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', 'Notifications'));
+    var zone = el('div', 'nt-zone'); bx.appendChild(zone);
+    function fermer() { m.remove(); }
+
+    // 1) Cet appareil
+    var ap = el('div', 'nt-bloc'); zone.appendChild(ap);
+    function peindreAppareil() {
+      ap.textContent = '';
+      ap.appendChild(el('h3', '', 'Sur cet appareil'));
+      if (IOS && !INSTALLEE) {
+        ap.appendChild(el('p', '', 'Sur iPhone, les notifications ne marchent que dans l\'appli installée : touchez Partager ⎙ puis « Sur l\'écran d\'accueil », ouvrez Vivre Mieux depuis l\'écran d\'accueil et revenez ici sur la cloche 🔔.'));
+        return;
+      }
+      if (!PUSH_OK) { ap.appendChild(el('p', '', 'Ce navigateur ne sait pas recevoir de notifications. Essayez avec Chrome, Edge, Firefox ou Safari à jour.')); return; }
+      if (Notification.permission === 'denied') {
+        ap.appendChild(el('p', '', 'Les notifications sont bloquées pour ce site. Autorisez-les dans les réglages du navigateur (ou du téléphone, rubrique Notifications), puis revenez ici.'));
+        return;
+      }
+      abonnementActuel().then(function (s) {
+        var nom = store('vm-push-nom');
+        if (s && nom) {
+          ap.appendChild(el('p', 'nt-ok', '✅ Activées pour ' + nom.replace(' (collaborateur)', '') + ' sur cet appareil.'));
+          var ess = el('button', 'pb', 'Recevoir un essai'); ess.type = 'button';
+          var dsc = el('button', 'pb peut', 'Désactiver'); dsc.type = 'button';
+          var msg = el('p', 'nb');
+          ess.addEventListener('click', function () {
+            msg.textContent = 'Envoi…';
+            postJson('push_essai', { endpoint: s.endpoint }).then(function (d) {
+              msg.textContent = d.ok ? 'Envoyé : la notification arrive dans quelques secondes.' : (d.erreur === 'inconnu' ? 'Cet appareil n\'est plus enregistré : désactivez puis réactivez.' : 'L\'envoi a échoué (code ' + (d.code || '?') + ').');
+            }).catch(function () { msg.textContent = 'Pas de connexion.'; });
+          });
+          dsc.addEventListener('click', function () {
+            postJson('push_desabo', { endpoint: s.endpoint }).catch(function () {}).then(function () { return s.unsubscribe(); }).then(function () {
+              try { localStorage.removeItem('vm-push-nom'); } catch (x) {}
+              if (D.abonnes && D.abonnes[nom]) D.abonnes[nom]--; peindreAppareil();
+            });
+          });
+          var l = el('div', 'nt-boutons'); l.appendChild(ess); l.appendChild(dsc); ap.appendChild(l); ap.appendChild(msg);
+          return;
+        }
+        ap.appendChild(el('p', '', 'Recevez sur cet appareil les messages de Hugo (rendez-vous, informations sur vos dossiers), même quand l\'appli est fermée.'));
+        var lab = el('label', 'nt-lab', 'Ces notifications sont pour : ');
+        var sel = el('select');
+        var o0 = el('option', '', '— choisir —'); o0.value = ''; sel.appendChild(o0);
+        (D.elus || []).forEach(function (n) { var o = el('option', '', n); o.value = n; if (n === (nom || moi)) o.selected = true; sel.appendChild(o); });
+        lab.appendChild(sel); ap.appendChild(lab);
+        var bt = el('button', 'bt-valider nt-activer', '🔔 Activer les notifications'); bt.type = 'button';
+        var msg2 = el('p', 'nb');
+        bt.addEventListener('click', function () {
+          if (!sel.value) { msg2.textContent = 'Choisissez d\'abord votre nom.'; sel.focus(); return; }
+          bt.disabled = true; msg2.textContent = 'Votre appareil va vous demander l\'autorisation : répondez « Autoriser ».';
+          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); })
+            .catch(function (e) {
+              bt.disabled = false;
+              msg2.textContent = e && e.message === 'refus' ? 'Autorisation refusée : rien n\'a été activé.' : 'L\'activation n\'a pas marché. Réessayez dans un instant.';
+            });
+        });
+        ap.appendChild(bt); ap.appendChild(msg2);
+      });
+    }
+    peindreAppareil();
+
+    // 2) Mes messages
+    var mm = el('div', 'nt-bloc'); zone.appendChild(mm);
+    var liste = mesNotifs();
+    mm.appendChild(el('h3', '', 'Messages reçus' + (nomNotif() ? ' · ' + nomNotif().replace(' (collaborateur)', '') : '')));
+    if (!liste.length) mm.appendChild(el('p', 'nb', 'Aucun message ces deux derniers mois.'));
+    var vu = store('vm-notif-vu') || '';
+    liste.slice(0, 30).forEach(function (x) {
+      var c = el('div', 'nt-msg' + (x.le > vu ? ' nouveau' : ''));
+      c.appendChild(el('b', '', x.titre)); if (x.texte) c.appendChild(el('p', '', x.texte));
+      var pied = el('span', 'nb', dateNotif(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : ''));
+      c.appendChild(pied);
+      if (x.ev) { var go = el('button', 'pb', 'Voir dans l\'agenda'); go.type = 'button'; go.addEventListener('click', function () { fermer(); allerEvenement(x.ev); }); c.appendChild(go); }
+      mm.appendChild(c);
+    });
+    if (liste.length) { store('vm-notif-vu', liste[0].le); majCloche(); }
+
+    // 3) Envoyer (Hugo)
+    var en = el('details', 'nt-bloc nt-envoi'); zone.appendChild(en);
+    function peindreEnvoi() {
+      en.textContent = '';
+      var hugo = /collaborateur/.test(moi || '') || /collaborateur/.test(store('vm-push-nom') || '') || store('vm-code-envoi');
+      en.hidden = !hugo; if (!hugo) return;
+      en.appendChild(el('summary', '', '✉️ Envoyer une notification'));
+      if (!D.envoi_actif) { en.appendChild(el('p', 'nb', 'Pour activer l\'envoi, ajoutez une ligne \'code_envoi\' => \'…\' dans ~/agenda-data/config.php sur le serveur.')); return; }
+      en.appendChild(el('p', 'nb', 'Destinataires (entre parenthèses : nombre d\'appareils où la personne a activé les notifications)'));
+      var cases = el('div', 'nt-dest'); var coches = {};
+      function caseNom(n, txt) {
+        var l = el('label', 'nt-case'); var c = el('input'); c.type = 'checkbox'; c.value = n; coches[n] = c;
+        l.appendChild(c); l.appendChild(document.createTextNode(' ' + txt)); cases.appendChild(l); return c;
+      }
+      var cTous = caseNom('tous', 'Tout le groupe');
+      (D.elus || []).forEach(function (n) {
+        var k = (D.abonnes || {})[n] || 0;
+        caseNom(n, n.replace(' (collaborateur)', '') + ' (' + (k ? k : 'pas encore activé') + ')');
+      });
+      cTous.addEventListener('change', function () { Object.keys(coches).forEach(function (n) { if (n !== 'tous') { coches[n].disabled = cTous.checked; } }); });
+      en.appendChild(cases);
+      var sEv = el('select', 'nt-champ'); var o0 = el('option', '', 'Lier à un rendez-vous de l\'agenda (facultatif)'); o0.value = ''; sEv.appendChild(o0);
+      var fin = cle(ajout(new Date(), 60));
+      D.evenements.filter(function (e) { return e.date >= AUJ && e.date <= fin; }).forEach(function (e) {
+        var o = el('option', '', courte(e.date) + (e.heure ? ' ' + hFmt(e.heure) : '') + ' · ' + e.titre); o.value = e.id; sEv.appendChild(o);
+      });
+      var fT = el('input', 'nt-champ'); fT.placeholder = 'Titre (ex. : Réunion publique demain)'; fT.maxLength = 80;
+      var fX = el('textarea', 'nt-champ'); fX.placeholder = 'Message (facultatif)'; fX.maxLength = 300; fX.rows = 3;
+      sEv.addEventListener('change', function () {
+        var e = D.evenements.filter(function (x) { return x.id === sEv.value; })[0]; if (!e) return;
+        fT.value = '📅 ' + e.titre.slice(0, 76);
+        var d = dDe(e.date); fX.value = JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + (e.heure ? ' à ' + hFmt(e.heure).replace('H', 'h') : '') + (e.lieu ? ' · ' + e.lieu : '');
+      });
+      var fC = el('input', 'nt-champ'); fC.type = 'password'; fC.placeholder = 'Code d\'envoi'; fC.value = store('vm-code-envoi') || ''; fC.autocomplete = 'off';
+      var bt = el('button', 'bt-valider', 'Envoyer'); bt.type = 'button'; var msg = el('p', 'nb');
+      [sEv, fT, fX, fC, bt, msg].forEach(function (x) { en.appendChild(x); });
+      bt.addEventListener('click', function () {
+        var a = cTous.checked ? ['tous'] : Object.keys(coches).filter(function (n) { return n !== 'tous' && coches[n].checked; });
+        if (!a.length) { msg.textContent = 'Cochez au moins un destinataire.'; return; }
+        if (!fT.value.trim()) { msg.textContent = 'Il faut un titre.'; fT.focus(); return; }
+        bt.disabled = true; msg.textContent = 'Envoi…';
+        postJson('push_envoi', { code: fC.value, a: a, titre: fT.value.trim(), texte: fX.value.trim(), ev: sEv.value }).then(function (d) {
+          bt.disabled = false;
+          if (d.erreur === 'code_envoi') { msg.textContent = 'Code d\'envoi incorrect.'; fC.select(); return; }
+          if (!d.ok) { msg.textContent = 'L\'envoi a échoué.'; return; }
+          store('vm-code-envoi', fC.value);
+          var n = Object.keys(d.recus || {}).reduce(function (s, k) { return s + d.recus[k]; }, 0);
+          msg.textContent = '✅ Envoyé sur ' + n + ' appareil' + (n > 1 ? 's' : '') + '.' + ((d.sans || []).length ? ' Pas reçu (notifications non activées) : ' + d.sans.map(function (x) { return x.replace(' (collaborateur)', ''); }).join(', ') + '. Le message reste visible pour eux sous la cloche 🔔.' : '');
+          fT.value = ''; fX.value = ''; sEv.value = '';
+          charger(); // l'historique se met à jour
+        }).catch(function () { bt.disabled = false; msg.textContent = 'Pas de connexion.'; });
+      });
+    }
+    peindreEnvoi();
+
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', fermer); bx.appendChild(f);
+    m.addEventListener('click', function (e) { if (e.target === m) fermer(); });
+    m.appendChild(bx); document.body.appendChild(m);
+  }
+  document.getElementById('cloche').addEventListener('click', ouvrirNotifs);
+
+  // Ouverture depuis une notification : ./?notif=…&ev=…
+  var paramsNotif = (function () { try { var q = new URLSearchParams(location.search); return q.get('notif') || q.get('ev') ? { n: q.get('notif'), ev: q.get('ev') } : null; } catch (e) { return null; } })();
+  function suiteNotif() {
+    majCloche();
+    if (!paramsNotif) return;
+    var p = paramsNotif; paramsNotif = null;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    if (!(p.ev && allerEvenement(p.ev))) ouvrirNotifs();
+  }
 
   // ---------- Application installable ----------
   // filet de sécurité : la page ne doit jamais rester décalée sur le côté

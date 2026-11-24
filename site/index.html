@@ -15,7 +15,7 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Vivre Mieux">
-<link rel="stylesheet" href="style.css?v=87">
+<link rel="stylesheet" href="style.css?v=88">
 </head>
 <body>
 <header class="bandeau">
@@ -35,6 +35,7 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 <div class="moi">
     <label for="moi">Je coche pour</label>
     <select id="moi"></select>
+    <button type="button" id="cloche" class="cloche" aria-label="Notifications" title="Notifications">🔔<span id="cloche-nb" class="cloche-nb" hidden></span></button>
   </div>
 </div>
 
@@ -50,6 +51,6 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
   </div>
 </div>
 
-<script src="app.js?v=87"></script>
+<script src="app.js?v=88"></script>
 </body>
 </html>

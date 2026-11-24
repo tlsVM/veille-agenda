@@ -905,3 +905,24 @@ img,video,iframe,table{max-width:100%}
 .actu .actu-titre{display:block}
 .actu .logo-media{width:20px;height:20px;border-radius:5px;vertical-align:-4px;margin-right:7px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.08);object-fit:contain}
 .actu .logo-media.large{width:auto;border-radius:3px;box-shadow:none;background:none}
+
+/* Notifications : cloche et fenêtre */
+.cloche{position:relative;border:0;background:none;cursor:pointer;font-size:17px;line-height:1;padding:3px 6px;margin-left:2px}
+.cloche-nb{position:absolute;top:-4px;right:-3px;min-width:16px;height:16px;border-radius:999px;background:#e00000;color:#fff;font:700 10px/16px var(--texte);text-align:center;padding:0 3px}
+.notifs h3{margin:14px 0 6px;font-size:14px;color:var(--vert-fonce)}
+.nt-bloc{border-top:1px solid var(--trait);padding-top:4px;margin-top:8px}
+.nt-bloc:first-child{border-top:0;margin-top:0}
+.nt-ok{color:var(--vert-fonce)!important;font-weight:600}
+.nt-boutons{display:flex;gap:8px;flex-wrap:wrap}
+.nt-lab{display:block;font-size:13px;margin:4px 0 10px}
+.nt-lab select,.nt-champ{font:inherit;font-size:14px;border:1px solid var(--trait);border-radius:10px;padding:7px 9px;max-width:100%}
+.nt-champ{display:block;width:100%;box-sizing:border-box;margin:6px 0}
+.nt-activer{width:100%}
+.nt-msg{background:#f6faf7;border-radius:12px;padding:9px 11px;margin:6px 0}
+.nt-msg.nouveau{box-shadow:inset 3px 0 0 var(--rose)}
+.nt-msg b{display:block;font-size:14px}
+.nt-msg p{margin:3px 0!important;font-size:13px;color:var(--encre)!important;white-space:pre-line}
+.nt-msg .pb{margin-top:6px}
+.nt-envoi summary{cursor:pointer;font-weight:600;color:var(--vert-fonce);padding:8px 0}
+.nt-dest{display:grid;grid-template-columns:1fr;gap:3px;font-size:13px;margin:4px 0 6px}
+.nt-case input{vertical-align:middle}
