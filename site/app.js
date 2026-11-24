@@ -988,13 +988,18 @@
     z.appendChild(el('h2', 'monag-titre', 'Agenda de ' + nom));
     var titre = function () { return 'Agenda de ' + nom; };
     var texte = function () { var d = new Date(); return texteListe('📅 Agenda de ' + nom, 'À partir du ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear(), mesEvenements(AUJ)); };
-    boutonsPartage(z, texte, titre);
+    // les options (copier, partager, PDF, image, agenda) : visibles sur ordinateur, repliées dans « Options » sur téléphone
+    var opt = el('details', 'monag-opt'); var sm = el('summary', 'monag-opt-bt', 'Options'); opt.appendChild(sm);
+    var corps = el('div', 'monag-opt-corps'); opt.appendChild(corps);
+    boutonsPartage(corps, texte, titre);
     if (D.cles_agenda) {
       var ag = el('div', 'ps-actions monag-ag');
       var a2 = el('button', 'bt-ps', '📅 Ajouter à mon agenda'); a2.type = 'button'; a2.addEventListener('click', function () { ouvrirAbonnement(moi); });
       var a1 = el('a', 'bt-ps', '⬇️ Télécharger le .ics'); a1.href = lienAbonnement(moi, true) + '&du=' + AUJ;
-      ag.appendChild(a2); ag.appendChild(a1); z.appendChild(ag);
+      ag.appendChild(a2); ag.appendChild(a1); corps.appendChild(ag);
     }
+    if (window.innerWidth >= 760) opt.open = true;
+    z.appendChild(opt);
     return z;
   }
 
