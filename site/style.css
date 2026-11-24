@@ -1428,3 +1428,16 @@ html:has(.modale:not([hidden])),body:has(.modale:not([hidden])){overflow:hidden;
 .pa-rond{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font:700 19px var(--texte)}
 .pa-msg{text-align:center;min-height:1em}
 @media (max-width:759px){.actu>.bt-partage-actu,.actu>.bt-notif{width:30px;height:30px}.actu.avec-partage>.bt-notif{right:38px}.actu.avec-partage.avec-notif{padding-right:74px}}
+/* partage sur les événements de l'agenda (liste) : positions des petits boutons */
+.ev.avec-partage>.bt-partage-ev{position:absolute;top:5px;right:55px}
+.ev.avec-partage .haut{padding-right:80px}
+.ev.avec-partage.avec-suppr>.bt-partage-ev{right:80px}
+.ev.avec-partage.avec-suppr>.bt-notif{right:105px}
+.ev.avec-partage.avec-suppr .haut{padding-right:128px}
+.ev>.bt-partage-ev{color:#1a1a1a;opacity:.85}
+.g-plein .g-h{padding-right:118px}
+/* fenêtre « Partager » du haut : ronds d'applis */
+.ps-apps{margin:4px 0 10px}
+.ps-apps .pa-grille{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}
+.ps-apps .pa-rond{width:44px;height:44px;font-size:17px}
+.monag-opt-corps .ps-apps .pa-grille{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}

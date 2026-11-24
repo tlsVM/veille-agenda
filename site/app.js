@@ -369,6 +369,7 @@
     }
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
     c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
+    if (t.g !== 'majo') { c.classList.add('avec-partage'); c.appendChild(btPartageEv(e)); }
     if (estHugo()) { c.classList.add('avec-notif', 'avec-suppr'); c.appendChild(btNotif(function () { return notifDeEv(e); })); c.appendChild(btSuppr(e)); }
     if (t.g !== 'majo') { // icône « ajouter à mon agenda » sur chaque événement (copie ponctuelle)
       var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
@@ -707,6 +708,9 @@
     b('⬇️ PDF', function () { telechargerDoc('pdf', titreDoc(), getTexte(), msg); });
     b('🖼️ Image', function () { telechargerDoc('png', titreDoc(), getTexte(), msg); });
     zone.appendChild(act); zone.appendChild(msg);
+    // envoi direct dans une messagerie
+    var apps = grilleApps(getTexte, titreDoc, null, null); apps.classList.add('ps-apps');
+    zone.insertBefore(apps, act);
   }
   function ouvrirPartage() {
     var lundiK = new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()));
@@ -1066,6 +1070,7 @@
   function boutonsIcones(e, t) {
     var ic = el('div', 'g-ic');
     if (estHugo()) ic.appendChild(btNotif(function () { return notifDeEv(e); }));
+    if (t.g !== 'majo') ic.appendChild(btPartageEv(e));
     if (t.g !== 'majo') {
       var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
       ba.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="11.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 6.3h12.4M5 1.3v3M11 1.3v3M8 8.3v4M6 10.3h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
@@ -1983,43 +1988,53 @@
     b.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirPartageActu(x); });
     return b;
   }
-  function ouvrirPartageActu(x) {
-    var t = texteActu(x), u = encodeURIComponent, sujet = x.titre;
-    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion partage-actu'); bx.setAttribute('role', 'dialog');
-    bx.appendChild(el('h2', '', 'Partager'));
-    var ap = el('div', 'er-apercu'); ap.appendChild(el('b', '', x.titre)); if (x.source) ap.appendChild(el('p', '', x.source)); bx.appendChild(ap);
-    var g = el('div', 'pa-grille');
-    function lienApp(nom, coul, href, ic) {
-      var l = el('a', 'pa-app'); l.href = href; l.target = '_blank'; l.rel = 'noopener';
-      var r = el('span', 'pa-rond', ic); r.style.background = coul; l.appendChild(r); l.appendChild(el('span', 'pa-nom', nom));
-      l.addEventListener('click', function () { setTimeout(function () { m.remove(); }, 300); }); g.appendChild(l);
-    }
-    lienApp('WhatsApp', '#25D366', 'https://wa.me/?text=' + u(t), 'W');
-    lienApp('Telegram', '#229ED9', 'https://t.me/share/url?url=' + u(x.lien || '') + '&text=' + u(x.lien ? t.replace(x.lien + '\n', '') : t), 'T');
-    lienApp('SMS', '#34C759', 'sms:?&body=' + u(t), '💬');
-    lienApp('Mail', '#5B6B73', 'mailto:?subject=' + u(sujet) + '&body=' + u(t), '✉');
-    // Signal (et toutes les autres applis) : feuille de partage du téléphone, ou copie sur ordinateur
-    var sig = el('button', 'pa-app'); sig.type = 'button'; var rs = el('span', 'pa-rond', 'S'); rs.style.background = '#3A76F0'; sig.appendChild(rs); sig.appendChild(el('span', 'pa-nom', 'Signal'));
-    var msg = el('p', 'nb pa-msg');
+  // Ronds d'applis (WhatsApp, Telegram, SMS, Mail, Signal, Autres, Copier) : réutilisés partout
+  function grilleApps(getTexte, getSujet, lienPrincipal, apres) {
+    var u = encodeURIComponent, g = el('div', 'pa-grille'), msg = el('p', 'nb pa-msg');
+    function t() { return getTexte(); }
     function copier() {
-      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { msg.textContent = '✓ Copié : collez-le dans la conversation.'; })
-        .catch(function () { var ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); msg.textContent = '✓ Copié.'; } catch (y) {} ta.remove(); });
+      var tx = t();
+      (navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(function () { msg.textContent = '✓ Copié : collez-le dans la conversation.'; })
+        .catch(function () { var ta = el('textarea'); ta.value = tx; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); msg.textContent = '✓ Copié.'; } catch (y) {} ta.remove(); });
     }
-    sig.addEventListener('click', function () {
-      if (navigator.share) navigator.share({ title: sujet, text: t }).catch(function () {});
+    function rond(nom, coul, ic) { var r = el('span', 'pa-rond', ic); r.style.background = coul; return r; }
+    function lienApp(nom, coul, ic, fHref) {
+      var l = el('a', 'pa-app'); l.target = '_blank'; l.rel = 'noopener'; l.href = '#';
+      l.appendChild(rond(nom, coul, ic)); l.appendChild(el('span', 'pa-nom', nom));
+      l.addEventListener('click', function () { l.href = fHref(); if (apres) setTimeout(apres, 300); }); g.appendChild(l);
+    }
+    function btApp(nom, coul, ic, f) { var b = el('button', 'pa-app'); b.type = 'button'; b.appendChild(rond(nom, coul, ic)); b.appendChild(el('span', 'pa-nom', nom)); b.addEventListener('click', f); g.appendChild(b); }
+    lienApp('WhatsApp', '#25D366', 'W', function () { return 'https://wa.me/?text=' + u(t()); });
+    lienApp('Telegram', '#229ED9', 'T', function () { var l = lienPrincipal ? lienPrincipal() : ''; var tx = t(); return 'https://t.me/share/url?url=' + u(l || ' ') + '&text=' + u(l ? tx.replace(l + '\n', '') : tx); });
+    lienApp('SMS', '#34C759', '💬', function () { return 'sms:?&body=' + u(t()); });
+    lienApp('Mail', '#5B6B73', '✉', function () { return 'mailto:?subject=' + u(getSujet()) + '&body=' + u(t()); });
+    btApp('Signal', '#3A76F0', 'S', function () {
+      if (navigator.share) navigator.share({ title: getSujet(), text: t() }).catch(function () {});
       else { copier(); msg.textContent = '✓ Copié : ouvrez Signal et collez le message dans la conversation.'; }
     });
-    g.appendChild(sig);
-    if (navigator.share) {
-      var aut = el('button', 'pa-app'); aut.type = 'button'; var ra = el('span', 'pa-rond', '⋯'); ra.style.background = '#0e6b41'; aut.appendChild(ra); aut.appendChild(el('span', 'pa-nom', 'Autres'));
-      aut.addEventListener('click', function () { navigator.share({ title: sujet, text: t }).catch(function () {}); }); g.appendChild(aut);
-    }
-    var cp = el('button', 'pa-app'); cp.type = 'button'; var rc = el('span', 'pa-rond', '⧉'); rc.style.background = '#123326'; cp.appendChild(rc); cp.appendChild(el('span', 'pa-nom', 'Copier'));
-    cp.addEventListener('click', copier); g.appendChild(cp);
-    bx.appendChild(g); bx.appendChild(msg);
+    if (navigator.share) btApp('Autres', '#0e6b41', '⋯', function () { navigator.share({ title: getSujet(), text: t() }).catch(function () {}); });
+    btApp('Copier', '#123326', '⧉', copier);
+    var z = el('div', 'pa-zone'); z.appendChild(g); z.appendChild(msg); return z;
+  }
+  function ouvrirPartageTexte(titre, sousTitre, texte, lienP) {
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion partage-actu'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', 'Partager'));
+    var ap = el('div', 'er-apercu'); ap.appendChild(el('b', '', titre)); if (sousTitre) ap.appendChild(el('p', '', sousTitre)); bx.appendChild(ap);
+    bx.appendChild(grilleApps(function () { return texte; }, function () { return titre; }, function () { return lienP || ''; }, function () { m.remove(); }));
     var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
     m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
     m.appendChild(bx); document.body.appendChild(m);
+  }
+  function ouvrirPartageActu(x) { ouvrirPartageTexte(x.titre, x.source || '', texteActu(x), x.lien || ''); }
+  function btPartageEv(e) {
+    var b = el('button', 'bt-copie bt-partage-actu bt-partage-ev'); b.type = 'button'; b.title = 'Partager (WhatsApp, Telegram, Signal, SMS, mail…)'; b.setAttribute('aria-label', 'Partager ce rendez-vous');
+    b.innerHTML = ICO_TG;
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation(); var d = dDe(e.date);
+      ouvrirPartageTexte(e.titre, JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + (e.heure ? ' à ' + e.heure.replace(':', 'h') : '') + (lieuDe(e) ? ' · ' + lieuDe(e) : ''),
+        '📅 ' + texteEv(e, true) + '\n— partagé depuis l\'appli Vivre Mieux', e.lien || '');
+    });
+    return b;
   }
 
   // ---------- Flèche d'envoi sur chaque événement, actu et info de quartier (pour Hugo) ----------
