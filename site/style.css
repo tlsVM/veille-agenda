@@ -1261,3 +1261,19 @@ body,.page{background:var(--fond)!important}
     background-repeat:no-repeat!important;background-position:right 10px center!important;background-size:10px 6px!important}
   .ag-ligne2 .tri-theme select option{color:#123326;background:#fff;text-transform:none;letter-spacing:0}
 }
+/* 24/11 : barre alignée exactement sur la largeur des jours ; « Trier par thème » au centre, « Agenda de … » en 2e ligne */
+@media (min-width:1000px){
+  body.vue-agenda:not(:has(.g3)) #vue>.outils-ag{max-width:1100px;margin-left:auto!important;margin-right:auto!important}
+  .outils-ag.outils-3{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important}
+  .outils-3 .og-g,.outils-3 .og-d{flex-wrap:nowrap}
+  .outils-3 .og-g .cal-wrap{flex:1;display:flex;gap:10px}
+  .outils-3 .og-g .bt-cal,.outils-3 .og-g .bt-ajout,.outils-3 .og-d .bt-presences{width:100%!important;flex:1}
+  .outils-3 .og-d .pres-wrap,.outils-3 .og-d .part-wrap{flex:1;display:flex}
+  .outils-3 .og-c .tri-theme select{width:220px!important}
+  .ag-ligne2 .monag-wrap{display:block}
+  .ag-ligne2 .bt-monag{height:30px!important;padding:0 18px!important;border:0!important;border-radius:5px!important;background:#0e6b41!important;color:#fff!important;
+    font:600 11px/1 var(--texte)!important;letter-spacing:.07em;text-transform:uppercase;box-shadow:none!important;cursor:pointer}
+  .ag-ligne2 .bt-monag.on{background:#158c57!important}
+  .ag-ligne2 .bt-monag .ic{display:none!important}
+  .ag-ligne2 .bt-monag:focus-visible{outline:2px solid var(--rose-fort);outline-offset:2px}
+}
