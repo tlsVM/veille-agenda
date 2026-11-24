@@ -957,7 +957,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a, ['push_abo', 'push_des
     $titre = champ($d, 'titre', 80); $texte = champ($d, 'texte', 300); $ev = (string)($d['ev'] ?? '');
     $lienN = champ($d, 'lien', 400); if (!preg_match('#^https?://#i', $lienN)) { $lienN = ''; }
     if (!preg_match('/^[a-z0-9]{0,40}$/', $ev)) { $ev = ''; }
-    if ($titre === '' && $texte !== '') { $titre = 'Message de Hugo'; } // un simple message suffit
     if (!$noms || ($titre === '' && $texte === '')) { sortir(['erreur' => 'champs'], 400); }
     if ($titre === '') { $titre = '💬 Message de Hugo'; } // un simple message, sans titre
     @set_time_limit(120);
