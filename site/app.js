@@ -2276,8 +2276,8 @@
       D.evenements.filter(function (e) { return e.date >= AUJ && e.date <= fin; }).forEach(function (e) {
         var o = el('option', '', courte(e.date) + (e.heure ? ' ' + hFmt(e.heure) : '') + ' · ' + e.titre); o.value = e.id; sEv.appendChild(o);
       });
-      var fT = el('input', 'nt-champ'); fT.placeholder = 'Titre (ex. : Réunion publique demain)'; fT.maxLength = 80;
-      var fX = el('textarea', 'nt-champ'); fX.placeholder = 'Message (facultatif)'; fX.maxLength = 300; fX.rows = 3;
+      var fT = el('input', 'nt-champ'); fT.placeholder = 'Titre (facultatif)'; fT.maxLength = 80;
+      var fX = el('textarea', 'nt-champ'); fX.placeholder = 'Votre message'; fX.maxLength = 300; fX.rows = 3;
       sEv.addEventListener('change', function () {
         var e = D.evenements.filter(function (x) { return x.id === sEv.value; })[0]; if (!e) return;
         fT.value = '📅 ' + e.titre.slice(0, 76);
@@ -2285,11 +2285,11 @@
       });
       var fC = el('input', 'nt-champ'); fC.type = 'password'; fC.placeholder = 'Code d\'envoi'; fC.value = store('vm-code-envoi') || ''; fC.autocomplete = 'off';
       var bt = el('button', 'bt-valider', 'Envoyer'); bt.type = 'button'; var msg = el('p', 'nb');
-      [sEv, fT, fX, fC, bt, msg].forEach(function (x) { en.appendChild(x); });
+      [fX, sEv, fT, fC, bt, msg].forEach(function (x) { en.appendChild(x); });
       bt.addEventListener('click', function () {
         var a = cTous.checked ? ['tous'] : Object.keys(coches).filter(function (n) { return n !== 'tous' && coches[n].checked; });
         if (!a.length) { msg.textContent = 'Cochez au moins un destinataire.'; return; }
-        if (!fT.value.trim()) { msg.textContent = 'Il faut un titre.'; fT.focus(); return; }
+        if (!fT.value.trim() && !fX.value.trim()) { msg.textContent = 'Écrivez un message.'; fX.focus(); return; }
         bt.disabled = true; msg.textContent = 'Envoi…';
         postJson('push_envoi', { code: fC.value, a: a, titre: fT.value.trim(), texte: fX.value.trim(), ev: sEv.value }).then(function (d) {
           bt.disabled = false;
