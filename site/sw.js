@@ -1,7 +1,7 @@
 /* Vivre Mieux · application installable : garde une copie de la page et des dernières données
    pour qu'elle s'ouvre même avec un mauvais réseau. Les données sont toujours prises en ligne d'abord. */
-const CACHE = 'vm-v3';
-const COQUILLE = ['./', 'index.html', 'manifest.json', 'logo-vm-rose.svg', 'logo-vm-vert.svg', 'icone-192.png',
+const CACHE = 'vm-v4';
+const COQUILLE = ['./', 'index.html', 'manifest.json', 'logo-vm-blanc.svg', 'icone-192.png',
   'polices/outfit-400.woff2', 'polices/outfit-500.woff2', 'polices/outfit-600.woff2', 'polices/outfit-700.woff2', 'polices/bebas-neue.woff2'];
 
 self.addEventListener('install', e => {

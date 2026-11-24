@@ -1017,3 +1017,7 @@ body .compte.long{font-size:9px}
 }
 .compte.initiales{font-size:15px;font-weight:700}
 body .compte.initiales{font-size:12.5px}
+/* 24/11 : bandeau = logo officiel Vivre Mieux en blanc, centré */
+.bandeau h1.bandeau-logo{font-size:0!important;text-shadow:none!important;line-height:0;margin:0}
+.bandeau-logo img{display:block;height:72px;width:auto}
+@media (max-width:759px){.bandeau-logo img{height:44px}}
