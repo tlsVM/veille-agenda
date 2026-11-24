@@ -849,7 +849,7 @@ function notifsRecentes() { return array_values(array_filter(historiqueNotifs(),
 function notifEtat() { global $DATA; $f = "$DATA/notifs-etat.json"; if (!is_file($f)) { return new stdClass(); } $p = json_decode(file_get_contents($f), true); return is_array($p) && $p ? $p : new stdClass(); }
 
 // Envoie à une liste de noms (ou à tous) ; retire les appareils qui se sont désabonnés
-function envoyerNotification($noms, $titre, $texte, $ev) {
+function envoyerNotification($noms, $titre, $texte, $ev, $lienN = '') {
   global $DATA;
   $tous = in_array('tous', $noms, true);
   $id = 'n' . bin2hex(random_bytes(5));
@@ -867,7 +867,7 @@ function envoyerNotification($noms, $titre, $texte, $ev) {
   $h = fopen("$DATA/notifications.json", 'c+');
   if ($h) {
     flock($h, LOCK_EX); $p = json_decode(stream_get_contents($h), true); if (!is_array($p)) { $p = []; }
-    array_unshift($p, ['id' => $id, 'le' => date('c'), 'a' => $dest, 'titre' => $titre, 'texte' => $texte, 'ev' => $ev]);
+    array_unshift($p, ['id' => $id, 'le' => date('c'), 'a' => $dest, 'titre' => $titre, 'texte' => $texte, 'ev' => $ev, 'lien' => $lienN]);
     $p = array_slice($p, 0, 200);
     ftruncate($h, 0); rewind($h); fwrite($h, json_encode($p, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
   }
@@ -951,10 +951,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a, ['push_abo', 'push_des
     if ($att === '' || !hash_equals($att, (string)($d['code'] ?? ''))) { sleep(1); sortir(['erreur' => 'code_envoi'], 403); }
     $noms = array_values(array_filter((array)($d['a'] ?? []), function ($n) { return $n === 'tous' || in_array($n, ELUS, true); }));
     $titre = champ($d, 'titre', 80); $texte = champ($d, 'texte', 300); $ev = (string)($d['ev'] ?? '');
+    $lienN = champ($d, 'lien', 400); if (!preg_match('#^https?://#i', $lienN)) { $lienN = ''; }
     if (!preg_match('/^[a-z0-9]{0,40}$/', $ev)) { $ev = ''; }
     if (!$noms || $titre === '') { sortir(['erreur' => 'champs'], 400); }
     @set_time_limit(120);
-    sortir(envoyerNotification($noms, $titre, $texte, $ev));
+    sortir(envoyerNotification($noms, $titre, $texte, $ev, $lienN));
   }
 }
 

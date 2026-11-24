@@ -117,8 +117,8 @@
     plus.addEventListener('click', function () { m.hidden = true; }); l.appendChild(plus);
     m.hidden = false;
   }
-  function choisirMoi(n) { moi = n; store('vm-moi', n); document.getElementById('moi').value = n; majPresences(); if (vue === 'agenda') rendre(); }
-  document.getElementById('moi').addEventListener('change', function (e) { moi = e.target.value; store('vm-moi', moi); majPresences(); if (vue === 'agenda') rendre(); }); // le bouton « Agenda de … » suit la personne choisie
+  function choisirMoi(n) { moi = n; store('vm-moi', n); document.getElementById('moi').value = n; majPresences(); rendre(); }
+  document.getElementById('moi').addEventListener('change', function (e) { moi = e.target.value; store('vm-moi', moi); majPresences(); rendre(); }); // le bouton « Agenda de … » suit la personne choisie
 
   // ---------- Présences ----------
   var COURT = function (n) { var p = n.replace(' (collaborateur)', '').split(' '); return p.length > 1 ? p[0].charAt(0) + '. ' + p.slice(1).join(' ') : n; };
@@ -303,6 +303,7 @@
     }
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
     c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
+    if (estHugo()) { c.classList.add('avec-notif'); c.appendChild(btNotif(function () { return notifDeEv(e); })); }
     if (t.g !== 'majo') { // icône « ajouter à mon agenda » sur chaque événement (copie ponctuelle)
       var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
       ba.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="11.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 6.3h12.4M5 1.3v3M11 1.3v3M8 8.3v4M6 10.3h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
@@ -334,6 +335,7 @@
     t.appendChild(document.createTextNode(a.titre)); c.appendChild(t);
     if (a.texte) c.appendChild(el('p', '', a.texte));
     if (a.source || a.lien) { var s = el('span', 'src'); if (a.lien) s.appendChild(lien(a.lien, a.source || 'Source')); else s.textContent = a.source; c.appendChild(s); }
+    if (estHugo()) { c.classList.add('avec-notif'); c.appendChild(btNotif(function () { return notifDeTexte(a, '📰 '); })); }
     return c;
   }
   // Solution de secours sans IA : Google Actualités, 7 derniers jours
@@ -387,6 +389,7 @@
     c.appendChild(el('b', '', it.titre));
     if (it.texte) c.appendChild(el('p', '', it.texte));
     if (it.source || it.lien) { var s = el('span', 'src'); if (it.lien) s.appendChild(lien(it.lien, it.source || 'Source')); else s.textContent = it.source; c.appendChild(s); }
+    if (estHugo()) { c.classList.add('avec-notif'); c.appendChild(btNotif(function () { return notifDeTexte(it, '📍 '); })); }
     return c;
   }
 
@@ -1700,6 +1703,71 @@
   setInterval(rafraichirPresences, 20000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { AUJ = cle(new Date()); rafraichirPresences(); } });
 
+  // ---------- Flèche d'envoi sur chaque événement, actu et info de quartier (pour Hugo) ----------
+  var ICO_ENVOI = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3.4 11.1 19.6 4.3c.8-.3 1.6.4 1.3 1.2l-5.6 15.1c-.3.8-1.4.9-1.8.1l-2.7-5.2-5.3-2.6c-.8-.4-.7-1.5.1-1.8Z" fill="currentColor"/><path d="m10.8 15.4 5.6-7.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  function btNotif(contenu) {
+    var b = el('button', 'bt-notif'); b.type = 'button'; b.title = 'Envoyer en notification à un·e élu·e'; b.setAttribute('aria-label', b.title);
+    b.innerHTML = ICO_ENVOI;
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirEnvoiRapide(contenu()); });
+    return b;
+  }
+  function notifDeEv(e) {
+    var d = dDe(e.date);
+    return { titre: '📅 ' + e.titre, ev: e.id, lien: '',
+      texte: JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + (e.heure ? ' à ' + e.heure.replace(':', 'h') : '') + (lieuDe(e) ? ' · ' + lieuDe(e) : '') };
+  }
+  function notifDeTexte(x, ic) {
+    var t = (x.texte || '').replace(/\s+/g, ' ').trim();
+    return { titre: ic + x.titre, ev: '', lien: /^https?:\/\//.test(x.lien || '') ? x.lien : '',
+      texte: (x.quartier ? x.quartier + ' · ' : '') + (t.length > 220 ? t.slice(0, 217) + '…' : t) };
+  }
+  // Petite fenêtre : je touche les noms, puis « Envoyer »
+  function ouvrirEnvoiRapide(n) {
+    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion envoi-rapide'); bx.setAttribute('role', 'dialog');
+    bx.appendChild(el('h2', '', 'Envoyer à…'));
+    var ap = el('div', 'er-apercu'); ap.appendChild(el('b', '', n.titre)); if (n.texte) ap.appendChild(el('p', '', n.texte)); bx.appendChild(ap);
+    var choisis = {}, liste = el('div', 'er-noms');
+    function puce(nom, txt) {
+      var b = el('button', 'er-nom', txt); b.type = 'button';
+      var k = (D.abonnes || {})[nom]; if (nom !== 'tous' && !k) { b.classList.add('sans'); b.title = 'Notifications pas encore activées : le message restera visible sous sa cloche'; }
+      b.addEventListener('click', function () {
+        if (nom === 'tous') { var on = !choisis.tous; choisis = {}; if (on) choisis.tous = true; }
+        else { delete choisis.tous; if (choisis[nom]) delete choisis[nom]; else choisis[nom] = true; }
+        [].forEach.call(liste.children, function (x) { x.classList.toggle('on', !!choisis[x.getAttribute('data-n')]); });
+        bt.disabled = !Object.keys(choisis).length;
+      });
+      b.setAttribute('data-n', nom); liste.appendChild(b);
+    }
+    puce('tous', '👥 Tout le groupe');
+    (D.elus || []).forEach(function (nom) { puce(nom, nom.replace(' (collaborateur)', ' (moi)')); });
+    bx.appendChild(liste);
+    bx.appendChild(el('p', 'nb', 'Les noms en gris n\'ont pas encore activé les notifications : ils verront le message sous leur cloche.'));
+    var fC = null;
+    if (!store('vm-code-envoi')) { fC = el('input', 'nt-champ'); fC.type = 'password'; fC.placeholder = 'Code d\'envoi (demandé une seule fois)'; bx.appendChild(fC); }
+    var bt = el('button', 'bt-valider er-envoyer'); bt.type = 'button'; bt.disabled = true; bt.innerHTML = ICO_ENVOI + ' <span>Envoyer</span>';
+    var msg = el('p', 'nb'); bx.appendChild(bt); bx.appendChild(msg);
+    bt.addEventListener('click', function () {
+      var code = fC ? fC.value : store('vm-code-envoi');
+      bt.disabled = true; msg.textContent = 'Envoi…';
+      postJson('push_envoi', { code: code, a: Object.keys(choisis), titre: n.titre.slice(0, 80), texte: n.texte.slice(0, 300), ev: n.ev || '', lien: n.lien || '' }).then(function (d) {
+        if (d.erreur === 'code_envoi') {
+          try { localStorage.removeItem('vm-code-envoi'); } catch (x) {}
+          msg.textContent = 'Code d\'envoi incorrect.'; bt.disabled = false;
+          if (!fC) { fC = el('input', 'nt-champ'); fC.type = 'password'; fC.placeholder = 'Code d\'envoi'; bx.insertBefore(fC, bt); }
+          fC.focus(); return;
+        }
+        if (!d.ok) { msg.textContent = 'L\'envoi a échoué.'; bt.disabled = false; return; }
+        if (fC) store('vm-code-envoi', fC.value);
+        var k = Object.keys(d.recus || {}).reduce(function (s, x) { return s + d.recus[x]; }, 0);
+        msg.textContent = '✅ Envoyé (' + k + ' appareil' + (k > 1 ? 's' : '') + ').';
+        rafraichirPresences(); setTimeout(function () { m.remove(); }, 1200);
+      }).catch(function () { bt.disabled = false; msg.textContent = 'Pas de connexion.'; });
+    });
+    var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); }); bx.appendChild(f);
+    m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
+    m.appendChild(bx); document.body.appendChild(m);
+  }
+
   // ---------- Notifications (cloche) : activer sur cet appareil, mes messages, envoi par Hugo ----------
   var PUSH_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   var IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1838,11 +1906,11 @@
       if (liste.length) mm.appendChild(el('p', 'nt-astuce', 'Glissez une notification vers la gauche ou touchez ✕ pour l\'effacer.'));
       liste.slice(0, 40).forEach(function (x) {
         var ligne = el('div', 'nt-ligne'), fondR = el('div', 'nt-fond', 'Effacer');
-        var c = el('div', 'nt-msg' + (horodatage(x.le) > vuAvant ? ' nouveau' : '') + (x.ev ? ' cliquable' : ''));
-        var ic = el('span', 'nt-ic', x.ev ? '📅' : '🔔'); c.appendChild(ic);
+        var c = el('div', 'nt-msg' + (horodatage(x.le) > vuAvant ? ' nouveau' : '') + (x.ev || x.lien ? ' cliquable' : ''));
+        var ic = el('span', 'nt-ic', x.ev ? '📅' : x.lien ? '📰' : '🔔'); c.appendChild(ic);
         var corps = el('div', 'nt-corps');
         corps.appendChild(el('b', '', x.titre)); if (x.texte) corps.appendChild(el('p', '', x.texte));
-        corps.appendChild(el('span', 'nt-date', ilYa(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : '') + (x.ev ? ' · voir dans l\'agenda →' : '')));
+        corps.appendChild(el('span', 'nt-date', ilYa(x.le) + ((x.a || [])[0] === 'tous' ? ' · à tout le groupe' : '') + (x.ev ? ' · voir dans l\'agenda →' : x.lien ? ' · lire →' : '')));
         c.appendChild(corps);
         var croix = el('button', 'nt-x', '✕'); croix.type = 'button'; croix.setAttribute('aria-label', 'Effacer cette notification'); croix.title = 'Effacer';
         c.appendChild(croix);
@@ -1851,7 +1919,7 @@
           setTimeout(peindreListe, 250);
         }
         croix.addEventListener('click', function (e) { e.stopPropagation(); effacer(); });
-        c.addEventListener('click', function () { if (glisse) return; if (x.ev) { fermer(); allerEvenement(x.ev); } });
+        c.addEventListener('click', function () { if (glisse) return; if (x.ev) { fermer(); allerEvenement(x.ev); } else if (/^https?:\/\//.test(x.lien || '')) { window.open(x.lien, '_blank', 'noopener'); } });
         // glisser vers la gauche pour effacer
         var x0 = null, y0 = 0, dx = 0, glisse = false;
         c.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; glisse = false; c.style.transition = 'none'; }, { passive: true });
