@@ -1103,3 +1103,8 @@ body .compte.initiales{font-size:12.5px}
   .g3-format{display:flex;width:max-content;margin:8px auto 6px}
   .g3-nav{justify-content:center;margin-left:0}
 }
+/* 24/11 : cloche insistante tant que les notifications ne sont pas activées sur l'appareil */
+.cloche.a-activer{background:#fff;animation:cloche-appel 2.4s ease-in-out infinite}
+.cloche.a-activer::after{content:"";position:absolute;inset:-3px;border-radius:999px;box-shadow:0 0 0 0 rgba(200,67,127,.7);animation:cloche-halo 1.2s ease-out infinite;pointer-events:none}
+@keyframes cloche-appel{0%,40%,100%{transform:rotate(0)}5%{transform:rotate(18deg)}10%{transform:rotate(-16deg)}15%{transform:rotate(12deg)}20%{transform:rotate(-8deg)}25%{transform:rotate(4deg)}30%{transform:rotate(0)}}
+@keyframes cloche-halo{0%{box-shadow:0 0 0 0 rgba(200,67,127,.75);background:rgba(245,181,210,.45)}70%{box-shadow:0 0 0 12px rgba(200,67,127,0);background:rgba(245,181,210,0)}100%{box-shadow:0 0 0 0 rgba(200,67,127,0)}}

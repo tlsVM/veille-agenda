@@ -2108,7 +2108,7 @@
           dsc.addEventListener('click', function () {
             postJson('push_desabo', { endpoint: s.endpoint }).catch(function () {}).then(function () { return s.unsubscribe(); }).then(function () {
               try { localStorage.removeItem('vm-push-nom'); } catch (x) {}
-              if (D.abonnes && D.abonnes[nom]) D.abonnes[nom]--; peindreAppareil();
+              if (D.abonnes && D.abonnes[nom]) D.abonnes[nom]--; peindreAppareil(); majInvitationCloche();
             });
           });
           var l = el('div', 'nt-boutons'); l.appendChild(ess); l.appendChild(dsc); ap.appendChild(l); ap.appendChild(msg);
@@ -2125,7 +2125,7 @@
         bt.addEventListener('click', function () {
           if (!sel.value) { msg2.textContent = 'Choisissez d\'abord votre nom.'; sel.focus(); return; }
           bt.disabled = true; msg2.textContent = 'Votre appareil va vous demander l\'autorisation : répondez « Autoriser ».';
-          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); peindreListe(); bEnv.hidden = !estHugo(); })
+          activerNotifs(sel.value).then(function () { peindreAppareil(); peindreEnvoi(); peindreListe(); bEnv.hidden = !estHugo(); majInvitationCloche(); })
             .catch(function (e) {
               bt.disabled = false;
               msg2.textContent = e && e.message === 'refus' ? 'Autorisation refusée : rien n\'a été activé.' : 'L\'activation n\'a pas marché. Réessayez dans un instant.';
@@ -2200,6 +2200,17 @@
     }, 0);
   }
   document.getElementById('cloche').addEventListener('click', ouvrirNotifs);
+  // Tant que les notifications ne sont pas activées sur cet appareil, la cloche clignote pour inciter à le faire
+  function majInvitationCloche() {
+    var cl = document.getElementById('cloche'); if (!cl) return;
+    if (!PUSH_OK && !(IOS && !INSTALLEE)) { cl.classList.remove('a-activer'); return; } // navigateur incapable : on n'insiste pas
+    abonnementActuel().then(function (s) {
+      var actif = !!(s && store('vm-push-nom'));
+      cl.classList.toggle('a-activer', !actif);
+      if (!actif) cl.title = 'Activez les notifications sur cet appareil'; else cl.title = 'Notifications';
+    });
+  }
+  majInvitationCloche();
   // une notification arrive pendant que l'appli est ouverte : la cloche se met à jour tout de suite
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'notif') rafraichirPresences(); });
 
