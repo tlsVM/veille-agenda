@@ -700,9 +700,13 @@ function secretIcs() {
 }
 function cleIcs($nom) { return substr(hash_hmac('sha256', $nom, secretIcs()), 0, 20); }
 
+// Événements supprimés par Hugo (masqués pour tout le monde) : ~/agenda-data/masques.json
+function masques() { global $DATA; $f = "$DATA/masques.json"; if (!is_file($f)) { return []; } $m = json_decode(file_get_contents($f), true); return is_array($m) ? $m : []; }
+function sansMasques($evs) { $m = masques(); if (!$m) { return $evs; } return array_values(array_filter($evs, function ($e) use ($m) { return !isset($m[$e['id'] ?? '']); })); }
+
 function tousEvenements() {
   $d = donnees();
-  $evs = fusionIcal(array_merge($d['evenements'] ?? [], ajouts()));
+  $evs = sansMasques(fusionIcal(array_merge($d['evenements'] ?? [], ajouts())));
   $ids = [];
   foreach ($evs as $e) { $ids[$e['id']] = 1; }
   foreach (array_keys(presences()) as $id) { // réunions de groupe du lundi (créées par l'application)
@@ -1039,7 +1043,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'pres') {
   sortirPuisGoogle(['ok' => true, 'presences' => enregistrerPresence($id, $nom, $statut)], $id);
 }
 
-if ($a === 'pres') { sortir(['presences' => presences(), 'notifs' => notifsRecentes(), 'notif_etat' => notifEtat()]); }
+if ($a === 'pres') { sortir(['presences' => presences(), 'notifs' => notifsRecentes(), 'notif_etat' => notifEtat(), 'masques' => array_keys(masques())]); }
+
+// Supprimer (masquer) ou rétablir un événement : réservé à Hugo (code d'envoi)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $a === 'masquer') {
+  $att = trim((string)((config() ?? [])['code_envoi'] ?? ''));
+  if ($att === '' || !hash_equals($att, (string)($_POST['code'] ?? ''))) { sleep(1); sortir(['erreur' => 'code'], 403); }
+  $id = (string)($_POST['id'] ?? ''); $retablir = ($_POST['retablir'] ?? '') === '1';
+  if (!preg_match('/^[a-z0-9]{1,40}$/', $id)) { sortir(['erreur' => 'id'], 400); }
+  $h = fopen("$DATA/masques.json", 'c+'); if (!$h) { sortir(['erreur' => 'ecriture'], 500); }
+  flock($h, LOCK_EX); $m = json_decode(stream_get_contents($h), true); if (!is_array($m)) { $m = []; }
+  if ($retablir) { unset($m[$id]); } else { $m[$id] = ['le' => date('c'), 'titre' => mb_substr((string)($_POST['titre'] ?? ''), 0, 160), 'date' => lireDate((string)($_POST['date'] ?? ''))]; }
+  ftruncate($h, 0); rewind($h); fwrite($h, json_encode($m, JSON_UNESCAPED_UNICODE)); fflush($h); flock($h, LOCK_UN); fclose($h);
+  @file_put_contents("$DATA/journal-ajouts.log", date('c') . "\t" . ($retablir ? 'retabli' : 'masque') . "\t$id\n", FILE_APPEND | LOCK_EX);
+  sortir(['ok' => true, 'masques' => array_keys($m)]);
+}
 
 // ---------- Sondages de date (réponses des élus) ----------
 function sondages() {
@@ -1069,7 +1087,8 @@ if ($a === 'presse' && !empty((config() ?? [])['presse_ia'])) { // désactivé :
 
 if ($a === 'data') {
   $d = donnees();
-  if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = fusionIcal(array_merge($d['evenements'] ?? [], ajouts())); }
+  if (!empty($d['evenements']) || isset($d['maj'])) { $d['evenements'] = sansMasques(fusionIcal(array_merge($d['evenements'] ?? [], ajouts()))); }
+  $d['masques'] = array_keys(masques());
   $d['presences'] = presences();
   $d['sondages'] = sondages();
   $d['ajout_actif'] = true; // ajout ouvert à tous ; le code d'accès, s'il est mis en place, protégera toute la plateforme

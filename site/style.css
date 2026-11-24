@@ -1175,3 +1175,16 @@ body .compte.initiales{font-size:12.5px}
 .g3-longs>summary::-webkit-details-marker{display:none}
 .g3-longs>summary::after{content:" ▸"}.g3-longs[open]>summary::after{content:" ▾"}
 .g3-longs .g-bande{margin:0 6px 4px;min-height:28px}
+/* 24/11 : petite croix de suppression (Hugo seulement) */
+.bt-suppr{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:6px;background:none;color:#b8aab1;font-size:12px;line-height:1;cursor:pointer;opacity:.6}
+.bt-suppr:hover,.bt-suppr:focus-visible{opacity:1;color:#c62828;background:rgba(198,40,40,.08)}
+.ev>.bt-suppr{position:absolute;top:5px;right:5px}
+.ev.avec-suppr>.bt-copie{right:30px}
+.ev.avec-suppr>.bt-cal-ev{right:55px}
+.ev.avec-suppr>.bt-notif{right:80px}
+.ev.avec-suppr .haut{padding-right:100px}
+.g-ic .bt-suppr{width:20px;height:20px;font-size:11px}
+.g-plein .g-h{padding-right:96px}
+.toast-annuler{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:14px;background:#123326;color:#fff;border-radius:12px;padding:10px 12px 10px 16px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100vw - 32px)}
+.toast-annuler span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast-annuler button{flex:none;border:0;border-radius:999px;background:var(--rose);color:#123326;font:700 13px var(--texte);padding:6px 14px;cursor:pointer}

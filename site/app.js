@@ -66,7 +66,7 @@
       if (d.erreur === 'code') { afficherCode(); return; }
       if (d.erreur && !d.evenements) { afficherErreur(d.erreur); return; }
       D = d; D.evenements = d.evenements || []; D.actus = d.actus || []; D.quartiers = d.quartiers || []; D.presences = d.presences || {};
-      ajouterReunionsGroupe(); signature = sigPresences();
+      ajouterReunionsGroupe(); appliquerMasques(d.masques); signature = sigPresences();
       D.evenements.sort(function (a, b) { return (a.date + (a.heure || '99')).localeCompare(b.date + (b.heure || '99')); });
       remplirMoi(); rendre(); suiteNotif();
     }).catch(function () { afficherErreur('reseau'); });
@@ -84,6 +84,13 @@
   function rafraichirPresences() {
     fetch('api.php?a=pres', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       if (!d.presences) return; D.presences = d.presences; majPresences();
+      // événements supprimés par Hugo : visibles par tous en moins de 20 secondes
+      if (d.masques && d.masques.slice().sort().join(',') !== Object.keys(MASQUES).sort().join(',')) {
+        var nouveaux = d.masques.filter(function (id) { return !MASQUES[id]; }), retablis = Object.keys(MASQUES).filter(function (id) { return d.masques.indexOf(id) < 0; });
+        appliquerMasques(d.masques);
+        if (retablis.length) { charger(true); return; } // un événement rétabli : on relit tout
+        if (nouveaux.length && !document.querySelector('.modale:not([hidden]), .nt-pop')) { var y = window.scrollY; rendre(); window.scrollTo(0, y); }
+      }
       if (d.notifs) {
         var avant = JSON.stringify(mesNotifs().map(function (x) { return x.id; }));
         D.notifs = d.notifs; D.notif_etat = d.notif_etat; majCloche();
@@ -97,6 +104,50 @@
       : code === 'feuille' ? 'La feuille Google n\'est pas lisible pour l\'instant (vérifier qu\'elle est partagée « toute personne disposant du lien »).'
       : 'Connexion impossible pour le moment. Réessayez dans un instant.';
     v.appendChild(el('p', 'vide', msg));
+  }
+
+  // ---------- Suppression d'un événement (Hugo) : masqué pour tout le monde ----------
+  var MASQUES = {};
+  function appliquerMasques(liste) {
+    MASQUES = {}; (liste || []).forEach(function (id) { MASQUES[id] = 1; });
+    D.evenements = (D.evenements || []).filter(function (e) { return !MASQUES[e.id]; });
+  }
+  function codeHugo() {
+    var c = store('vm-code-envoi');
+    if (!c) { c = prompt('Code d\'envoi (le même que pour les notifications) :') || ''; }
+    return c;
+  }
+  function envoyerMasque(e, retablir) {
+    var code = codeHugo(); if (!code) return Promise.reject(new Error('code'));
+    return fetch('api.php', { method: 'POST', body: new URLSearchParams({ a: 'masquer', id: e.id, titre: e.titre || '', date: e.date || '', code: code, retablir: retablir ? '1' : '' }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.erreur === 'code') { try { localStorage.removeItem('vm-code-envoi'); } catch (x) {} alert('Code incorrect.'); throw new Error('code'); }
+        if (!d.ok) throw new Error('serveur');
+        store('vm-code-envoi', code); return d;
+      });
+  }
+  function btSuppr(e) {
+    var b = el('button', 'bt-suppr', '✕'); b.type = 'button';
+    b.title = 'Supprimer cet événement (pour tout le monde)'; b.setAttribute('aria-label', 'Supprimer « ' + e.titre + ' »');
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (!confirm('Supprimer « ' + e.titre + ' » de l\'agenda, pour tous les élus ?')) return;
+      envoyerMasque(e, false).then(function (d) {
+        var gardes = D.evenements.slice(); appliquerMasques(d.masques);
+        var m = document.querySelector('.modale.ev-detail-m'); if (m) m.remove();
+        var y = window.scrollY; rendre(); window.scrollTo(0, y);
+        toastAnnuler('« ' + e.titre + ' » supprimé', function () {
+          envoyerMasque(e, true).then(function (d2) { MASQUES = {}; (d2.masques || []).forEach(function (id) { MASQUES[id] = 1; }); D.evenements = gardes.filter(function (x) { return !MASQUES[x.id]; }); var y2 = window.scrollY; rendre(); window.scrollTo(0, y2); }).catch(function () {});
+        });
+      }).catch(function (x) { if (x.message !== 'code') alert('La suppression n\'a pas marché. Réessayez.'); });
+    });
+    return b;
+  }
+  function toastAnnuler(txt, annuler) {
+    var old = document.querySelector('.toast-annuler'); if (old) old.remove();
+    var t = el('div', 'toast-annuler'); t.setAttribute('role', 'status'); t.appendChild(el('span', '', txt));
+    var b = el('button', '', 'Annuler'); b.type = 'button'; b.addEventListener('click', function () { t.remove(); annuler(); }); t.appendChild(b);
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 8000);
   }
 
   // ---------- Qui coche ----------
@@ -315,7 +366,7 @@
     }
     if (t.g !== 'majo') c.appendChild(blocPresence(e.id));
     c.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
-    if (estHugo()) { c.classList.add('avec-notif'); c.appendChild(btNotif(function () { return notifDeEv(e); })); }
+    if (estHugo()) { c.classList.add('avec-notif', 'avec-suppr'); c.appendChild(btNotif(function () { return notifDeEv(e); })); c.appendChild(btSuppr(e)); }
     if (t.g !== 'majo') { // icône « ajouter à mon agenda » sur chaque événement (copie ponctuelle)
       var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
       ba.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="11.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 6.3h12.4M5 1.3v3M11 1.3v3M8 8.3v4M6 10.3h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
@@ -994,7 +1045,7 @@
     return l;
   }
   function ouvrirEvenement(e) {
-    var m = el('div', 'modale'), bx = el('div', 'modale-boite gestion ev-detail'); bx.setAttribute('role', 'dialog');
+    var m = el('div', 'modale ev-detail-m'), bx = el('div', 'modale-boite gestion ev-detail'); bx.setAttribute('role', 'dialog');
     var d = dDe(e.date); bx.appendChild(el('p', 'ev-detail-jour', JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]));
     bx.appendChild(carteEv(e)); m.appendChild(bx);
     var f = el('button', 'gest-fermer', 'Fermer'); f.type = 'button'; f.addEventListener('click', function () { m.remove(); rendre(); }); bx.appendChild(f);
@@ -1010,6 +1061,7 @@
       ba.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirAjoutAgenda(e); }); ic.appendChild(ba);
     }
     ic.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
+    if (estHugo()) ic.appendChild(btSuppr(e));
     return ic;
   }
   function dateCourteFr(k) { var d = dDe(k); return d.getDate() + ' ' + MC[d.getMonth()].toLowerCase(); }
