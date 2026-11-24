@@ -1416,3 +1416,15 @@ html:has(.modale:not([hidden])),body:has(.modale:not([hidden])){overflow:hidden;
   .cal-j{font-size:12.5px;padding:4px 0}
   .cal-nav{width:40px;height:40px;font-size:14px}
 }
+/* 24/11 : partager une actu (logo Telegram) ; la cloche sert à envoyer en notification */
+.actu.avec-partage{position:relative;padding-right:40px}
+.actu>.bt-partage-actu{position:absolute;top:7px;right:7px;color:#1a1a1a;opacity:.85}
+.actu.avec-partage.avec-notif{padding-right:62px}
+.actu.avec-partage>.bt-notif{right:32px}
+.pa-grille{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 6px;margin:6px 0 4px}
+.pa-app{display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;cursor:pointer;text-decoration:none;color:#123326;font:500 12px var(--texte);padding:4px 0;border-radius:10px}
+.pa-app:hover{background:#f3f7f4}
+.pa-app:focus-visible{outline:2px solid var(--rose-fort);outline-offset:2px}
+.pa-rond{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font:700 19px var(--texte)}
+.pa-msg{text-align:center;min-height:1em}
+@media (max-width:759px){.actu>.bt-partage-actu,.actu>.bt-notif{width:30px;height:30px}.actu.avec-partage>.bt-notif{right:38px}.actu.avec-partage.avec-notif{padding-right:74px}}
