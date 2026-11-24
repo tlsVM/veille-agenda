@@ -1199,3 +1199,12 @@ body .compte.initiales{font-size:12.5px}
 .bulle-notif::before{content:"";position:absolute;top:-6px;right:18px;width:12px;height:12px;background:#c8437f;transform:rotate(45deg);border-radius:2px}
 .bulle-t{border:0;background:none;color:#fff;font:600 13px/1.35 var(--texte);text-align:left;cursor:pointer;padding:0}
 .bulle-x{border:0;background:none;color:#fff;opacity:.8;font-size:13px;cursor:pointer;padding:0 4px}
+
+/* ===== 24/11 : fond vert sauge très pâle (moins de blanc pur, même teinte sur téléphone et ordinateur) ===== */
+:root{--fond:#e9f0eb;--carte:#f8fbf9;--barre:#f3f7f4}
+@media (max-width:759px){:root{--carte:#fcfdfc}} /* téléphone : cartes un peu plus lumineuses (lecture en extérieur) */
+body,.page{background:var(--fond)!important}
+.barre-nav{background:var(--barre)!important}
+.bloc,.jour,.ev,.item,.sem,.semaine,.g3-corps,.g3-tete,.g3-col,.g3-grille>.g3-bord,.monag-barre,.outils-ag .tri-theme select,.g3-auj,.g3-format,.g3-format button:not(.on){background-color:var(--carte)!important}
+.g3-col.auj{background-color:#f2f8f4!important}
+.g3-bande{background:#f1f6f2!important}
