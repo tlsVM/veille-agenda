@@ -973,7 +973,7 @@
     ts.addEventListener('change', function () { filtre = ts.value; rendre(); });
     var bps = el('button', 'bt-presences bt-nospres'); habiller(bps, '👥', 'Nos présences', 'Présences'); bps.type = 'button'; bps.title = 'Présences de la semaine';
     bps.addEventListener('click', function () { ouvrirPresencesSemaine(new Date().getDay() === 0 ? cle(ajout(lundi(new Date()), 7)) : cle(lundi(new Date()))); });
-    tl.appendChild(el('span', 'ic', '🎨')); tl.appendChild(ts); tl.setAttribute('data-court', 'Thèmes'); outils.appendChild(tl);
+    tl.appendChild(el('span', 'ic', '🏷️')); tl.appendChild(ts); tl.setAttribute('data-court', 'Thèmes'); outils.appendChild(tl);
     var pw = el('div', 'pres-wrap'); pw.appendChild(bps); outils.appendChild(pw);
     var bpa = el('button', 'bt-presences bt-partager'); habiller(bpa, '📤', 'Partager', 'Partager'); bpa.type = 'button';
     bpa.addEventListener('click', ouvrirPartage);
