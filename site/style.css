@@ -996,24 +996,24 @@ img,video,iframe,table{max-width:100%}
 @keyframes vm-clignote{0%,100%{background:#00e5ff;box-shadow:0 0 0 2px #00e5ff,0 0 14px #00e5ff}50%{background:#ff2fd1;box-shadow:0 0 0 2px #ff2fd1,0 0 14px #ff2fd1}}
 @media (prefers-reduced-motion:reduce){.compte.clignote{animation-duration:3s}}
 @media (max-width:759px){.compte{width:32px;height:32px;font-size:11px}.compte.long{font-size:9px}.compte.clignote{font-size:16px}}
-/* Agenda : barre d'onglets plus fine, onglets inactifs presque transparents */
-body.vue-agenda .barre-nav{padding-top:4px;padding-bottom:4px}
-body.vue-agenda .barre-nav .onglets{gap:2px}
-body.vue-agenda .barre-nav .onglets button{font-size:15px;padding:3px 16px;border-width:1.5px}
-body.vue-agenda .barre-nav .onglets button:not(.on){opacity:.35;border-color:transparent;background:transparent;font-weight:500;font-size:14px;padding:3px 10px}
-body.vue-agenda .barre-nav .onglets button:not(.on):hover{opacity:.8}
-body.vue-agenda .cloche{font-size:15px;padding:3px 5px}
-body.vue-agenda .compte{width:32px;height:32px;font-size:11px}
-body.vue-agenda .compte.long{font-size:9px}
+/* Barre d onglets fine (toutes les rubriques) : onglet ouvert bien visible, les autres presque transparents */
+body .barre-nav{padding-top:4px;padding-bottom:4px}
+body .barre-nav .onglets{gap:2px}
+body .barre-nav .onglets button{font-size:15px;padding:3px 16px;border-width:1.5px}
+body .barre-nav .onglets button:not(.on){opacity:.35;border-color:transparent;background:transparent;font-weight:500;font-size:14px;padding:3px 10px}
+body .barre-nav .onglets button:not(.on):hover{opacity:.8}
+body .cloche{font-size:15px;padding:3px 5px}
+body .compte{width:32px;height:32px;font-size:11px}
+body .compte.long{font-size:9px}
 @media (max-width:759px){
-  body.vue-agenda .barre-nav .onglets button{font-size:13px;padding:3px 10px}
-  body.vue-agenda .barre-nav .onglets button:not(.on){font-size:12px;padding:3px 5px}
-  body.vue-agenda .compte{width:28px;height:28px;font-size:9.5px}
+  body .barre-nav .onglets button{font-size:13px;padding:3px 10px}
+  body .barre-nav .onglets button:not(.on){font-size:12px;padding:3px 5px}
+  body .compte{width:28px;height:28px;font-size:9.5px}
 }
 @media (max-width:759px){
-  body.vue-agenda .barre-nav{flex-direction:row;gap:4px;padding-left:6px;padding-right:6px}
-  body.vue-agenda .barre-nav .onglets{flex:1;min-width:0;justify-content:flex-start}
-  body.vue-agenda .barre-nav .moi{flex:none}
+  body .barre-nav{flex-direction:row;gap:4px;padding-left:6px;padding-right:6px}
+  body .barre-nav .onglets{flex:1;min-width:0;justify-content:flex-start}
+  body .barre-nav .moi{flex:none}
 }
 .compte.initiales{font-size:15px;font-weight:700}
-body.vue-agenda .compte.initiales{font-size:12.5px}
+body .compte.initiales{font-size:12.5px}

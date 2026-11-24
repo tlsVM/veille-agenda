@@ -1671,7 +1671,7 @@
   function rendre() {
     var v = document.getElementById('vue'); v.textContent = '';
     document.querySelectorAll('.onglets button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === vue); });
-    document.body.classList.toggle('vue-agenda', vue === 'agenda'); // barre d'onglets plus fine dans l'agenda
+    document.body.classList.toggle('vue-agenda', vue === 'agenda');
     ({ jour: vueJour, agenda: vueAgenda, quartiers: vueQuartiers, archives: vueArchives, sondage: vueSondage, recherche: vueRecherche }[vue] || vueJour)(v);
     var p = el('p', 'pied', 'Données mises à jour ' + (D.maj ? 'le ' + new Date(D.maj).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '')); v.appendChild(p);
   }
