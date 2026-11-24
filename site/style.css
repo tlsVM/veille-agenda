@@ -979,3 +979,41 @@ img,video,iframe,table{max-width:100%}
 /* Boutons des cartes (copier, agenda, envoyer) : en noir, même taille */
 .ev>.bt-copie,.actu>.bt-copie,.item>.bt-copie{color:#1a1a1a;opacity:.85}
 .ev>.bt-copie:hover,.actu>.bt-copie:hover,.item>.bt-copie:hover,.ev>.bt-copie:focus-visible{opacity:1;color:#000;background:rgba(0,0,0,.07)}
+
+/* ===== 24/11 : maquette de Hugo — bandeau titre seul, rond « mon compte », barre fine dans l'agenda ===== */
+.bandeau{display:flex!important;align-items:center;justify-content:center;padding:calc(6px + env(safe-area-inset-top,0px)) 16px 6px!important;min-height:76px;box-sizing:border-box}
+.bandeau .bl{display:none!important}
+.bandeau h1{font-size:72px!important;line-height:1;white-space:nowrap;text-shadow:3px 3px 0 var(--rose-fort)!important;-webkit-text-stroke:0!important}
+@media (max-width:759px){.bandeau{min-height:52px}.bandeau h1{font-size:40px!important;text-shadow:2px 2px 0 var(--rose-fort)!important}}
+@media (max-width:370px){.bandeau h1{font-size:34px!important}}
+/* « Je coche pour » remplacé par le rond du prénom */
+.moi label,.moi select{display:none!important}
+.barre-nav .moi,.moi{gap:6px;padding:0!important;background:none!important;box-shadow:none!important}
+.compte{flex:none;width:40px;height:40px;border-radius:50%;border:2px solid #fff;background:var(--vert);color:#fff;font:600 13px/1 var(--texte);box-shadow:0 0 0 2px var(--vert);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;overflow:hidden}
+.compte.long{font-size:10.5px}
+.compte:focus-visible{outline:2px solid var(--rose-fort);outline-offset:3px}
+.compte.clignote{font-size:19px;font-weight:700;animation:vm-clignote 1.2s ease-in-out infinite}
+@keyframes vm-clignote{0%,100%{background:#00e5ff;box-shadow:0 0 0 2px #00e5ff,0 0 14px #00e5ff}50%{background:#ff2fd1;box-shadow:0 0 0 2px #ff2fd1,0 0 14px #ff2fd1}}
+@media (prefers-reduced-motion:reduce){.compte.clignote{animation-duration:3s}}
+@media (max-width:759px){.compte{width:32px;height:32px;font-size:11px}.compte.long{font-size:9px}.compte.clignote{font-size:16px}}
+/* Agenda : barre d'onglets plus fine, onglets inactifs presque transparents */
+body.vue-agenda .barre-nav{padding-top:4px;padding-bottom:4px}
+body.vue-agenda .barre-nav .onglets{gap:2px}
+body.vue-agenda .barre-nav .onglets button{font-size:15px;padding:3px 16px;border-width:1.5px}
+body.vue-agenda .barre-nav .onglets button:not(.on){opacity:.35;border-color:transparent;background:transparent;font-weight:500;font-size:14px;padding:3px 10px}
+body.vue-agenda .barre-nav .onglets button:not(.on):hover{opacity:.8}
+body.vue-agenda .cloche{font-size:15px;padding:3px 5px}
+body.vue-agenda .compte{width:32px;height:32px;font-size:11px}
+body.vue-agenda .compte.long{font-size:9px}
+@media (max-width:759px){
+  body.vue-agenda .barre-nav .onglets button{font-size:13px;padding:3px 10px}
+  body.vue-agenda .barre-nav .onglets button:not(.on){font-size:12px;padding:3px 5px}
+  body.vue-agenda .compte{width:28px;height:28px;font-size:9.5px}
+}
+@media (max-width:759px){
+  body.vue-agenda .barre-nav{flex-direction:row;gap:4px;padding-left:6px;padding-right:6px}
+  body.vue-agenda .barre-nav .onglets{flex:1;min-width:0;justify-content:flex-start}
+  body.vue-agenda .barre-nav .moi{flex:none}
+}
+.compte.initiales{font-size:15px;font-weight:700}
+body.vue-agenda .compte.initiales{font-size:12.5px}

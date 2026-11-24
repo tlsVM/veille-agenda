@@ -15,13 +15,11 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Vivre Mieux">
-<link rel="stylesheet" href="style.css?v=93">
+<link rel="stylesheet" href="style.css?v=96">
 </head>
 <body>
 <header class="bandeau">
-  <img class="bl bl-rose" src="logo-vm-rose.svg" alt="Vivre Mieux Toulouse, groupe municipal d'opposition" width="1260" height="580">
-  <h1>Veille et agenda</h1>
-  <img class="bl bl-vert" src="logo-vm-vert.svg" alt="" aria-hidden="true" width="1260" height="580">
+  <h1>élu.e.s Vivre Mieux</h1>
 </header>
 <div class="barre-nav">
 <nav class="onglets" aria-label="Rubriques">
@@ -33,9 +31,9 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
   <button type="button" data-v="recherche" aria-label="Rechercher">🔍</button>
 </nav>
 <div class="moi">
-    <label for="moi">Je coche pour</label>
-    <select id="moi"></select>
+    <select id="moi" hidden aria-hidden="true" tabindex="-1"></select>
     <button type="button" id="cloche" class="cloche" aria-label="Notifications" title="Notifications">🔔<span id="cloche-nb" class="cloche-nb" hidden></span></button>
+    <button type="button" id="compte" class="compte clignote" aria-label="Choisir mon prénom" title="Choisir mon prénom">?</button>
   </div>
 </div>
 
@@ -51,6 +49,6 @@ if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
   </div>
 </div>
 
-<script src="app.js?v=93"></script>
+<script src="app.js?v=96"></script>
 </body>
 </html>

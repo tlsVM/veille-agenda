@@ -104,8 +104,20 @@
     var s = document.getElementById('moi'); s.textContent = '';
     var o0 = el('option', '', '— choisir —'); o0.value = ''; s.appendChild(o0);
     (D.elus || []).forEach(function (n) { var o = el('option', '', n); o.value = n; if (n === moi) o.selected = true; s.appendChild(o); });
+    majCompte();
     if (!moi) ouvrirChoix();
   }
+  // Rond « mon compte » : prénom de la personne ; clignote tant qu'aucun prénom n'est choisi
+  function majCompte() {
+    var b = document.getElementById('compte'); if (!b) return;
+    var p = moi ? moi.replace(/ \(collaborateur\)$/, '').split(' ')[0] : '';
+    // prénom court en entier ; prénom long (François, Anne-Sophie…) en initiales pour tenir dans le rond
+    var aff = p.length <= 6 ? p : p.split('-').map(function (x) { return x.charAt(0); }).join('');
+    b.textContent = aff || '?'; b.classList.toggle('clignote', !p); b.classList.toggle('long', aff.length > 4); b.classList.toggle('initiales', aff.length < 3 && !!p);
+    b.setAttribute('aria-label', p ? 'Mon compte : ' + moi.replace(' (collaborateur)', '') + ' (changer)' : 'Choisir mon prénom');
+    b.title = p ? moi.replace(' (collaborateur)', '') + ' · toucher pour changer' : 'Choisissez votre prénom';
+  }
+  document.getElementById('compte').addEventListener('click', function () { ouvrirChoix(); });
   function ouvrirChoix() {
     var m = document.getElementById('choix-nom'), l = document.getElementById('choix-liste'); l.textContent = '';
     (D.elus || []).forEach(function (n) {
@@ -117,8 +129,8 @@
     plus.addEventListener('click', function () { m.hidden = true; }); l.appendChild(plus);
     m.hidden = false;
   }
-  function choisirMoi(n) { moi = n; store('vm-moi', n); document.getElementById('moi').value = n; majPresences(); rendre(); }
-  document.getElementById('moi').addEventListener('change', function (e) { moi = e.target.value; store('vm-moi', moi); majPresences(); rendre(); }); // le bouton « Agenda de … » suit la personne choisie
+  function choisirMoi(n) { moi = n; store('vm-moi', n); document.getElementById('moi').value = n; majCompte(); majPresences(); rendre(); }
+  document.getElementById('moi').addEventListener('change', function (e) { moi = e.target.value; store('vm-moi', moi); majCompte(); majPresences(); rendre(); }); // le bouton « Agenda de … » suit la personne choisie
 
   // ---------- Présences ----------
   var COURT = function (n) { var p = n.replace(' (collaborateur)', '').split(' '); return p.length > 1 ? p[0].charAt(0) + '. ' + p.slice(1).join(' ') : n; };
@@ -1019,7 +1031,7 @@
         cont = el('details', 'sem-prec'); var sp = el('summary'); sp.appendChild(el('b', '', 'Semaine précédente ')); sp.appendChild(el('span', '', lu.getDate() + ' → ' + di.getDate() + ' ' + MC[di.getMonth()]));
         cont.appendChild(sp); groupes[s].forEach(function (k) { cont.appendChild(blocJour(k, parJour[k])); }); v.appendChild(cont); return;
       }
-      if (s === ouverte) { cont = el('div', 'sem-1'); var sd1 = el('div', 'semaine', s === cle(debut) ? lib : 'Cette semaine → ' + lu.getDate() + (lu.getMonth() !== di.getMonth() ? ' ' + MC[lu.getMonth()] : '') + ' au ' + di.getDate() + ' ' + MC[di.getMonth()]); rondSemaine(sd1, s); cont.appendChild(sd1); }
+      if (s === ouverte) { cont = el('div', 'sem-1'); } // semaine en cours : directement les jours, sans titre
       else { cont = el('details', 'sem'); if (monAgenda) cont.open = true; var sm = el('summary'); var sd = el('div', 'semaine', lib); sd.appendChild(el('span', '', groupes[s].length + ' jour' + (groupes[s].length > 1 ? 's' : ''))); rondSemaine(sd, s); sm.appendChild(sd); cont.appendChild(sm); }
       var prec = null, nPrec = 0, grilleJ = el('div', 'jours-g');
       groupes[s].forEach(function (k) {
@@ -1622,7 +1634,7 @@
     function lib(c) { var d = dDe(c.slice(0, 10)); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' · ' + (d.getDay() === 6 ? SONDAGE.samediLib : hFmt(c.slice(11))); }
     if (best) { var bb = el('div', 'sond-best'); bb.appendChild(el('span', '', '🏆 Meilleure date pour l\'instant')); bb.appendChild(el('b', '', lib(best.c))); if (best.grise) bb.appendChild(el('span', 'sond-imp', 'date en principe indisponible')); bb.appendChild(el('span', '', best.x.o + ' oui · ' + best.x.b + ' « je me libérerai » · ' + best.x.n + ' non')); v.appendChild(bb); }
     var peutRep = moi && elus.indexOf(moi) >= 0;
-    if (!peutRep) v.appendChild(el('p', 'sond-aide', moi ? '👉 Choisissez le nom d\'un·e élu·e dans « Je coche pour » pour répondre à sa place.' : '👉 Choisissez votre nom en haut (« Je coche pour ») pour répondre.'));
+    if (!peutRep) v.appendChild(el('p', 'sond-aide', moi ? '👉 Choisissez le nom d\'un·e élu·e dans le rond en haut à droite pour répondre à sa place.' : '👉 Choisissez votre nom dans le rond en haut à droite pour répondre.'));
     else v.appendChild(el('p', 'sond-aide', 'Vous répondez pour : ' + nomLong(moi)));
     var liste = el('div', 'sond-liste');
     crs.forEach(function (c) {
@@ -1659,6 +1671,7 @@
   function rendre() {
     var v = document.getElementById('vue'); v.textContent = '';
     document.querySelectorAll('.onglets button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === vue); });
+    document.body.classList.toggle('vue-agenda', vue === 'agenda'); // barre d'onglets plus fine dans l'agenda
     ({ jour: vueJour, agenda: vueAgenda, quartiers: vueQuartiers, archives: vueArchives, sondage: vueSondage, recherche: vueRecherche }[vue] || vueJour)(v);
     var p = el('p', 'pied', 'Données mises à jour ' + (D.maj ? 'le ' + new Date(D.maj).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '')); v.appendChild(p);
   }
@@ -1894,7 +1907,7 @@
       mm.textContent = '';
       var liste = mesNotifs();
       var tete = el('div', 'nt-tete');
-      tete.appendChild(el('span', 'nt-pour', nomNotif() ? 'Pour ' + nomNotif().replace(' (collaborateur)', '') : 'Choisissez votre nom dans « Je coche pour »'));
+      tete.appendChild(el('span', 'nt-pour', nomNotif() ? 'Pour ' + nomNotif().replace(' (collaborateur)', '') : 'Choisissez votre prénom dans le rond en haut à droite'));
       if (liste.length > 1) {
         var tout = el('button', 'nt-tout', 'Tout effacer'); tout.type = 'button';
         tout.addEventListener('click', function () {
