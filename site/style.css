@@ -1053,7 +1053,7 @@ body .compte.initiales{font-size:12.5px}
 .g3-jt.auj .g3-jn{background:var(--vert);color:#fff}
 .g3-jt.auj .g3-js{color:var(--vert)}
 .g3-sansh{align-self:stretch;display:flex;flex-direction:column;gap:3px;margin-top:6px}
-.g3-sansh .g-ev{position:static;width:100%;height:auto;min-height:0}
+.g3-sansh .g-ev{position:relative;top:auto!important;left:auto!important;width:100%;height:auto;min-height:0}
 .g3-fl{width:44px;height:44px;border-radius:50%;border:0;background:var(--vert);color:#fff;font:500 30px/1 var(--texte);display:flex;align-items:center;justify-content:center;padding:0 0 4px;cursor:pointer;box-shadow:0 3px 10px rgba(21,140,87,.3)}
 .g3-fl:hover{background:var(--vert-fonce)}
 .g3-fl:focus-visible{outline:2px solid var(--rose-fort);outline-offset:3px}
@@ -1061,7 +1061,7 @@ body .compte.initiales{font-size:12.5px}
 .g3-axe{position:relative;border-right:1px solid var(--trait)}
 .g3-hr{position:absolute;right:8px;transform:translateY(-50%);font-size:11.5px;font-weight:600;color:#8a8f8c}
 .g3-hr:first-child{transform:none;top:2px!important}
-.g3-col{position:relative;border-left:1px solid var(--trait);background-image:repeating-linear-gradient(to bottom,transparent 0 63px,#f1e6eb 63px 64px)}
+.g3-col{position:relative;border-left:1px solid var(--trait);background-image:repeating-linear-gradient(to bottom,transparent 0 79px,#f1e6eb 79px 80px)}
 .g3-col.auj{background-color:#fbfdfc}
 .g3-grille>.g3-bord{border-left:1px solid var(--trait)}
 .g3-now{position:absolute;left:0;right:0;height:2px;background:var(--rose-fort);z-index:3}
@@ -1078,3 +1078,15 @@ body .compte.initiales{font-size:12.5px}
 .ev-detail{max-width:560px!important}
 .ev-detail-jour{margin:0 0 8px!important;font:400 26px/1 var(--titre)!important;color:var(--vert)!important;text-transform:uppercase;letter-spacing:.03em}
 @media (min-width:1000px){body:has(.g3) .car-mode,body:has(.g3) .prec{display:none!important}}
+
+/* boutons directement sur les rendez-vous de la grille */
+.g-ev{padding:5px 8px 6px;overflow:visible}
+.g-ic{position:absolute;top:3px;right:3px;display:flex;gap:0}
+.g-ic .bt-copie{color:#1a1a1a;opacity:.8;width:22px;height:22px}
+.g-ev .g-h{padding-right:70px}
+.g-t{border:0;background:none;padding:0;text-align:left;cursor:pointer;font:700 13px/1.2 var(--texte);color:var(--encre);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.g-t:hover{text-decoration:underline}
+.g-ev .pres{margin-top:4px;gap:4px}
+.g-ev .pb{font-size:11.5px;padding:2px 9px}
+.g-ev .pb-autre{font-size:11px;padding:2px 2px}
+.g-ev .qui{font-size:11px}

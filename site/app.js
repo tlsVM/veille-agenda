@@ -961,7 +961,7 @@
 
   // ---------- Ordinateur : grille 3 jours avec les heures ----------
   var debut3 = '';
-  var NB_JOURS = 3, H_DEB = 7, H_FIN = 24, PX_H = 64;
+  var NB_JOURS = 3, H_DEB = 7, H_FIN = 24, PX_H = 80;
   function grandEcran() { return window.innerWidth >= 1000; }
   var etaitGrand = grandEcran();
   window.addEventListener('resize', function () { var g = grandEcran(); if (g !== etaitGrand) { etaitGrand = g; if (vue === 'agenda') rendre(); } });
@@ -991,21 +991,30 @@
     document.body.appendChild(m); majPresences();
   }
   function blocGrille(e, x) {
-    var t = TYPES[typeDe(e)], b = el('button', 'g-ev' + (e.important === 'oui' ? ' cle' : '')); b.type = 'button';
+    var t = TYPES[typeDe(e)], b = el('div', 'g-ev' + (e.important === 'oui' ? ' cle' : ''));
     b.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur : t.c);
     b.style.setProperty('--f', /^#[0-9a-f]{6}$/i.test(e.couleur || '') ? e.couleur + '1a' : t.f);
     if (x) {
-      b.style.top = ((x.d - H_DEB * 60) / 60 * PX_H) + 'px'; b.style.height = Math.max(34, 90 / 60 * PX_H - 4) + 'px';
+      b.style.top = ((x.d - H_DEB * 60) / 60 * PX_H) + 'px'; b.style.minHeight = (90 / 60 * PX_H - 4) + 'px';
       b.style.left = 'calc(' + (x.col / x.nb * 100) + '% + 2px)'; b.style.width = 'calc(' + (100 / x.nb) + '% - 4px)';
     }
-    var p = D.presences[e.id] || {}, nbP = Object.keys(p).filter(function (n) { return p[n] === 'present'; }).length;
-    var l1 = el('span', 'g-h', (e.heure ? hFmt(e.heure) + ' · ' : '') + (e.type || ''));
-    if (moi && p[moi]) l1.appendChild(el('b', 'g-moi', p[moi] === 'present' ? ' ✓' : ' ?'));
-    b.appendChild(l1); b.appendChild(el('span', 'g-t', e.titre));
+    // boutons en haut à droite : envoyer (Hugo), ajouter à mon agenda, copier
+    var ic = el('div', 'g-ic');
+    if (estHugo()) ic.appendChild(btNotif(function () { return notifDeEv(e); }));
+    if (t.g !== 'majo') {
+      var ba = el('button', 'bt-copie bt-cal-ev'); ba.type = 'button'; ba.title = 'Ajouter à mon agenda'; ba.setAttribute('aria-label', 'Ajouter à mon agenda');
+      ba.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="11.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 6.3h12.4M5 1.3v3M11 1.3v3M8 8.3v4M6 10.3h4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+      ba.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirAjoutAgenda(e); }); ic.appendChild(ba);
+    }
+    ic.appendChild(btCopie(function () { return texteEv(e, true); }, 'Copier cet événement'));
+    b.appendChild(ic);
+    b.appendChild(el('span', 'g-h', (e.heure ? hFmt(e.heure) + ' · ' : '') + (e.type || '')));
+    var ti = el('button', 'g-t', e.titre); ti.type = 'button'; ti.title = 'Voir le détail';
+    ti.addEventListener('click', function (ev) { ev.stopPropagation(); ouvrirEvenement(e); });
+    b.appendChild(ti);
     if (e.lieu || e.quartier) b.appendChild(el('span', 'g-l', e.quartier || e.lieu));
-    if (nbP) b.appendChild(el('span', 'g-p', nbP + ' présent' + (nbP > 1 ? 's' : '')));
-    b.title = (e.heure ? hFmt(e.heure) + ' · ' : '') + e.titre + (e.lieu ? ' · ' + e.lieu : '');
-    b.addEventListener('click', function () { ouvrirEvenement(e); });
+    if (t.g !== 'majo') b.appendChild(blocPresence(e.id));
+    b.addEventListener('click', function (ev) { if (ev.target === b || ev.target.classList.contains('g-l') || ev.target.classList.contains('g-h')) ouvrirEvenement(e); });
     return b;
   }
   function grilleTroisJours() {
@@ -1048,6 +1057,7 @@
     });
     g.appendChild(el('div', 'g3-bord'));
     corps.appendChild(g); z.appendChild(corps);
+    setTimeout(majPresences, 0);
     return z;
   }
   function vueAgenda(v) {
