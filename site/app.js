@@ -1012,7 +1012,8 @@
 
   // ---------- Ordinateur : grille 3 jours avec les heures ----------
   var debut3 = '';
-  var formatAg = store('vm-format') === 'grille' ? 'grille' : 'liste'; // la liste s'ouvre par défaut
+  var formatAg = 'liste'; // la liste s'ouvre toujours en premier ; la grille seulement à la demande
+  try { localStorage.removeItem('vm-format'); } catch (x) {}
   var NB_JOURS = 3, H_DEB = 8, H_FIN = 23, PX_H = 54;
   function grandEcran() { return window.innerWidth >= 1000; }
   var etaitGrand = grandEcran();
@@ -1211,7 +1212,7 @@
       var fmt = el('div', 'g3-format'); fmt.setAttribute('role', 'group'); fmt.setAttribute('aria-label', 'Format de l\'agenda');
       [['grille', '▦ Grille 3 jours'], ['liste', '☰ Liste']].forEach(function (f) {
         var bf = el('button', formatAg === f[0] ? 'on' : '', f[1]); bf.type = 'button'; bf.setAttribute('aria-pressed', formatAg === f[0] ? 'true' : 'false');
-        bf.addEventListener('click', function () { formatAg = f[0]; store('vm-format', f[0]); rendre(); });
+        bf.addEventListener('click', function () { formatAg = f[0]; rendre(); });
         fmt.appendChild(bf);
       });
       v.appendChild(fmt);
@@ -1901,7 +1902,7 @@
     var p = el('p', 'pied', 'Données mises à jour ' + (D.maj ? 'le ' + new Date(D.maj).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '')); v.appendChild(p);
   }
   document.querySelectorAll('.onglets button').forEach(function (b) {
-    b.addEventListener('click', function () { vue = b.getAttribute('data-v'); store('vm-vue', vue); rendre(); window.scrollTo(0, 0); });
+    b.addEventListener('click', function () { vue = b.getAttribute('data-v'); if (vue === 'agenda') formatAg = 'liste'; store('vm-vue', vue); rendre(); window.scrollTo(0, 0); });
   });
 
   // Après « tirer pour actualiser », on relit la feuille sans attendre le cache du serveur
